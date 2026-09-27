@@ -28,7 +28,6 @@ export const tacoSummarySchema = z.object({
   id: uuidSchema,
   tacoTypeId: uuidSchema,
   name: z.string(),
-  name: z.string(),
   score: z.number().min(1).max(5).nullable(),
   reviewCount: z.number().int().nonnegative(),
 });

@@ -1,4 +1,3 @@
-import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import "reflect-metadata";
@@ -13,12 +12,6 @@ async function bootstrap(): Promise<void> {
 
   app.enableCors({ origin: true });
   app.setGlobalPrefix("v1", { exclude: ["healthz"] });
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transformOptions: { enableImplicitConversion: true },
-  }));
   app.enableShutdownHooks();
   await app.listen(port, "0.0.0.0");
 }

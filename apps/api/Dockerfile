@@ -8,13 +8,12 @@ COPY packages/contracts/src packages/contracts/src
 RUN pnpm install --filter @taco-hunt/api...
 COPY apps/api apps/api
 COPY packages/contracts packages/contracts
-RUN pnpm --filter @taco-hunt/api exec tsc
+RUN pnpm --filter @taco-hunt/api build
+RUN pnpm --filter @taco-hunt/api --prod deploy --legacy /app/deploy
 
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/api/package.json ./apps/api/package.json
-COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/deploy ./
 EXPOSE 3001
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["node", "dist/main.js"]
