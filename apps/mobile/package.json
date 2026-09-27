@@ -5,7 +5,8 @@
   "engines": { "node": ">=20.19.4" },
   "main": "index.js",
   "scripts": {
-    "start": "node start.mjs"
+    "start": "node start.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "expo": "~57.0.25",

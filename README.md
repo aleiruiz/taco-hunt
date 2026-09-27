@@ -32,6 +32,18 @@ pnpm db:status
 
 ## Ejecutar la demo
 
+## Calidad y formato
+
+Usa estos comandos desde la raíz antes de compartir cambios:
+
+```powershell
+pnpm lint
+pnpm typecheck
+pnpm format:check
+```
+
+`pnpm lint` aplica ESLint a la app Expo, la API y la landing. `pnpm typecheck` revisa los tipos de la API y la app móvil. Para dar formato a los archivos compatibles usa `pnpm format`; `pnpm format:check` solo informa si hay diferencias. La configuración común está en `eslint.config.js` y `.prettierrc.json`.
+
 En tres terminales desde la raíz:
 
 ```powershell
