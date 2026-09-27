@@ -1,202 +1,128 @@
-import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { Link, type Href } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Link, type Href, useRouter } from "expo-router";
+import MapView, { Marker, type Region } from "react-native-maps";
+import * as Location from "expo-location";
 
-type Spot = {
-  id: string;
-  name: string;
-  neighborhood: string;
-  reviewCount: number;
-  bestTaco: { name: string; score: number | null } | null;
-};
+type TacoType = { id: string; slug: string; nameEs: string };
+type Taco = { id: string; tacoTypeId?: string; name: string; score: number | null; reviewCount: number };
+type Spot = { id: string; name: string; neighborhood: string; latitude: number; longitude: number; lastVerifiedAt: string | null; reviewCount: number; bestTaco: Taco | null };
 type Page = { items: Spot[]; nextCursor: string | null };
+type Area = { label: string; north: number; south: number; east: number; west: number };
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  line: "#DFD0BA",
-};
+const AREAS: Area[] = [
+  { label: "Monterrey", north: 25.78, south: 25.60, east: -100.20, west: -100.40 },
+  { label: "San Pedro", north: 25.72, south: 25.62, east: -100.30, west: -100.45 },
+  { label: "San Nicolás", north: 25.80, south: 25.70, east: -100.20, west: -100.32 },
+  { label: "Guadalupe", north: 25.72, south: 25.62, east: -100.15, west: -100.27 },
+  { label: "Apodaca", north: 25.82, south: 25.72, east: -100.08, west: -100.23 },
+];
+const colors = { ink: "#302723", muted: "#6C5D53", red: "#E95032", green: "#276C4F", paper: "#FFFAF1", line: "#DFD0BA", cream: "#FBF3E6" };
 
 export default function ExploreScreen() {
   const [items, setItems] = useState<Spot[]>([]);
+  const [types, setTypes] = useState<TacoType[]>([]);
   const [query, setQuery] = useState("");
+  const [activeType, setActiveType] = useState<TacoType | null>(null);
+  const [area, setArea] = useState(AREAS[0]);
+  const [areaPicker, setAreaPicker] = useState(false);
+  const [mode, setMode] = useState<"lista" | "mapa">("lista");
   const [loading, setLoading] = useState(true);
+  const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
-  const load = async (q = query) => {
-    setLoading(true);
-    setError("");
-    try {
-      const params = new URLSearchParams({ limit: "30" });
-      if (q.trim()) params.set("q", q.trim());
-      const response = await fetch(`${API}/spots?${params}`);
-      if (!response.ok) throw new Error();
-      setItems(((await response.json()) as Page).items);
-    } catch {
-      setError("No hay conexión con Taco Hunt. Revisa que la API esté iniciada.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    const loadInitial = async () => {
-      try {
-        const response = await fetch(`${API}/spots?limit=30`);
-        if (!response.ok) throw new Error();
-        setItems(((await response.json()) as Page).items);
-      } catch {
-        setError("No hay conexión con Taco Hunt. Revisa que la API esté iniciada.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const router = useRouter();
 
-    void loadInitial();
+  const loadTypes = useCallback(async () => {
+    try {
+      const response = await fetch(`${API}/taco-types`);
+      if (!response.ok) return;
+      const data = await response.json() as { items: TacoType[] };
+      setTypes(data.items);
+    } catch { /* Search and browsing remain available when types cannot load. */ }
   }, []);
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
-      <Text style={styles.title}>¿Qué se te antoja hoy?</Text>
-      <Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text>
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        onSubmitEditing={() => void load()}
-        placeholder="Busca un puesto o una colonia"
-        placeholderTextColor="#8A7A6E"
-        returnKeyType="search"
-        style={styles.search}
-        accessibilityLabel="Buscar puesto o colonia"
-      />
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Puestos para descubrir</Text>
-        <Text style={styles.count}>{items.length} lugares</Text>
-      </View>
-      {loading ? (
-        <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
-      ) : error ? (
-        <Pressable onPress={() => void load()} style={styles.empty}>
-          <Text style={styles.emptyTitle}>Sin conexión</Text>
-          <Text style={styles.muted}>{error} Toca para reintentar.</Text>
-        </Pressable>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={() => void load()}
-              tintColor={colors.red}
-            />
-          }
-          contentContainerStyle={{ paddingBottom: 32 }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Aún no hay puestos en esta búsqueda</Text>
-              <Text style={styles.muted}>Prueba con otra colonia o vuelve más tarde.</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <Link
-              href={{ pathname: "/spot/[id]", params: { id: item.id } } as unknown as Href}
-              asChild
-            >
-              <Pressable style={styles.card}>
-                <View style={styles.taco}>
-                  <Text style={{ fontSize: 25 }}>🌮</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{item.name}</Text>
-                  <Text style={styles.muted}>{item.neighborhood}</Text>
-                  <Text style={styles.meta}>
-                    {item.bestTaco
-                      ? `${item.bestTaco.name} · ${item.bestTaco.score === null ? "Sin reseñas" : `${item.bestTaco.score.toFixed(1)} ★`}`
-                      : "Tacos por descubrir"}
-                  </Text>
-                </View>
-                <Text style={styles.arrow}>›</Text>
-              </Pressable>
-            </Link>
-          )}
-        />
-      )}
-    </View>
-  );
+
+  const load = useCallback(async (q = query, selectedType = activeType, selectedArea = area) => {
+    setLoading(true); setError("");
+    try {
+      const params = new URLSearchParams({ limit: "30", north: String(selectedArea.north), south: String(selectedArea.south), east: String(selectedArea.east), west: String(selectedArea.west) });
+      if (q.trim()) params.set("q", q.trim());
+      if (selectedType) params.set("tacoType", selectedType.slug);
+      const response = await fetch(`${API}/spots?${params}`);
+      if (!response.ok) throw new Error("No se pudo cargar la búsqueda.");
+      const page = await response.json() as Page;
+      setItems(page.items);
+    } catch { setError("No hay conexión con Taco Hunt. Puedes reintentar cuando vuelva la señal."); }
+    finally { setLoading(false); }
+  }, [activeType, area, query]);
+
+  useEffect(() => { void loadTypes(); }, [loadTypes]);
+  useEffect(() => { void load("", null, AREAS[0]); }, []);
+
+  const locate = async () => {
+    setLocating(true);
+    try {
+      // Permission and coordinates are requested only after the user's explicit tap.
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== "granted") {
+        setError("Sin permiso de ubicación. Puedes elegir una zona manualmente.");
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude, longitude } = position.coords;
+      const areaAtLocation: Area = { label: "Cerca de ti", north: latitude + 0.08, south: latitude - 0.08, east: longitude + 0.10, west: longitude - 0.10 };
+      setArea(areaAtLocation);
+      await load(query, activeType, areaAtLocation);
+    } catch {
+      setError("No pudimos obtener tu ubicación. Elige una zona para seguir explorando.");
+    } finally { setLocating(false); }
+  };
+
+  const mapRegion = useMemo<Region>(() => {
+    const latitude = items.length ? items.reduce((total, item) => total + item.latitude, 0) / items.length : (area.north + area.south) / 2;
+    const longitude = items.length ? items.reduce((total, item) => total + item.longitude, 0) / items.length : (area.east + area.west) / 2;
+    return { latitude, longitude, latitudeDelta: Math.max(0.045, area.north - area.south), longitudeDelta: Math.max(0.05, area.east - area.west) };
+  }, [items, area]);
+
+  const chooseType = (type: TacoType | null) => { setActiveType(type); void load(query, type, area); };
+  const chooseArea = (next: Area) => { setArea(next); setAreaPicker(false); void load(query, activeType, next); };
+
+  return <View style={styles.screen}>
+    <FlatList
+      data={mode === "lista" ? items : []}
+      keyExtractor={(item) => item.id}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.listContent}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.red} />}
+      ListHeaderComponent={<>
+        <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
+        <Text style={styles.title}>¿Qué se te antoja hoy?</Text>
+        <Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text>
+        <TextInput value={query} onChangeText={setQuery} onSubmitEditing={() => void load()} placeholder="Busca un puesto o una colonia" placeholderTextColor="#8A7A6E" returnKeyType="search" style={styles.search} accessibilityLabel="Buscar puesto o colonia" />
+        <View style={styles.controls}>
+          <Pressable accessibilityRole="button" onPress={() => void locate()} style={styles.locationButton}><Text style={styles.locationText}>{locating ? "Buscando…" : "⌖  Usar mi ubicación"}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityExpanded={areaPicker} onPress={() => setAreaPicker((open) => !open)} style={styles.areaButton}><Text style={styles.areaText}>⌄  {area.label}</Text></Pressable>
+        </View>
+        {areaPicker && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.areaOptions}>{AREAS.map((option) => <Pressable key={option.label} onPress={() => chooseArea(option)} style={[styles.areaChip, area.label === option.label && styles.selectedChip]}><Text style={[styles.chipText, area.label === option.label && styles.selectedChipText]}>{option.label}</Text></Pressable>)}</ScrollView>}
+        <Text style={styles.filterLabel}>SE TE ANTOJA</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeRow} contentContainerStyle={{ gap: 8 }}>
+          <Pressable accessibilityRole="button" accessibilityState={{ selected: !activeType }} onPress={() => chooseType(null)} style={[styles.typeChip, !activeType && styles.selectedChip]}><Text style={[styles.chipText, !activeType && styles.selectedChipText]}>Todos</Text></Pressable>
+          {types.map((type) => <Pressable key={type.id} accessibilityRole="button" accessibilityState={{ selected: activeType?.id === type.id }} onPress={() => chooseType(activeType?.id === type.id ? null : type)} style={[styles.typeChip, activeType?.id === type.id && styles.selectedChip]}><Text style={[styles.chipText, activeType?.id === type.id && styles.selectedChipText]}>{type.nameEs}</Text></Pressable>)}
+        </ScrollView>
+        <View style={styles.sectionRow}><Text style={styles.sectionTitle}>Puestos para descubrir</Text><Text style={styles.count}>{items.length} lugares</Text></View>
+        <View style={styles.modeRow}><Pressable accessibilityRole="button" accessibilityState={{ selected: mode === "lista" }} onPress={() => setMode("lista")} style={[styles.modeButton, mode === "lista" && styles.modeSelected]}><Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>☷  Lista</Text></Pressable><Pressable accessibilityRole="button" accessibilityState={{ selected: mode === "mapa" }} onPress={() => setMode("mapa")} style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}><Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>⌖  Mapa</Text></Pressable></View>
+        {mode === "mapa" && !error && <View accessibilityLabel="Mapa de puestos" style={styles.map}><MapView style={StyleSheet.absoluteFill} initialRegion={mapRegion} region={mapRegion} accessibilityLabel="Mapa de puestos en la zona seleccionada" showsUserLocation={false}>
+          {items.map((item) => <Marker key={item.id} coordinate={{ latitude: item.latitude, longitude: item.longitude }} title={item.name} description={item.neighborhood} onCalloutPress={() => router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)} />)}
+        </MapView><Text style={styles.mapCaption}>Toca un marcador para ver el puesto · {items.length} puestos</Text></View>}
+        {loading && <ActivityIndicator color={colors.red} style={{ marginTop: 28 }} />}
+        {!loading && error ? <Pressable accessibilityRole="button" onPress={() => void load()} style={styles.empty}><Text style={styles.emptyTitle}>Sin conexión</Text><Text style={styles.muted}>{error} Toca para reintentar.</Text></Pressable> : null}
+        {!loading && !error && mode === "mapa" && items.length === 0 ? <View style={styles.empty}><Text style={styles.emptyTitle}>No hay puestos en esta zona</Text><Text style={styles.muted}>Prueba otra zona o cambia el filtro.</Text></View> : null}
+      </>}
+      ListEmptyComponent={mode === "lista" && !loading && !error ? <View style={styles.empty}><Text style={styles.emptyTitle}>Aún no hay puestos en esta búsqueda</Text><Text style={styles.muted}>Prueba con otra colonia o vuelve más tarde.</Text></View> : null}
+      renderItem={({ item }) => <Link href={{ pathname: "/spot/[id]", params: { id: item.id } } as unknown as Href} asChild><Pressable accessibilityRole="link" style={styles.card}><View style={styles.taco}><Text style={{ fontSize: 25 }}>🌮</Text></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.muted}>{item.neighborhood}</Text><Text style={styles.meta}>{item.bestTaco ? `${item.bestTaco.name} · ${item.bestTaco.score === null ? "Sin reseñas" : `${item.bestTaco.score.toFixed(1)} ★`}` : "Tacos por descubrir"}</Text></View><Text style={styles.arrow}>›</Text></Pressable></Link>}
+    />
+  </View>;
 }
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, paddingHorizontal: 22, paddingTop: 66, backgroundColor: "#FBF3E6" },
-  kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  title: {
-    marginTop: 11,
-    color: colors.ink,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 },
-  search: {
-    marginTop: 23,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 15,
-    backgroundColor: colors.paper,
-    paddingHorizontal: 16,
-    height: 52,
-    color: colors.ink,
-    fontSize: 15,
-  },
-  sectionRow: {
-    marginTop: 27,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" },
-  count: { color: colors.muted, fontSize: 12, fontWeight: "700" },
-  card: {
-    minHeight: 91,
-    padding: 13,
-    marginBottom: 10,
-    borderRadius: 18,
-    borderColor: "#E8DCCB",
-    borderWidth: 1,
-    backgroundColor: colors.paper,
-    flexDirection: "row",
-    gap: 13,
-    alignItems: "center",
-  },
-  taco: {
-    width: 57,
-    height: 57,
-    borderRadius: 15,
-    backgroundColor: "#F9DEAE",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
-  muted: { color: colors.muted, fontSize: 13, marginTop: 3 },
-  meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 },
-  arrow: { color: colors.muted, fontSize: 28, paddingHorizontal: 4 },
-  empty: {
-    marginTop: 24,
-    borderRadius: 18,
-    backgroundColor: colors.paper,
-    padding: 20,
-    alignItems: "center",
-  },
-  emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" },
+  screen: { flex: 1, backgroundColor: colors.cream }, listContent: { paddingHorizontal: 22, paddingTop: 60, paddingBottom: 36 }, kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 }, title: { marginTop: 11, color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", letterSpacing: -1 }, subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 }, search: { marginTop: 20, borderWidth: 1, borderColor: colors.line, borderRadius: 15, backgroundColor: colors.paper, paddingHorizontal: 16, height: 52, color: colors.ink, fontSize: 15 }, controls: { flexDirection: "row", gap: 9, marginTop: 11 }, locationButton: { backgroundColor: colors.green, borderRadius: 13, minHeight: 43, alignItems: "center", justifyContent: "center", paddingHorizontal: 13 }, locationText: { color: "white", fontWeight: "800", fontSize: 12 }, areaButton: { flex: 1, borderWidth: 1, borderColor: colors.line, borderRadius: 13, minHeight: 43, alignItems: "center", justifyContent: "center", backgroundColor: colors.paper }, areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 }, areaOptions: { marginTop: 9, maxHeight: 42 }, areaChip: { marginRight: 8, paddingHorizontal: 13, height: 36, justifyContent: "center", borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1 }, filterLabel: { marginTop: 20, marginBottom: 9, color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }, typeRow: { maxHeight: 42 }, typeChip: { paddingHorizontal: 14, height: 36, justifyContent: "center", borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1 }, chipText: { color: colors.ink, fontWeight: "700", fontSize: 12 }, selectedChip: { backgroundColor: colors.ink, borderColor: colors.ink }, selectedChipText: { color: "white" }, sectionRow: { marginTop: 23, marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" }, count: { color: colors.muted, fontSize: 12, fontWeight: "700" }, modeRow: { flexDirection: "row", padding: 3, backgroundColor: "#EFE4D5", borderRadius: 12, marginBottom: 12 }, modeButton: { flex: 1, minHeight: 37, alignItems: "center", justifyContent: "center", borderRadius: 9 }, modeSelected: { backgroundColor: colors.paper }, modeText: { color: colors.muted, fontWeight: "700", fontSize: 12 }, modeSelectedText: { color: colors.ink }, card: { minHeight: 91, padding: 13, marginBottom: 10, borderRadius: 18, borderColor: "#E8DCCB", borderWidth: 1, backgroundColor: colors.paper, flexDirection: "row", gap: 13, alignItems: "center" }, taco: { width: 57, height: 57, borderRadius: 15, backgroundColor: "#F9DEAE", alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" }, muted: { color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }, meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 }, arrow: { color: colors.muted, fontSize: 23, paddingHorizontal: 4, fontWeight: "800" }, empty: { marginTop: 16, borderRadius: 18, backgroundColor: colors.paper, padding: 20, alignItems: "center" }, emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" }, map: { height: 245, borderRadius: 18, backgroundColor: "#E8E6D7", overflow: "hidden", marginBottom: 11 }, mapCaption: { position: "absolute", bottom: 9, left: 12, color: colors.muted, fontSize: 10, fontWeight: "700", backgroundColor: colors.paper, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
 });
