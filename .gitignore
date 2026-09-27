@@ -1,0 +1,21 @@
+node_modules/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+
+# Supabase local state, link metadata, and keys
+.supabase/
+supabase/.branches/
+supabase/.temp/
+supabase/signing_keys.json
+
+# Build and local tool state
+.expo/
+dist/
+build/
+coverage/
+.task-docker-config/
+
