@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "maxWorkers": 3,
+  "baseBranch": "main",
+  "workers": [],
+  "tasks": {
+    "T00": { "status": "merged", "pr": null },
+    "T01": { "status": "ready", "dependsOn": ["T00"], "pr": null },
+    "T02": { "status": "ready", "dependsOn": ["T00"], "pr": null },
+    "T03": { "status": "ready", "dependsOn": ["T00"], "pr": null },
+    "T04": { "status": "ready", "dependsOn": ["T00"], "pr": null },
+    "T05": { "status": "blocked", "dependsOn": ["T01", "T02"], "pr": null },
+    "T06": { "status": "blocked", "dependsOn": ["T01", "T02"], "pr": null },
+    "T07": { "status": "blocked", "dependsOn": ["T03", "T06"], "pr": null },
+    "T08": { "status": "blocked", "dependsOn": ["T05", "T06"], "pr": null },
+    "T09": { "status": "blocked", "dependsOn": ["T05", "T06"], "pr": null },
+    "T10": { "status": "blocked", "dependsOn": ["T02", "T03", "T07"], "pr": null },
+    "T11": { "status": "blocked", "dependsOn": ["T06", "T08"], "pr": null },
+    "T12": { "status": "blocked", "dependsOn": ["T03", "T05"], "pr": null },
+    "T13": { "status": "blocked", "dependsOn": ["T01", "T09"], "pr": null },
+    "T14": { "status": "blocked", "dependsOn": ["T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10", "T11", "T12", "T13"], "pr": null },
+    "T15": { "status": "blocked", "dependsOn": ["T14"], "external": ["E01", "E02"], "pr": null },
+    "T16": { "status": "blocked", "dependsOn": ["T15"], "external": ["E03", "E04"], "pr": null }
+  }
+}

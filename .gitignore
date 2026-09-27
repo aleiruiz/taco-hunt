@@ -18,4 +18,3 @@ dist/
 build/
 coverage/
 .task-docker-config/
-

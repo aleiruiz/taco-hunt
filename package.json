@@ -5,9 +5,12 @@
   "description": "Monorepo for Taco Hunt, a street taco discovery app.",
   "packageManager": "pnpm@11.25.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.19.4"
   },
   "scripts": {
+    "dev:api": "pnpm --filter @taco-hunt/api dev",
+    "dev:mobile": "node apps/mobile/start.mjs",
+    "dev:landing": "pnpm --filter @taco-hunt/landing dev",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
@@ -18,4 +21,3 @@
     "supabase": "2.118.0"
   }
 }
-
