@@ -8,7 +8,8 @@ select ('20000000-0000-4000-8000-' || lpad(n::text,12,'0'))::uuid,
        'approved','fictional',null
 from generate_series(1,10) as n;
 
-insert into app_private.spot_tacos(spot_id,taco_type_id,status)
-select s.id,t.id,'approved'
+insert into app_private.spot_tacos(id,spot_id,taco_type_id,status)
+select ('30000000-0000-4000-8000-' || lpad((row_number() over (order by s.id,t.id))::text,12,'0'))::uuid,
+       s.id,t.id,'approved'
 from app_private.spots s cross join app_private.taco_types t
 where s.source_type='fictional' and t.slug in ('pastor','barbacoa');

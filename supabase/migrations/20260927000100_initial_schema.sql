@@ -135,10 +135,18 @@ do $$ begin
 end $$;
 
 grant usage on schema app_private to taco_hunt_api;
-grant select, insert, update, delete on all tables in schema app_private to taco_hunt_api;
+grant select on app_private.taco_types to taco_hunt_api;
+grant select, insert, update, delete on
+  app_private.profiles,
+  app_private.spots,
+  app_private.spot_tacos,
+  app_private.reviews,
+  app_private.favorites,
+  app_private.reports,
+  app_private.media_uploads,
+  app_private.moderation_audit
+to taco_hunt_api;
 grant usage, select on all sequences in schema app_private to taco_hunt_api;
-alter default privileges in schema app_private grant select, insert, update, delete on tables to taco_hunt_api;
-alter default privileges in schema app_private grant usage, select on sequences to taco_hunt_api;
 
 -- The Data API roles cannot access product tables, even if the schema is exposed later.
 revoke all on all tables in schema app_private from public, anon, authenticated, service_role;

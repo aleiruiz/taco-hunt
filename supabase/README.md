@@ -15,6 +15,23 @@ pnpm db:reset
 
 El script genera una contraseña aleatoria local, la aplica al rol que prepara la migración y actualiza solo `DATABASE_URL` en `.env`. No imprime ni persiste la contraseña en el historial de migraciones. `supabase db reset` recrea la base; después de un reset vuelve a correr `provision` para establecer una nueva clave y actualizar `.env`.
 
+## Verificación E2E de T01
+
+Con Docker Desktop iniciado y las dependencias instaladas, corre desde la raíz en PowerShell:
+
+```powershell
+pnpm db:start
+pnpm db:reset
+.\supabase\dev-role.ps1 provision
+pnpm exec supabase db query --local --output table --query "select count(*) as fixture_spots from app_private.spots where source_type = 'fictional';"
+pnpm exec supabase db query --local --output table --query "select count(*) as fixture_tacos from app_private.spot_tacos st join app_private.spots s on s.id = st.spot_id where s.source_type = 'fictional';"
+pnpm exec supabase db query --local --output table --query "select has_schema_privilege('anon', 'app_private', 'USAGE') as anon_schema, has_table_privilege('taco_hunt_api', 'app_private.import_candidates', 'SELECT') as api_import_read, has_table_privilege('taco_hunt_api', 'app_private.spots', 'SELECT') as api_spot_read;"
+```
+
+El resultado esperado es 10 puestos y 20 relaciones de taco; `anon_schema` y `api_import_read` deben ser `false`, mientras `api_spot_read` debe ser `true`. Repite `pnpm db:reset` y las consultas para comprobar que las cantidades e IDs sembrados se mantienen. `provision` debe correrse después del reset para restaurar la clave local.
+
+En el entorno de autoría, la comprobación E2E no pudo ejecutarse: `docker info --format '{{.ServerVersion}}'` devolvió `permission denied while trying to connect to the docker API at npipe:////./pipe/docker_engine`; `pnpm exec supabase --version` intentó descargar los paquetes npm y el registro respondió `EACCES`; `psql` y una instalación global de Supabase CLI tampoco estaban presentes. La alternativa verificable es ejecutar los comandos de arriba en una máquina con Docker Desktop y el lockfile instalado, y adjuntar su salida al PR. No se afirma que la comprobación haya pasado.
+
 Para rotar la clave sin reiniciar la base (equivale a provisionar una nueva):
 
 ```powershell
