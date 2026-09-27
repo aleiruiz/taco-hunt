@@ -3,13 +3,13 @@
   "maxWorkers": 3,
   "baseBranch": "main",
   "workers": [
-    { "taskId": "T01", "clientThreadId": "client-new-thread:2b8b17be-ee6c-4c3c-bbbf-e1d5fa77ad30", "threadId": null, "status": "launching" },
-    { "taskId": "T02", "clientThreadId": "client-new-thread:7ff302c4-cc1d-4aa4-82ce-21ab6a8fcc68", "threadId": null, "status": "launching" },
-    { "taskId": "T03", "clientThreadId": "client-new-thread:18570158-71db-4ffb-8109-b25eba5c77ea", "threadId": null, "status": "launching" }
+    { "taskId": "T01", "threadId": "01a0e53a-bd84-7aa0-98c7-2b3c0c477664", "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/70a4/taco-hunt", "status": "changes_requested" },
+    { "taskId": "T02", "threadId": "01a0e53a-cbe7-7961-9641-b3af44e0074e", "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/3522/taco-hunt", "status": "active" },
+    { "taskId": "T03", "threadId": "01a0e53a-d6d2-7a03-9027-0e201ef25998", "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/cd89/taco-hunt", "status": "active" }
   ],
   "tasks": {
     "T00": { "status": "merged", "pr": null },
-    "T01": { "status": "active", "dependsOn": ["T00"], "pr": null },
+    "T01": { "status": "changes_requested", "dependsOn": ["T00"], "pr": null },
     "T02": { "status": "active", "dependsOn": ["T00"], "pr": null },
     "T03": { "status": "active", "dependsOn": ["T00"], "pr": null },
     "T04": { "status": "ready", "dependsOn": ["T00"], "pr": null },
