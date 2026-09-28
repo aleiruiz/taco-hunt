@@ -11,11 +11,7 @@ import { DATABASE_POOL } from "../database/database.module.js";
 import type { AuthenticatedProfile } from "../auth/auth.types.js";
 import type { z } from "zod";
 import { spotProposalSchema, tacoProposalSchema } from "@taco-hunt/contracts";
-import {
-  classifyDuplicate,
-  duplicateCandidateSql,
-  normalizeName,
-} from "./duplicate-detector.js";
+import { classifyDuplicate, duplicateCandidateSql, normalizeName } from "./duplicate-detector.js";
 
 type SpotProposal = z.infer<typeof spotProposalSchema>;
 type TacoProposal = z.infer<typeof tacoProposalSchema>;
@@ -29,10 +25,10 @@ export class ProposalsService {
   async createSpot(profile: AuthenticatedProfile, input: SpotProposal) {
     try {
       const normalizedName = normalizeName(input.name);
-      const candidates = await this.pool.query(
-        duplicateCandidateSql(),
-        [input.latitude, input.longitude],
-      );
+      const candidates = await this.pool.query(duplicateCandidateSql(), [
+        input.latitude,
+        input.longitude,
+      ]);
       const duplicateCandidates = candidates.rows.map((candidate) => ({
         ...candidate,
         match: classifyDuplicate(input.name, candidate.name),

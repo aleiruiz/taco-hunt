@@ -108,11 +108,7 @@ export class AdminController {
         details: { issues: parsed.error.issues },
       });
     }
-    return this.admin.findDuplicates(
-      parsed.data.name,
-      parsed.data.latitude,
-      parsed.data.longitude,
-    );
+    return this.admin.findDuplicates(parsed.data.name, parsed.data.latitude, parsed.data.longitude);
   }
 
   @Post("/spot-proposals/:id/approve")

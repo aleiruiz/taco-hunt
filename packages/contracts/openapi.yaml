@@ -429,9 +429,24 @@ paths:
       summary: Busca puestos aprobados cercanos para revisar un posible duplicado
       security: [{ bearerAuth: [] }]
       parameters:
-        - { in: query, name: name, required: true, schema: { type: string, minLength: 2, maxLength: 120 } }
-        - { in: query, name: latitude, required: true, schema: { type: number, minimum: 25, maximum: 27 } }
-        - { in: query, name: longitude, required: true, schema: { type: number, minimum: -101.5, maximum: -99 } }
+        - {
+            in: query,
+            name: name,
+            required: true,
+            schema: { type: string, minLength: 2, maxLength: 120 },
+          }
+        - {
+            in: query,
+            name: latitude,
+            required: true,
+            schema: { type: number, minimum: 25, maximum: 27 },
+          }
+        - {
+            in: query,
+            name: longitude,
+            required: true,
+            schema: { type: number, minimum: -101.5, maximum: -99 },
+          }
       responses:
         "200":
           description: Candidatos públicos cercanos, sin propuestas pendientes ni datos de autores
