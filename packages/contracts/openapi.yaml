@@ -22,6 +22,25 @@ paths:
                   status: { const: ok }
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+  /s/{id}:
+    get:
+      operationId: shareSpotPreview
+      summary: Vista HTML pública para compartir un puesto aprobado
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Vista HTML con metadatos Open Graph y enlace a la aplicación
+          content:
+            text/html:
+              schema: { type: string }
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /v1/taco-types:
     get:
       operationId: listTacoTypes
