@@ -48,7 +48,8 @@ export class ShareController {
         tacoNames: string | null;
       }>(
         `select s.id,s.name,s.neighborhood,s.last_verified_at as "lastVerifiedAt",
-          string_agg(coalesce(st.display_name,tt.name_es), ', ' order by tt.name_es) as "tacoNames"
+          string_agg(coalesce(st.display_name,tt.name_es), ', ' order by tt.name_es)
+            filter (where tt.id is not null) as "tacoNames"
          from app_private.spots s
          left join app_private.spot_tacos st on st.spot_id=s.id and st.status='approved'
          left join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active
