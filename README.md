@@ -1,23 +1,23 @@
 # Taco Hunt
 
-Monorepo para descubrir puestos de tacos y calificar un tipo de taco en un puesto específico de Monterrey.
+Monorepo for discovering taco stands and rating a specific taco type at a specific stand in Monterrey.
 
-La especificación funcional completa está en [docs/build-spec.md](docs/build-spec.md). La landing está en [apps/landing/index.html](apps/landing/index.html) y usa [apps/landing/taco-hunt-logo.svg](apps/landing/taco-hunt-logo.svg).
+The full functional specification is in [docs/build-spec.md](docs/build-spec.md). The landing page is at [apps/landing/index.html](apps/landing/index.html) and uses [apps/landing/taco-hunt-logo.svg](apps/landing/taco-hunt-logo.svg).
 
-## Conexiones preparadas
+## Connections in place
 
-- **GitHub:** repositorio público `aleiruiz/taco-hunt`, rama `main`.
-- **Supabase local:** CLI fijada como dependencia de desarrollo y configuración versionada en `supabase/`. La base, Auth y Storage locales corren en Docker.
-- **Supabase remoto y Google Cloud:** no se enlazaron todavía; requieren seleccionar/crear proyectos y autenticar las cuentas. No se creó infraestructura cloud ni se activó facturación.
-- **Expo y mapas:** se conectarán al construir `apps/mobile`; Android Maps requiere una clave restringida. La app no usará Places ni APIs de geocodificación/rutas.
+- **GitHub:** public repository `aleiruiz/taco-hunt`, `main` branch.
+- **Local Supabase:** CLI pinned as a dev dependency, with configuration versioned in `supabase/`. The local database, Auth, and Storage run in Docker.
+- **Remote Supabase and Google Cloud:** not linked yet; they require selecting/creating projects and authenticating the accounts. No cloud infrastructure was created and no billing was activated.
+- **Expo and maps:** will be connected when building `apps/mobile`; Android Maps requires a restricted key. The app will not use Places or geocoding/routing APIs.
 
-## Requisitos locales
+## Local requirements
 
-- Node.js 20.19.4 o superior (requisito de Expo SDK 57)
-- pnpm (versión fijada en `package.json`)
-- Docker Desktop iniciado
+- Node.js 20.19.4 or higher (Expo SDK 57 requirement)
+- pnpm (version pinned in `package.json`)
+- Docker Desktop running
 
-## Preparar el entorno
+## Set up the environment
 
 ```powershell
 pnpm install
@@ -26,25 +26,25 @@ pnpm db:start
 pnpm db:status
 ```
 
-`db:status` muestra la URL local de Auth y las claves para desarrollo. Copia únicamente la clave publicable a las variables `SUPABASE_PUBLISHABLE_KEY` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env`. Las claves/contraseñas privilegiadas son solo para el servidor y nunca se deben anteponer con `EXPO_PUBLIC_` ni publicar.
+`db:status` shows the local Auth URL and the keys for development. Copy only the publishable key into the `SUPABASE_PUBLISHABLE_KEY` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` variables in `.env`. Privileged keys/passwords are server-only and must never be prefixed with `EXPO_PUBLIC_` or published.
 
-`pnpm db:reset` aplica las migraciones desde cero y carga puestos ficticios de desarrollo. Para detener los servicios locales usa `pnpm db:stop`.
+`pnpm db:reset` applies migrations from scratch and loads fictional development stands. To stop local services use `pnpm db:stop`.
 
-## Fotos de reseñas
+## Review photos
 
-Las fotos se procesan y guardan en el bucket privado `review-photos`. Para habilitar la carga local, configura `SUPABASE_URL` y `SUPABASE_SECRET_KEY` en `.env` con la URL local y la clave `service_role` que muestra `pnpm db:status`. Estas credenciales son exclusivamente del servidor; nunca las incluyas en variables `EXPO_PUBLIC_`.
+Photos are processed and stored in the private `review-photos` bucket. To enable local uploads, set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in `.env` to the local URL and the `service_role` key shown by `pnpm db:status`. These credentials are server-only; never include them in `EXPO_PUBLIC_` variables.
 
-El API acepta una imagen de hasta 2 MB en `POST /v1/review-photos` como multipart (`file`), valida el contenido decodificado, elimina metadatos, corrige orientación y genera WebP de hasta 1200 px y 300 KB. Devuelve un ID de carga de un solo uso que se envía como `photoUploadId` al crear o editar una reseña; usar `null` en la edición quita la foto. La eliminación de reseñas quita primero la referencia de base de datos y luego intenta borrar el objeto.
+The API accepts an image up to 2 MB at `POST /v1/review-photos` as multipart (`file`), validates the decoded content, strips metadata, fixes orientation, and generates a WebP up to 1200 px and 300 KB. It returns a one-time-use upload ID that is sent as `photoUploadId` when creating or editing a review; using `null` on edit removes the photo. Deleting a review removes the database reference first, then attempts to delete the object.
 
-Las respuestas públicas nunca incluyen una URL directa de Storage. Para mostrar una imagen, solicita `GET /v1/media/:reviewId`; el endpoint solo genera una URL firmada si la reseña continúa visible y el puesto y tipo de taco están aprobados. La URL vence en cinco minutos; fotos ocultas o no disponibles responden 404.
+Public responses never include a direct Storage URL. To display an image, request `GET /v1/media/:reviewId`; the endpoint only issues a signed URL if the review is still visible and the stand and taco type are approved. The URL expires in five minutes; hidden or unavailable photos respond 404.
 
-Para revisar y limpiar cargas pendientes antiguas u objetos huérfanos, ejecuta `pnpm --filter @taco-hunt/api media:cleanup` en modo de vista previa. Para borrar los objetos listados, agrega `-- --delete`. El umbral predeterminado es 24 horas; se puede cambiar con `MEDIA_ORPHAN_AGE_HOURS` (1–8760). El comando necesita `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` o `SUPABASE_SERVICE_ROLE_KEY` del lado servidor.
+To review and clean up old pending uploads or orphaned objects, run `pnpm --filter @taco-hunt/api media:cleanup` in preview mode. To delete the listed objects, add `-- --delete`. The default threshold is 24 hours; it can be changed with `MEDIA_ORPHAN_AGE_HOURS` (1–8760). The command needs `DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` on the server side.
 
-## Ejecutar la demo
+## Run the demo
 
-## Calidad y formato
+## Quality and formatting
 
-Usa estos comandos desde la raíz antes de compartir cambios:
+Run these commands from the repository root before sharing changes:
 
 ```powershell
 pnpm lint
@@ -52,11 +52,11 @@ pnpm typecheck
 pnpm format:check
 ```
 
-`pnpm lint` aplica ESLint a la app Expo, la API y la landing. `pnpm typecheck` revisa los tipos de la API y la app móvil. Para dar formato a los archivos compatibles usa `pnpm format`; `pnpm format:check` solo informa si hay diferencias. La configuración común está en `eslint.config.js` y `.prettierrc.json`.
+`pnpm lint` applies ESLint to the Expo app, the API, and the landing page. `pnpm typecheck` checks types for the API and the mobile app. To format compatible files use `pnpm format`; `pnpm format:check` only reports whether there are differences. The shared configuration lives in `eslint.config.js` and `.prettierrc.json`.
 
-El procedimiento manual de punta a punta para iniciar Supabase, comprobar la API y abrir la exploración móvil está en [docs/e2e.md](docs/e2e.md). GitHub Actions ejecuta los comandos de calidad sin iniciar Docker ni requerir credenciales de Supabase.
+The manual end-to-end procedure for starting Supabase, checking the API, and opening mobile discovery is in [docs/e2e.md](docs/e2e.md). GitHub Actions runs the quality commands without starting Docker or requiring Supabase credentials.
 
-En tres terminales desde la raíz:
+In three terminals from the root:
 
 ```powershell
 $env:DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:55422/postgres"
@@ -72,24 +72,24 @@ $env:EXPO_PUBLIC_API_URL = "http://localhost:3001/v1"
 pnpm dev:mobile
 ```
 
-La landing local queda en `http://localhost:4173`; API: `http://localhost:3001/healthz`. Para emulador Android usa `http://10.0.2.2:3001/v1` como `EXPO_PUBLIC_API_URL`; en un teléfono físico, usa la IP LAN de esta computadora. En Expo Go, presiona `w` para previsualizar en el navegador.
+The local landing page runs at `http://localhost:4173`; the API at `http://localhost:3001/healthz`. For the Android emulator use `http://10.0.2.2:3001/v1` as `EXPO_PUBLIC_API_URL`; on a physical phone, use this computer's LAN IP. In Expo Go, press `w` to preview in the browser.
 
-## API desde móvil
+## API from mobile
 
-- Simulador iOS: normalmente puede acceder al API local con `localhost`.
-- Emulador Android: usa `10.0.2.2` como host de la computadora.
-- Teléfono físico: usa la IP LAN de la computadora, con ambos dispositivos en la misma red. Define ese valor solo en el `.env` local; no lo escribas en el código ni lo subas a Git.
+- iOS simulator: can usually reach the local API with `localhost`.
+- Android emulator: use `10.0.2.2` as the computer's host.
+- Physical phone: use the computer's LAN IP, with both devices on the same network. Set that value only in the local `.env`; never write it into code or commit it to Git.
 
-La IP depende de cada red. La API debe escuchar en `0.0.0.0`; el firewall local puede pedir permiso para conexiones privadas.
+The IP depends on each network. The API must listen on `0.0.0.0`; the local firewall may prompt for permission for private connections.
 
-## Primer inicio
+## First run
 
-- Si `pnpm db:start` no conecta, inicia Docker Desktop y confirma que el motor esté listo.
-- La configuración usa puertos 55420–55429 para evitar rangos reservados por Windows; si cambias alguno, ajusta las URLs del `.env` local.
-- Para un Android sin mapa, configura `EXPO_PUBLIC_ANDROID_MAPS_API_KEY` con una clave de Google Maps SDK para Android restringida por nombre de paquete y certificado de firma. Maps puede requerir facturación de Google Cloud; no actives Places.
-- Si el teléfono no llega al API, verifica que la API escuche en `0.0.0.0`, la URL LAN del `.env`, la red Wi-Fi y las reglas del firewall.
-- Los mensajes de Auth del stack local se capturan en el servidor de correo de prueba; no se envían a direcciones reales.
+- If `pnpm db:start` fails to connect, start Docker Desktop and confirm the engine is ready.
+- The configuration uses ports 55420–55429 to avoid ranges reserved by Windows; if you change one, adjust the local `.env` URLs.
+- For Android without a map, set `EXPO_PUBLIC_ANDROID_MAPS_API_KEY` to a Google Maps SDK for Android key restricted by package name and signing certificate. Maps may require Google Cloud billing; do not enable Places.
+- If the phone can't reach the API, check that the API listens on `0.0.0.0`, the LAN URL in `.env`, the Wi-Fi network, and the firewall rules.
+- Auth messages from the local stack are captured by the test mail server; they are not sent to real addresses.
 
-## Más información
+## More information
 
-Consulta `docs/build-spec.md` para la arquitectura, modelo de datos, API, seguridad, importación con procedencia y receta de despliegue.
+See `docs/build-spec.md` for architecture, data model, API, security, provenance-based import, and the deployment recipe.

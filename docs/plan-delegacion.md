@@ -1,81 +1,81 @@
-# Plan de delegación de Taco Hunt
+# Taco Hunt Delegation Plan
 
-Este tablero sigue la especificación de docs/build-spec.md y el estado actual del repositorio. La landing, el esquema inicial, las lecturas básicas del API y las pantallas móviles de lista y detalle ya existen. El túnel ngrok es una vista temporal de la landing, no un despliegue de producción.
+This board follows the specification in docs/build-spec.md and the repository's current state. The landing page, the initial schema, basic API reads, and the mobile list/detail screens already exist. The ngrok tunnel is a temporary view of the landing page, not a production deployment.
 
-## Regla de bloqueo
+## Blocking rule
 
-- Una tarea queda **libre** cuando todas sus dependencias están cerradas y su contrato de entrada está acordado.
-- Cada trabajador es una tarea/sesión independiente de Codex, con historial y worktree propios; no se delega como subagente del hilo del orquestador. Cada trabajador modifica su área; la coordinación integra package.json compartidos, pnpm-lock.yaml, rutas raíz y migraciones que afectan a varios módulos.
-- T00 fija una base versionada y el contrato actual de lectura. Después pueden trabajar tres agentes en paralelo: T01, T02 y T03. La coordinación puede avanzar T04.
-- **Cierre final:** T14 y T15 permanecen bloqueadas hasta que T01–T13 estén cerradas. T16 requiere además las entradas externas de lanzamiento. Que una tarea esté libre significa que puede comenzar; para abrir el cierre final debe estar terminada.
+- A task becomes **free** when all its dependencies are closed and its input contract is agreed.
+- Each worker is an independent Codex task/session, with its own history and worktree; it is not delegated as a subagent of the orchestrator's thread. Each worker modifies its own area; coordination integrates shared package.json files, pnpm-lock.yaml, root routes, and migrations that affect multiple modules.
+- T00 sets a versioned baseline and the current read contract. After that, three agents can work in parallel: T01, T02, and T03. Coordination can advance T04.
+- **Final closure:** T14 stays blocked until T01–T13 are closed and must cover data from T18–T20. T15 stays blocked until T14 and T17–T24 are closed — T24 (Maps/Places cost and security controls) is the candidate most at risk of lagging and should be assigned as soon as T17 and T21 close. T16 additionally requires the external launch inputs. A task being free means it can start; opening the final closure requires it to be finished.
 
-## P0: quitar los bloqueos que impiden delegar
+## P0: remove the blockers preventing delegation
 
-| ID  | Tarea y resultado esperado                                                                                                                                                                     | Bloqueada por | Área principal                     | Estado  |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------- | ------- |
-| T00 | Revisar y versionar la base actual; fijar las formas de respuesta y errores del API; asignar propietarios de archivos y preparar ramas de trabajo.                                             | Ninguna       | Coordinación, raíz del repositorio | Cerrada |
-| T01 | Consolidar Supabase local: migraciones, permisos del rol de API, restricciones y diez puestos ficticios reproducibles.                                                                         | T00           | supabase/                          | Libre   |
-| T02 | Adaptar el API a NestJS con Fastify, crear paquetes de contratos y OpenAPI, y fijar validación y errores comunes. La especificación exige esa arquitectura; el API actual usa Fastify directo. | T00           | apps/api/ y packages/contracts/    | Libre   |
+| ID  | Task and expected outcome                                                                                                                                                                     | Blocked by | Main area                          | Status  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------- | ------- |
+| T00 | Review and version the current baseline; fix the API's response and error shapes; assign file owners and prepare work branches.                                                              | None       | Coordination, repo root             | Closed  |
+| T01 | Consolidate local Supabase: migrations, API role permissions, constraints, and ten reproducible fictional stands.                                                                            | T00        | supabase/                           | Free    |
+| T02 | Adapt the API to NestJS with Fastify, create contracts and OpenAPI packages, and fix common validation and errors. The spec requires this architecture; the current API uses Fastify directly. | T00        | apps/api/ and packages/contracts/   | Free    |
 
-## P1: primera tanda paralela de producto
+## P1: first parallel product wave
 
-| ID  | Tarea y resultado esperado                                                                                                                                                                                     | Bloqueada por | Área principal                             | Estado                                                       |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ | ------------------------------------------------------------ |
-| T03 | Completar exploración móvil: búsqueda, filtro por taco, mapa/lista, ubicación solo al pedirla, selección manual de zona, detalle y estados sin conexión. Puede usar adaptadores de datos mientras T05 termina. | T00           | apps/mobile/app/ y src/features/discovery/ | Libre                                                        |
-| T04 | Añadir comandos de lint y tipos, CI reproducible, y documentar el primer arranque. La coordinación integra los cambios compartidos; la creación o ejecución de pruebas queda pendiente de petición expresa.    | T00           | .github/, raíz y docs/                     | Parcial: PR #4 integrado; follow-up listo para CI y guía E2E |
-| T05 | Completar lecturas públicas: paginación estable, límites de zona, filtros, reseñas visibles y datos de fiabilidad; solo devolver puestos aprobados.                                                            | T01 y T02     | apps/api/src/spots/ y reviews/lecturas     | Bloqueada                                                    |
-| T06 | Implementar identidad del servidor: JWT verificado, perfiles, rol de administrador, bloqueos, límites de solicitudes y separación de claves.                                                                   | T01 y T02     | apps/api/src/auth/ y profiles/             | Bloqueada                                                    |
-| T07 | Implementar registro, acceso, recuperación, sesión y ajustes en móvil con Supabase Auth.                                                                                                                       | T03 y T06     | apps/mobile/src/auth/ y rutas de acceso    | Bloqueada                                                    |
+| ID  | Task and expected outcome                                                                                                                                                                                      | Blocked by     | Main area                                   | Status                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | -------------------------------------------- | -------------------------------------------------------------- |
+| T03 | Complete mobile discovery: search, filter by taco type, map/list, location only on request, manual area selection, detail, and offline states. May use data adapters while T05 finishes.                     | T00            | apps/mobile/app/ and src/features/discovery/ | Free                                                            |
+| T04 | Add lint and type commands, reproducible CI, and document the first run. Coordination integrates shared changes; creating or running tests is pending an explicit request.                                   | T00            | .github/, root, and docs/                    | Partial: PR #4 integrated; follow-up ready for CI and E2E guide |
+| T05 | Complete public reads: stable pagination, area bounds, filters, visible reviews, and reliability data; only return approved stands.                                                                           | T01 and T02    | apps/api/src/spots/ and reviews/reads        | Blocked                                                         |
+| T06 | Implement server identity: verified JWT, profiles, admin role, blocks, rate limits, and key separation.                                                                                                       | T01 and T02    | apps/api/src/auth/ and profiles/             | Blocked                                                         |
+| T07 | Implement sign-up, sign-in, recovery, session, and settings on mobile with Supabase Auth.                                                                                                                      | T03 and T06    | apps/mobile/src/auth/ and access routes      | Blocked                                                         |
 
-T05 y T06 pueden correr en paralelo una vez cerradas T01 y T02; sus módulos y rutas tienen propietarios distintos. T07 comienza al cerrar T06, para integrar la sesión móvil contra la verificación del servidor.
+T05 and T06 can run in parallel once T01 and T02 are closed; their modules and routes have separate owners. T07 starts once T06 closes, to integrate the mobile session against server verification.
 
-## P2: contribuciones y funciones complementarias
+## P2: contributions and complementary features
 
-| ID  | Tarea y resultado esperado                                                                                                                                                            | Bloqueada por  | Área principal                                         | Estado    |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------ | --------- |
-| T08 | API de reseñas y favoritos: puntuaciones, edición/borrado propio, unicidad, historial y operaciones idempotentes.                                                                     | T05 y T06      | apps/api/src/reviews/ y favorites/                     | Bloqueada |
-| T09 | Propuestas, reportes y moderación: duplicados cercanos, cola privada, acciones de administrador y auditoría.                                                                          | T05 y T06      | apps/api/src/proposals/, reports/ y admin/             | Bloqueada |
-| T10 | Pantallas móviles para calificar, guardar, proponer, reportar y consultar Mis tacos. Usar los contratos fijados y datos simulados hasta integrar T08 y T09.                           | T02, T03 y T07 | apps/mobile/src/features/contributions/ y rutas nuevas | Bloqueada |
-| T11 | Foto por reseña: validación, eliminación de metadatos, compresión, almacenamiento privado, asociación única y limpieza de cargas huérfanas.                                           | T06 y T08      | apps/api/src/media/ y Storage                          | Bloqueada |
-| T12 | Página HTTPS para compartir un puesto, enlaces hacia la app y documentos de privacidad y moderación. Mantener la landing actual y preparar metadatos finales para un dominio estable. | T03 y T05      | apps/api/src/share/ y docs/                            | Bloqueada |
-| T13 | Importación CSV a candidatos privados, detección de duplicados, revisión y documentación de procedencia; ninguna publicación automática.                                              | T01 y T09      | db/scripts/ o supabase/scripts/                        | Bloqueada |
+| ID  | Task and expected outcome                                                                                                                                                            | Blocked by     | Main area                                               | Status    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------- | --------- |
+| T08 | Reviews and favorites API: scores, own edit/delete, uniqueness, history, and idempotent operations.                                                                                   | T05 and T06    | apps/api/src/reviews/ and favorites/                        | Blocked   |
+| T09 | Proposals, reports, and moderation: nearby duplicates, private queue, admin actions, and audit.                                                                                        | T05 and T06    | apps/api/src/proposals/, reports/, and admin/               | Blocked   |
+| T10 | Mobile screens for rating, saving, proposing, reporting, and viewing My Tacos. Use the fixed contracts and mocked data until T08 and T09 integrate.                                    | T02, T03, and T07 | apps/mobile/src/features/contributions/ and new routes  | Blocked   |
+| T11 | Photo per review: validation, metadata stripping, compression, private storage, unique association, and orphaned-upload cleanup.                                                      | T06 and T08    | apps/api/src/media/ and Storage                             | Blocked   |
+| T12 | HTTPS page for sharing a stand, links to the app, and privacy and moderation documents. Keep the current landing page and prepare final metadata for a stable domain.                 | T03 and T05    | apps/api/src/share/ and docs/                               | Blocked   |
+| T13 | CSV import into private candidates, duplicate detection, review, and provenance documentation; no automatic publishing.                                                                | T01 and T09    | db/scripts/ or supabase/scripts/                            | Blocked   |
 
-T08, T09 y T10 pueden avanzar en paralelo con contratos congelados. T11, T12 y T13 forman otra tanda paralela cuando se liberen sus dependencias.
+T08, T09, and T10 can advance in parallel with frozen contracts. T11, T12, and T13 form another parallel wave once their dependencies are released.
 
-## P2.5: descubrimiento, propuestas y moderación de taquerías
+## P2.5: taquería discovery, proposals, and moderation
 
-| ID  | Tarea y resultado esperado                                                                                                                                                       | Bloqueada por | Área principal                      | Estado    |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------- | --------- |
-| T17 | Descubrimiento administrativo de candidatos con Google Places para Monterrey; conservar `place_id` y metadatos de descubrimiento, sin importar calificaciones, reseñas ni fotos. | T02, T06      | apps/api/src/places/ y moderación   | Bloqueada |
-| T18 | Propuestas de taquerías desde autocomplete o captura manual; el autor ve sus propuestas pendientes y ningún registro recibe calificación Taco Hunt antes de aprobarse.           | T02, T03, T06 | apps/api/src/proposals/ y móvil     | Bloqueada |
-| T19 | Panel de moderación para propuestas, reportes, fotos y duplicados, con aprobar, rechazar, solicitar cambios, fusionar y ocultar, además de auditoría.                            | T06, T09      | apps/mobile/ y apps/api/src/admin/  | Bloqueada |
-| T20 | Flujo de aprobación y procedencia: convertir una propuesta en puesto Taco Hunt, registrar fuente, verificación, moderador y campos propios.                                      | T18, T19      | apps/api/src/spots/ y admin         | Bloqueada |
-| T21 | Autocomplete de taquerías, colonias, municipios y direcciones con atribución de Google y captura manual alternativa.                                                             | T03, T17      | apps/mobile/src/features/discovery/ | Bloqueada |
-| T22 | Enlaces de direcciones hacia Google Maps o la aplicación de mapas instalada, sin almacenar rutas.                                                                                | T03, T20      | apps/mobile/                        | Bloqueada |
-| T23 | Revisión periódica de candidatos por `place_id`; enviar cambios o cierres a moderación sin sobrescribir datos Taco Hunt silenciosamente.                                         | T17, T20      | apps/api/src/places/ y jobs         | Bloqueada |
-| T24 | Controles de coste y seguridad de Maps/Places: claves restringidas, cuotas, deduplicación, alertas y apagado de emergencia.                                                      | T17, T21      | infraestructura y docs              | Bloqueada |
+| ID  | Task and expected outcome                                                                                                                                                        | Blocked by | Main area                            | Status    |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------- | --------- |
+| T17 | Admin candidate discovery with Google Places for Monterrey; keep `place_id` and discovery metadata, without importing ratings, reviews, or photos.                               | T02, T06   | apps/api/src/places/ and moderation    | Blocked   |
+| T18 | Taquería proposals from autocomplete or manual entry; the author sees their pending proposals, and no record gets a Taco Hunt rating before approval.                            | T02, T03, T06 | apps/api/src/proposals/ and mobile  | Blocked   |
+| T19 | Moderation panel for proposals, reports, photos, and duplicates, with approve, reject, request changes, merge, and hide, plus audit.                                             | T06, T09   | apps/mobile/ and apps/api/src/admin/   | Blocked   |
+| T20 | Approval and provenance flow: convert a proposal into a Taco Hunt stand, recording source, verification, moderator, and ownership fields.                                        | T18, T19   | apps/api/src/spots/ and admin          | Blocked   |
+| T21 | Autocomplete for taquerías, neighborhoods, municipalities, and addresses with Google attribution and an alternative manual-entry option.                                          | T03, T17   | apps/mobile/src/features/discovery/    | Blocked   |
+| T22 | Address links to Google Maps or the installed maps app, without storing routes.                                                                                                   | T03, T20   | apps/mobile/                           | Blocked   |
+| T23 | Periodic review of candidates by `place_id`; send changes or closures to moderation without silently overwriting Taco Hunt data.                                                  | T17, T20   | apps/api/src/places/ and jobs          | Blocked   |
+| T24 | Maps/Places cost and safety controls: restricted keys, quotas, deduplication, alerts, and an emergency shutoff.                                                                   | T17, T21   | infrastructure and docs                | Blocked   |
 
-## P3: cierre deliberadamente bloqueado hasta el final
+## P3: deliberately blocked until the end
 
-| ID  | Tarea y resultado esperado                                                                                                                                                                          | Bloqueada por                                                                                   | Estado          |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------- |
-| T14 | Cerrar el ciclo de la cuenta: borrado seguro y reintentable, limpieza de fotos y datos privados, telemetría agregada y documentación final de privacidad.                                           | **Todas T01–T13 cerradas**                                                                      | Bloqueada final |
-| T15 | Integración y aceptación completas: migraciones limpias y existentes, flujos de dos usuarios y administrador, privacidad de fotos, accesibilidad, dispositivos, CI, contenedor y guía reproducible. | **Todas T01–T14 cerradas** y E01/E02 para las pruebas físicas correspondientes                  | Bloqueada final |
-| T16 | Despliegue y publicación reales, con dominio y datos autorizados.                                                                                                                                   | **T15 cerrada** y E03/E04; requiere autorización del propietario para activar recursos o gastar | Bloqueada final |
+| ID  | Task and expected outcome                                                                                                                                                                          | Blocked by                                                                                       | Status          |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | --------------- |
+| T14 | Close the account lifecycle: safe and retryable deletion, cleanup of photos and private data (includes proposal/moderation/provenance data from T18–T20), aggregated telemetry, and final privacy documentation. | **All of T01–T13 closed; T18–T20 data covered**                                                    | Blocked final    |
+| T15 | Full integration and acceptance: clean and existing migrations, two-user and admin flows, photo privacy, accessibility, devices, CI, container, and a reproducible guide.                           | **T14 closed; T17–T24 closed** and E01/E02 for the corresponding physical passes                    | Blocked final    |
+| T16 | Real deployment and publishing, with domain and authorized data.                                                                                                                                     | **T15 closed** and E03/E04; requires owner authorization to activate resources or spend             | Blocked final    |
 
-## Entradas externas: no bloquean el código independiente
+## External inputs: do not block independent code
 
-| ID  | Entrada                                                                                             | Bloquea                     |
-| --- | --------------------------------------------------------------------------------------------------- | --------------------------- |
-| E01 | Iniciar sesión en Expo CLI y Expo Go del iPhone con la misma cuenta.                                | Pase físico iOS de T15      |
-| E02 | Clave restringida de Google Maps SDK para Android y dispositivo de prueba.                          | Pase de mapa Android de T15 |
-| E03 | Cuentas y configuración de Supabase remoto, Google Cloud, secretos, dominio y aprobación de costos. | T16                         |
-| E04 | Nombre público validado, puestos y fotos con derechos confirmados, cuentas de las tiendas.          | T16                         |
+| ID  | Input                                                                                                | Blocks                      |
+| --- | ----------------------------------------------------------------------------------------------------- | ---------------------------- |
+| E01 | Sign in to Expo CLI and Expo Go on the iPhone with the same account.                                  | T15's physical iOS pass      |
+| E02 | Restricted Google Maps SDK for Android key and a test device.                                         | T15's Android map pass       |
+| E03 | Remote Supabase and Google Cloud accounts and configuration, secrets, domain, and cost approval.       | T16                          |
+| E04 | Validated public name, stands and photos with confirmed rights, store accounts.                        | T16                          |
 
-## Orden de liberación
+## Release order
 
-1. Coordinación cierra T00.
-2. Primera ola: agentes en T01, T02 y T03; coordinación en T04.
-3. Segunda ola: T05 y T06; después T07. Se liberan T08–T10 según sus dependencias.
-4. T11–T13 avanzan en paralelo cuando sus módulos de entrada estén cerrados.
-5. Se abre T14 solo con T01–T13 cerradas, luego T15 y finalmente T16.
+1. Coordination closes T00.
+2. First wave: agents on T01, T02, and T03; coordination on T04.
+3. Second wave: T05 and T06; then T07. T08–T10 are released according to their dependencies.
+4. T11–T13 advance in parallel once their input modules are closed.
+5. T14 opens only once T01–T13 are closed and T18–T20 data is covered; T15 additionally requires T17–T24 closed; finally T16.

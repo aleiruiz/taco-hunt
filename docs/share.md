@@ -1,7 +1,7 @@
-# Enlaces compartidos
+# Shared links
 
-El API publica una vista HTML pequeña para cada puesto aprobado en `GET /s/:spotId`. La página funciona sin la aplicación instalada e incluye el nombre, colonia y tipos de taco aprobados, además de metadatos Open Graph y un enlace `tacohunt://spot/:spotId` para abrir la aplicación.
+The API publishes a small HTML preview for each approved stand at `GET /s/:spotId`. The page works without the app installed and includes the name, neighborhood, and approved taco types, plus Open Graph metadata and a `tacohunt://spot/:spotId` link to open the app.
 
-Configura `PUBLIC_BASE_URL` con el origen HTTPS estable antes de desplegar, por ejemplo `https://tacohunt.example`. El valor solo se usa para `og:url`; no se deriva de la cabecera `Host`. En desarrollo se usa `https://taco-hunt.example` como marcador y la página sigue funcionando en el host local.
+Set `PUBLIC_BASE_URL` to the stable HTTPS origin before deploying, e.g. `https://tacohunt.example`. The value is only used for `og:url`; it is never derived from the `Host` header. In development, `https://taco-hunt.example` is used as a placeholder and the page still works on the local host.
 
-La consulta solo selecciona puestos con estado `approved` y tipos de taco aprobados. No se incluyen coordenadas del usuario, correo, notas privadas, reseñas ocultas, propuestas pendientes ni fotos privadas. Los enlaces universales de iOS y App Links de Android quedan pendientes hasta disponer de un dominio estable.
+The query only selects stands with `approved` status and approved taco types. User coordinates, email, private notes, hidden reviews, pending proposals, and private photos are never included. iOS Universal Links and Android App Links remain pending until a stable domain is available.

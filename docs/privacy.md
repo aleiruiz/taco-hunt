@@ -1,9 +1,9 @@
-# Privacidad de contribuciones y moderación
+# Privacy of contributions and moderation
 
-Taco Hunt usa el API como única vía de acceso a datos del producto. La aplicación móvil no recibe credenciales de base de datos ni consulta directamente las tablas privadas.
+Taco Hunt uses the API as the only path to product data. The mobile app never receives database credentials and never queries private tables directly.
 
-Los reportes son privados. El autor de un reporte puede recibir únicamente el identificador, destino, motivo, estado y fecha de su propia solicitud; no se publican su correo, nombre, nota interna ni identidad del moderador. La cola administrativa tampoco expone el identificador del reportante a clientes normales. Los reportes no ocultan contenido automáticamente y se aplican límites de escritura por usuario y dirección de red.
+Reports are private. A report's author can only receive the identifier, target, reason, status, and date of their own request; their email, name, internal note, and the moderator's identity are never published. The admin queue also does not expose the reporter's identifier to normal clients. Reports do not hide content automatically, and per-user and per-network-address write limits apply.
 
-Las propuestas pendientes son visibles para su autor y para administradores. Las sugerencias de duplicado solo consultan puestos aprobados dentro de 100 metros y devuelven nombre, colonia, coordenadas públicas, distancia y una clasificación de coincidencia. Nunca se incluyen propuestas pendientes, notas privadas o datos del usuario que propuso el puesto.
+Pending proposals are visible to their author and to admins. Duplicate suggestions only query approved stands within 100 meters and return name, neighborhood, public coordinates, distance, and a match classification. Pending proposals, private notes, or data about the user who proposed the stand are never included.
 
-No se guarda historial de ubicación del usuario. Las coordenadas de un puesto son datos del puesto y no deben confundirse con una ubicación personal. Los textos de reseñas no se envían a telemetría; la analítica debe conservar únicamente conteos agregados.
+No user location history is stored. A stand's coordinates are stand data and must not be confused with a personal location. Review text is never sent to telemetry; analytics must keep only aggregated counts.

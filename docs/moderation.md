@@ -1,15 +1,15 @@
-# Moderación, reportes y duplicados
+# Moderation, reports, and duplicates
 
-La API privada de moderación está disponible en `/v1/admin` y está protegida por el rol de perfil verificado. Un usuario no administrador recibe `403`; las colas y auditorías nunca son públicas.
+The private moderation API is available at `/v1/admin` and is protected by the verified profile role. A non-admin user gets `403`; queues and audit logs are never public.
 
-Las colas están disponibles con `GET /v1/admin/queue?kind=spots|tacos|reports|photos|duplicates`. Cada mutación se ejecuta en una transacción y agrega una fila inmutable a `app_private.moderation_audit`. El historial está disponible para administradores en `GET /v1/admin/audit`.
+Queues are available at `GET /v1/admin/queue?kind=spots|tacos|reports|photos|duplicates`. Every mutation runs in a transaction and appends an immutable row to `app_private.moderation_audit`. History is available to admins at `GET /v1/admin/audit`.
 
-Las acciones incluyen aprobar o rechazar propuestas, solicitar cambios, cerrar reportes, ocultar o mostrar reseñas, eliminar la referencia de una foto y fusionar un duplicado pendiente con un puesto canónico aprobado. Una fusión solo rechaza el duplicado pendiente; no sobrescribe el puesto canónico ni mueve contenido de usuarios silenciosamente.
+Actions include approving or rejecting proposals, requesting changes, closing reports, hiding or unhiding reviews, removing a photo's reference, and merging a pending duplicate into an approved canonical stand. A merge only rejects the pending duplicate; it never overwrites the canonical stand or silently moves user content.
 
-El panel móvil de moderación está disponible desde ajustes de una cuenta autenticada. El API sigue siendo la frontera de autorización, por lo que un usuario normal no puede revelar datos de la cola.
+The mobile moderation panel is available from an authenticated account's settings. The API remains the authorization boundary, so a normal user cannot expose queue data.
 
-Los reportes aceptan solo los motivos `inaccurate`, `abusive`, `spam`, `closed` y `other`, con una nota opcional de hasta 500 caracteres. Cada usuario puede mantener un solo reporte abierto por contenido. Crear un reporte valida que el destino exista, pero no revela información privada del destino ni cambia su visibilidad.
+Reports accept only the reasons `inaccurate`, `abusive`, `spam`, `closed`, and `other`, with an optional note up to 500 characters. Each user can keep only one open report per piece of content. Creating a report validates that the target exists, but does not reveal private information about the target or change its visibility.
 
-La cola administrativa se consulta con `/v1/admin/queue?kind=reports`. Las acciones de moderación requieren un perfil con rol `admin`, quedan registradas en `moderation_audit` y no deben copiar la nota del reportante a una respuesta pública.
+The admin queue is queried with `/v1/admin/queue?kind=reports`. Moderation actions require a profile with the `admin` role, are logged in `moderation_audit`, and must never copy the reporter's note into a public response.
 
-La comprobación de duplicados usa nombre normalizado (minúsculas, sin acentos y espacios compactados) y distancia Haversine. `/v1/admin/duplicate-candidates` permite a un moderador revisar un nombre y pin antes de aprobar una propuesta. Las propuestas también ejecutan esta comprobación al crearse: una coincidencia de nombre dentro de 100 metros produce `409`; candidatos cercanos no bloquean la propuesta, pero se devuelven para revisión. No se publica ni fusiona automáticamente ningún registro.
+Duplicate checking uses a normalized name (lowercase, no accents, compacted whitespace) and Haversine distance. `/v1/admin/duplicate-candidates` lets a moderator review a name and pin before approving a proposal. Proposals also run this check on creation: a name match within 100 meters produces `409`; nearby candidates don't block the proposal but are returned for review. No record is published or merged automatically.
