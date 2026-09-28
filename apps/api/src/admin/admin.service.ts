@@ -28,8 +28,16 @@ export class AdminService {
         const { rows } = await this.pool.query(
           `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,
              s.longitude::float8 as longitude,s.proposal_note as note,s.created_by as "createdBy",
-             s.created_at as "createdAt"
-           from app_private.spots s where s.status='pending' order by s.created_at asc limit 100`,
+             s.created_at as "createdAt",
+             case when latest.action='request_changes' then 'changes_requested' else 'pending' end as status,
+             latest.internal_reason as "moderationReason"
+           from app_private.spots s
+           left join lateral (
+             select action,internal_reason from app_private.moderation_audit
+             where target_type='spot' and target_id=s.id
+             order by created_at desc,id desc limit 1
+           ) latest on true
+           where s.status='pending' order by s.created_at asc limit 100`,
         );
         return { items: rows };
       }

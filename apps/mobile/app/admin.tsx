@@ -118,7 +118,7 @@ export default function AdminScreen() {
                 ? `${String(item.reason ?? "Sin motivo")} · ${String(item.targetType ?? "contenido")}`
                 : tab === "photos"
                   ? `${String(item.tacoName ?? "Taco")} · ${String(item.spotName ?? "Puesto")}`
-                  : `${String(item.neighborhood ?? "Sin colonia")} · ${String(item.status ?? "pendiente")}`}
+                  : `${String(item.neighborhood ?? "Sin colonia")} · ${String(item.status ?? "pendiente")}${item.moderationReason ? ` · ${String(item.moderationReason)}` : ""}`}
           </Text>
           <View style={styles.actions}>
             {tab === "audit" ? (
