@@ -11,6 +11,11 @@ import type { Pool, PoolClient } from "pg";
 import { uuidSchema } from "@taco-hunt/contracts";
 import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
+import {
+  classifyDuplicate,
+  duplicateCandidateSql,
+  type DuplicateCandidate,
+} from "../proposals/duplicate-detector.js";
 
 export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
 type ModerationAction =
@@ -33,6 +38,7 @@ export class AdminService {
 
   constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
 
+  /** Returns up to 100 moderation items; report items omit the reporter's identity. */
   async queue(kind: QueueKind) {
     try {
       if (kind === "spots") {
@@ -106,7 +112,7 @@ export class AdminService {
       }
       const { rows } = await this.pool.query(
         `select r.id,r.target_type as "targetType",r.target_id as "targetId",r.reason,r.note,
-           r.reporter_id as "reporterId",r.created_at as "createdAt",
+           r.created_at as "createdAt",
            case when r.target_type='spot' then s.name else st.name end as "targetName"
          from app_private.reports r
          left join app_private.spots s on r.target_type='spot' and s.id=r.target_id
@@ -119,6 +125,33 @@ export class AdminService {
       return { items: rows };
     } catch (error) {
       this.fail("Moderation queue query failed", error);
+    }
+  }
+
+  /**
+   * Returns up to ten approved spots within 100 meters, classified by normalized name.
+   * @param name - Proposed spot name to compare with existing names.
+   * @param latitude - Search center latitude in degrees.
+   * @param longitude - Search center longitude in degrees.
+   * @throws {ServiceUnavailableException} If the database query fails.
+   */
+  async findDuplicates(
+    name: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<DuplicateCandidate[]> {
+    try {
+      const { rows } = await this.pool.query(duplicateCandidateSql(), [
+        normalizeName(name),
+        latitude,
+        longitude,
+      ]);
+      return rows.map((candidate) => ({
+        ...candidate,
+        match: classifyDuplicate(name, candidate.name),
+      }));
+    } catch (error) {
+      this.fail("Duplicate candidate query failed", error);
     }
   }
 

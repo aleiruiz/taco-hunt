@@ -12,6 +12,7 @@ import { ProposalsModule } from "./proposals/proposals.module.js";
 import { ReportsModule } from "./reports/reports.module.js";
 import { AdminModule } from "./admin/admin.module.js";
 import { PlacesModule } from "./places/places.module.js";
+import { ShareModule } from "./share/share.module.js";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PlacesModule } from "./places/places.module.js";
     ReportsModule,
     AdminModule,
     PlacesModule,
+    ShareModule,
   ],
   controllers: [HealthController, SpotsController, ReviewsController, FavoritesController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

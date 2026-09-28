@@ -1,5 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
+import { RequestMethod } from "@nestjs/common";
 import "reflect-metadata";
 import { AppModule } from "./app.module.js";
 import multipart from "@fastify/multipart";
@@ -18,6 +19,7 @@ function getTrustProxyHops(): number | false {
   return hops === 0 ? false : hops;
 }
 
+/** Starts the API with multipart uploads, CORS, and unprefixed health and share routes. */
 async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3001);
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -30,7 +32,9 @@ async function bootstrap(): Promise<void> {
   });
 
   app.enableCors({ origin: true });
-  app.setGlobalPrefix("v1", { exclude: ["healthz"] });
+  app.setGlobalPrefix("v1", {
+    exclude: ["healthz", { path: "s/:id", method: RequestMethod.GET }],
+  });
   app.enableShutdownHooks();
   await app.listen(port, "0.0.0.0");
 }
