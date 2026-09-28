@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
 
@@ -69,12 +69,15 @@ export default function SpotScreen() {
   useEffect(() => {
     void load();
   }, [load]);
-  useEffect(() => {
-    if (!session || !id) return;
-    void listFavorites(session)
-      .then(({ items }) => setFavoriteState(items.some((item) => item.id === id)))
-      .catch(() => undefined);
-  }, [id, session]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!session || !id) return undefined;
+      void listFavorites(session)
+        .then(({ items }) => setFavoriteState(items.some((item) => item.id === id)))
+        .catch(() => undefined);
+      return undefined;
+    }, [id, session]),
+  );
   async function toggleFavorite() {
     if (!session) {
       router.push("/sign-in");

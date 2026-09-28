@@ -95,10 +95,17 @@ async function request<T>(path: string, session: Session, init?: RequestInit): P
 }
 
 export async function listOwnReviews(session: Session) {
-  return request<{ items: OwnReview[]; nextCursor: string | null }>(
-    "/me/reviews?limit=50",
-    session,
-  );
+  const items: OwnReview[] = [];
+  let cursor: string | null = null;
+  do {
+    const page: { items: OwnReview[]; nextCursor: string | null } = await request(
+      `/me/reviews?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      session,
+    );
+    items.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+  return { items, nextCursor: null };
 }
 
 export async function createReview(session: Session, input: ReviewInput) {
@@ -117,10 +124,17 @@ export async function deleteReview(session: Session, id: string) {
 }
 
 export async function listFavorites(session: Session) {
-  return request<{ items: Favorite[]; nextCursor: string | null }>(
-    "/me/favorites?limit=50",
-    session,
-  );
+  const items: Favorite[] = [];
+  let cursor: string | null = null;
+  do {
+    const page: { items: Favorite[]; nextCursor: string | null } = await request(
+      `/me/favorites?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      session,
+    );
+    items.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+  return { items, nextCursor: null };
 }
 
 export async function setFavorite(session: Session, spotId: string, favorite: boolean) {
