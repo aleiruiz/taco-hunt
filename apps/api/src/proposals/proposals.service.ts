@@ -56,8 +56,8 @@ export class ProposalsService {
 
       const { rows } = await this.pool.query(
         `insert into app_private.spots
-          (name,normalized_name,neighborhood,latitude,longitude,status,created_by,source_type,proposal_note)
-         values ($1,$2,$3,$4,$5,'pending',$6,'user',$7)
+          (name,normalized_name,neighborhood,latitude,longitude,status,created_by,source_type,source_ref,proposal_note)
+         values ($1,$2,$3,$4,$5,'pending',$6,'user',$7,$8)
          returning id,name,neighborhood,latitude::float8 as latitude,
            longitude::float8 as longitude,status,created_at as "createdAt"`,
         [
@@ -67,6 +67,7 @@ export class ProposalsService {
           input.latitude,
           input.longitude,
           profile.id,
+          input.sourceRef ? `${input.source}:${input.sourceRef}` : `user:${input.source}`,
           input.note ?? null,
         ],
       );

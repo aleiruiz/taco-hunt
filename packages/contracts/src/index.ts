@@ -216,13 +216,20 @@ export const favoritePageSchema = z.object({
   nextCursor: cursorTokenSchema.nullable(),
 });
 export type FavoritePage = z.infer<typeof favoritePageSchema>;
-export const spotProposalSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  neighborhood: z.string().trim().min(2).max(120),
-  latitude: z.number().min(25).max(27),
-  longitude: z.number().min(-101.5).max(-99),
-  note: z.string().max(500).optional(),
-});
+export const spotProposalSourceSchema = z.enum(["manual", "autocomplete"]);
+export type SpotProposalSource = z.infer<typeof spotProposalSourceSchema>;
+
+export const spotProposalSchema = z
+  .object({
+    name: z.string().trim().min(2).max(120),
+    neighborhood: z.string().trim().min(2).max(120),
+    latitude: z.number().min(25).max(27),
+    longitude: z.number().min(-101.5).max(-99),
+    note: z.string().max(500).optional(),
+    source: spotProposalSourceSchema.default("manual"),
+    sourceRef: z.string().trim().min(1).max(200).optional(),
+  })
+  .strict();
 export const tacoProposalSchema = z.object({
   spotId: uuidSchema,
   tacoTypeId: uuidSchema,
