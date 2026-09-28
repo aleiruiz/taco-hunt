@@ -1,11 +1,11 @@
 # Taco Hunt Orchestration
 
-The orchestrator operates in the main Codex task. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. Workers are Codex tasks in separate worktrees of the same repository. The limit is **three active workers**; coordination in the main task does not use one of those slots.
+The orchestrator operates in the main Codex task. Every worker must be a separate, user-visible Codex task/session with its own history and worktree in the repository. Do not use subagents within the orchestrator task as implementation workers. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. The limit is **three active worker tasks**; coordination in the main task does not use one of those slots.
 
 ## Worker cycle
 
 1. Select the highest-priority available task whose dependencies are integrated into `main`. Prefer tasks with separate areas and stable contracts.
-2. Create a Codex task in a worktree based on the latest `main`, with its ID, scope, owned files, acceptance criteria, and check-in format. Record its `threadId` and branch.
+2. Create an independent Codex task/session in its own worktree based on the latest `main`, with its ID, scope, owned files, acceptance criteria, and check-in format. Record its `threadId`, worktree, and branch. Do not spawn a subagent in the orchestrator session for this work.
 3. Check progress at least every 30 minutes while a task is active. If there is a prolonged silence, ask for an update once and record a blocker if it persists; do not create a second task for the same ID.
 4. When the author opens a PR, confirm that CodeRabbit completed a review of the exact current PR head commit. A review completed before the latest push does not count. If the app is not installed or has not reviewed the current head, resolve that integration or report the blocker to the user.
 5. The orchestrator evaluates CodeRabbit findings against the specification, contracts, security, migrations, and compatibility with other branches. The author fixes important findings or documents why they do not apply. The orchestrator also checks CI and confirms that important findings are resolved.
