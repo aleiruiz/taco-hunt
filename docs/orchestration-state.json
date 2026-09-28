@@ -3,15 +3,43 @@
   "maxWorkers": 3,
   "baseBranch": "main",
   "workers": [
-    { "taskId": "T01", "threadId": "01a0e53a-bd84-7aa0-98c7-2b3c0c477664", "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/70a4/taco-hunt", "status": "review" },
-    { "taskId": "T02", "threadId": "01a0e53a-cbe7-7961-9641-b3af44e0074e", "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/3522/taco-hunt", "status": "changes_requested" },
-    { "taskId": "T03", "threadId": "01a0e53a-d6d2-7a03-9027-0e201ef25998", "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/cd89/taco-hunt", "status": "review", "reviewing": "T01" }
+    {
+      "taskId": "T01",
+      "threadId": "01a0e53a-bd84-7aa0-98c7-2b3c0c477664",
+      "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/70a4/taco-hunt",
+      "status": "review"
+    },
+    {
+      "taskId": "T02",
+      "threadId": "01a0e53a-cbe7-7961-9641-b3af44e0074e",
+      "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/3522/taco-hunt",
+      "status": "changes_requested"
+    },
+    {
+      "taskId": "T03",
+      "threadId": "01a0e53a-d6d2-7a03-9027-0e201ef25998",
+      "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/cd89/taco-hunt",
+      "status": "review",
+      "reviewing": "T01"
+    }
   ],
   "tasks": {
     "T00": { "status": "merged", "pr": null },
-    "T01": { "status": "review", "dependsOn": ["T00"], "pr": "https://github.com/aleiruiz/taco-hunt/pull/3" },
-    "T02": { "status": "changes_requested", "dependsOn": ["T00"], "pr": "https://github.com/aleiruiz/taco-hunt/pull/2" },
-    "T03": { "status": "review", "dependsOn": ["T00"], "pr": "https://github.com/aleiruiz/taco-hunt/pull/1" },
+    "T01": {
+      "status": "review",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/3"
+    },
+    "T02": {
+      "status": "changes_requested",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/2"
+    },
+    "T03": {
+      "status": "review",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/1"
+    },
     "T04": { "status": "ready", "dependsOn": ["T00"], "pr": null },
     "T05": { "status": "blocked", "dependsOn": ["T01", "T02"], "pr": null },
     "T06": { "status": "blocked", "dependsOn": ["T01", "T02"], "pr": null },
@@ -22,7 +50,25 @@
     "T11": { "status": "blocked", "dependsOn": ["T06", "T08"], "pr": null },
     "T12": { "status": "blocked", "dependsOn": ["T03", "T05"], "pr": null },
     "T13": { "status": "blocked", "dependsOn": ["T01", "T09"], "pr": null },
-    "T14": { "status": "blocked", "dependsOn": ["T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10", "T11", "T12", "T13"], "pr": null },
+    "T14": {
+      "status": "blocked",
+      "dependsOn": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13"
+      ],
+      "pr": null
+    },
     "T15": { "status": "blocked", "dependsOn": ["T14"], "external": ["E01", "E02"], "pr": null },
     "T16": { "status": "blocked", "dependsOn": ["T15"], "external": ["E03", "E04"], "pr": null }
   }

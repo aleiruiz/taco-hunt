@@ -44,6 +44,8 @@ pnpm format:check
 
 `pnpm lint` aplica ESLint a la app Expo, la API y la landing. `pnpm typecheck` revisa los tipos de la API y la app móvil. Para dar formato a los archivos compatibles usa `pnpm format`; `pnpm format:check` solo informa si hay diferencias. La configuración común está en `eslint.config.js` y `.prettierrc.json`.
 
+El procedimiento manual de punta a punta para iniciar Supabase, comprobar la API y abrir la exploración móvil está en [docs/e2e.md](docs/e2e.md). GitHub Actions ejecuta los comandos de calidad sin iniciar Docker ni requerir credenciales de Supabase.
+
 En tres terminales desde la raíz:
 
 ```powershell
