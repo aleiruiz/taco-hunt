@@ -6,7 +6,15 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "plugins": ["expo-router", ["expo-location", { "locationWhenInUsePermission": "Taco Hunt usa tu ubicación solo cuando tocas «Usar mi ubicación» para mostrar puestos cercanos." }]],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Taco Hunt usa tu ubicación solo cuando tocas «Usar mi ubicación» para mostrar puestos cercanos."
+        }
+      ]
+    ],
     "experiments": { "typedRoutes": true }
   }
 }
