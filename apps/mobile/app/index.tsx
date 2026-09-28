@@ -65,6 +65,7 @@ function clipAreaToApiCoverage(area: Area): Area | null {
 
 export default function ExploreScreen() {
   const [items, setItems] = useState<Spot[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [types, setTypes] = useState<TacoType[]>([]);
   const [query, setQuery] = useState("");
   const [activeType, setActiveType] = useState<TacoType | null>(null);
@@ -72,6 +73,7 @@ export default function ExploreScreen() {
   const [areaPicker, setAreaPicker] = useState(false);
   const [mode, setMode] = useState<"lista" | "mapa">("lista");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -88,9 +90,17 @@ export default function ExploreScreen() {
   }, []);
 
   const load = useCallback(
-    async (q = query, selectedType = activeType, selectedArea = area) => {
-      setLoading(true);
+    async (
+      q = query,
+      selectedType = activeType,
+      selectedArea = area,
+      cursor?: string,
+      append = false,
+    ) => {
+      if (append) setLoadingMore(true);
+      else setLoading(true);
       setError("");
+      if (!append) setNextCursor(null);
       try {
         const bounds = clipAreaToApiCoverage(selectedArea);
         if (!bounds) {
@@ -109,14 +119,17 @@ export default function ExploreScreen() {
         });
         if (q.trim()) params.set("q", q.trim());
         if (selectedType) params.set("tacoType", selectedType.slug);
+        if (cursor) params.set("cursor", cursor);
         const response = await fetch(`${API}/spots?${params}`);
         if (!response.ok) throw new Error("No se pudo cargar la búsqueda.");
         const page = (await response.json()) as Page;
-        setItems(page.items);
+        setItems((current) => (append ? [...current, ...page.items] : page.items));
+        setNextCursor(page.nextCursor);
       } catch {
         setError("No hay conexión con Taco Hunt. Puedes reintentar cuando vuelva la señal.");
       } finally {
-        setLoading(false);
+        if (append) setLoadingMore(false);
+        else setLoading(false);
       }
     },
     [activeType, area, query],
@@ -389,6 +402,20 @@ export default function ExploreScreen() {
             </View>
           ) : null
         }
+        ListFooterComponent={
+          !loading && !error && nextCursor ? (
+            <Pressable
+              accessibilityRole="button"
+              disabled={loadingMore}
+              onPress={() => void load(query, activeType, area, nextCursor, true)}
+              style={styles.loadMore}
+            >
+              <Text style={styles.loadMoreText}>
+                {loadingMore ? "Cargando…" : "Ver más puestos"}
+              </Text>
+            </Pressable>
+          ) : null
+        }
         renderItem={({ item }) => (
           <Link
             href={{ pathname: "/spot/[id]", params: { id: item.id } } as unknown as Href}
@@ -444,7 +471,7 @@ const styles = StyleSheet.create({
   locationButton: {
     backgroundColor: colors.green,
     borderRadius: 13,
-    minHeight: 43,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 13,
@@ -455,17 +482,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: 13,
-    minHeight: 43,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.paper,
   },
   areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 },
-  areaOptions: { marginTop: 9, maxHeight: 42 },
+  areaOptions: { marginTop: 9, maxHeight: 50 },
   areaChip: {
     marginRight: 8,
     paddingHorizontal: 13,
-    height: 36,
+    height: 44,
     justifyContent: "center",
     borderRadius: 18,
     backgroundColor: colors.paper,
@@ -480,10 +507,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 1.2,
   },
-  typeRow: { maxHeight: 42 },
+  typeRow: { maxHeight: 50 },
   typeChip: {
     paddingHorizontal: 14,
-    height: 36,
+    height: 44,
     justifyContent: "center",
     borderRadius: 18,
     backgroundColor: colors.paper,
@@ -511,7 +538,7 @@ const styles = StyleSheet.create({
   },
   modeButton: {
     flex: 1,
-    minHeight: 37,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 9,
@@ -590,4 +617,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
+  loadMore: {
+    minHeight: 44,
+    marginTop: 4,
+    marginBottom: 10,
+    borderRadius: 13,
+    backgroundColor: colors.green,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreText: { color: "white", fontWeight: "800", fontSize: 13 },
 });
