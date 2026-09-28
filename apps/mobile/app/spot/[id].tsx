@@ -1,16 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
+import { openDirections as openMapDirections } from "@/lib/directions";
 
 type Taco = {
   id: string;
@@ -94,10 +87,7 @@ export default function SpotScreen() {
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
   const openDirections = () => {
     if (!hasPin || !spot) return;
-    const label = encodeURIComponent(spot.name);
-    void Linking.openURL(
-      `https://www.google.com/maps/search/?api=1&query=${spot.latitude},${spot.longitude}(${label})`,
-    ).catch(() => undefined);
+    void openMapDirections({ latitude: spot.latitude!, longitude: spot.longitude! }, spot.name);
   };
 
   return (
@@ -161,6 +151,8 @@ export default function SpotScreen() {
                 </View>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`Cómo llegar a ${spot.name}`}
+                  accessibilityHint="Abre una aplicación de mapas para mostrar la ruta"
                   onPress={openDirections}
                   style={styles.directions}
                 >

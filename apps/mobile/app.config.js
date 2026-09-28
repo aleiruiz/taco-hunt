@@ -5,6 +5,13 @@ module.exports = () => ({
   android: {
     package: "com.aleiruiz.tacohunt",
   },
+  ios: {
+    ...(appJson.expo.ios ?? {}),
+    infoPlist: {
+      ...(appJson.expo.ios?.infoPlist ?? {}),
+      LSApplicationQueriesSchemes: ["comgooglemaps", "maps"],
+    },
+  },
   plugins: [
     ...appJson.expo.plugins,
     [
