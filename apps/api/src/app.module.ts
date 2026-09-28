@@ -11,9 +11,18 @@ import { MediaModule } from "./media/media.module.js";
 import { ProposalsModule } from "./proposals/proposals.module.js";
 import { ReportsModule } from "./reports/reports.module.js";
 import { AdminModule } from "./admin/admin.module.js";
+import { PlacesModule } from "./places/places.module.js";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, MediaModule, ProposalsModule, ReportsModule, AdminModule],
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    MediaModule,
+    ProposalsModule,
+    ReportsModule,
+    AdminModule,
+    PlacesModule,
+  ],
   controllers: [HealthController, SpotsController, ReviewsController, FavoritesController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })
