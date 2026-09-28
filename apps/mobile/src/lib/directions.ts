@@ -21,15 +21,14 @@ function encodedDestination({ latitude, longitude }: Coordinates) {
 }
 
 /** Opens turn-by-turn directions without sending or persisting a route. */
-export async function openDirections(coordinates: Coordinates, label: string): Promise<boolean> {
+export async function openDirections(coordinates: Coordinates): Promise<boolean> {
   if (!validCoordinates(coordinates)) return false;
 
   const destination = encodedDestination(coordinates);
-  const encodedLabel = encodeURIComponent(label);
   const fallback = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
   const candidates =
     Platform.OS === "android"
-      ? [`geo:${destination}?q=${destination}(${encodedLabel})`]
+      ? [`google.navigation:q=${destination}`]
       : [
           `comgooglemaps://?daddr=${destination}&directionsmode=driving`,
           `maps://?daddr=${destination}&dirflg=d`,
@@ -37,10 +36,8 @@ export async function openDirections(coordinates: Coordinates, label: string): P
 
   for (const url of candidates) {
     try {
-      if (await Linking.canOpenURL(url)) {
-        await Linking.openURL(url);
-        return true;
-      }
+      await Linking.openURL(url);
+      return true;
     } catch {
       // Try the next installed map application or the web fallback.
     }

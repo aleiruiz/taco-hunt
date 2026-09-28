@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
@@ -87,7 +95,16 @@ export default function SpotScreen() {
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
   const openDirections = () => {
     if (!hasPin || !spot) return;
-    void openMapDirections({ latitude: spot.latitude!, longitude: spot.longitude! }, spot.name);
+    void openMapDirections({ latitude: spot.latitude!, longitude: spot.longitude! }).then(
+      (opened) => {
+        if (!opened) {
+          Alert.alert(
+            "No se pudo abrir el mapa",
+            "No encontramos una aplicación de mapas disponible. Intenta de nuevo más tarde.",
+          );
+        }
+      },
+    );
   };
 
   return (
