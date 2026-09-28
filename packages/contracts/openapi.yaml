@@ -136,6 +136,47 @@ paths:
                   nextCursor: { type: [string, "null"], maxLength: 512 }
         "400": { $ref: "#/components/responses/ApiError" }
         "404": { $ref: "#/components/responses/ApiError" }
+  /v1/media/{id}:
+    get:
+      operationId: getVisibleReviewPhoto
+      summary: Emite una URL temporal para una foto de reseña visible
+      description: La revisión debe estar visible y asociada a un puesto y tipo de taco aprobados. Fotos ocultas o no disponibles responden 404.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: URL de lectura firmada con vigencia limitada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewPhotoAccess" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/review-photos:
+    post:
+      operationId: uploadReviewPhoto
+      summary: Valida, procesa y almacena una foto de reseña privada
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Foto procesada temporal y privada; el ID solo puede reclamarse una vez
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewPhotoUpload" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
   /v1/reviews:
     post:
       operationId: createReview
@@ -382,45 +423,35 @@ components:
         pricePaidMxn: { type: [number, "null"], minimum: 0 }
         body: { type: [string, "null"], maxLength: 500 }
         createdAt: { type: string, format: date-time }
+    ReviewPhotoAccess:
+      type: object
+      required: [url, expiresIn]
+      properties:
+        url: { type: string, format: uri }
+        expiresIn: { type: integer, const: 300 }
+    ReviewPhotoUpload:
+      type: object
+      required: [id, contentType, sizeBytes]
+      properties:
+        id: { type: string, format: uuid }
+        contentType: { const: image/webp }
+        sizeBytes: { type: integer, minimum: 1, maximum: 307200 }
     SpotSummary:
       type: object
-      required:
-        [
-          id,
-          name,
-          neighborhood,
-          latitude,
-          longitude,
-          photoUrl,
-          lastVerifiedAt,
-          reviewCount,
-          bestTaco,
-        ]
+      required: [id, name, neighborhood, latitude, longitude, lastVerifiedAt, reviewCount, bestTaco]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         neighborhood: { type: string }
         latitude: { type: number }
         longitude: { type: number }
-        photoUrl: { type: [string, "null"], format: uri }
         lastVerifiedAt: { type: [string, "null"], format: date-time }
         reviewCount: { type: integer, minimum: 0 }
         bestTaco: { oneOf: [{ $ref: "#/components/schemas/TacoSummary" }, { type: "null" }] }
     SpotDetail:
       type: object
       required:
-        [
-          id,
-          name,
-          neighborhood,
-          latitude,
-          longitude,
-          lastVerifiedAt,
-          photoUrl,
-          reviewCount,
-          tacos,
-          reviews,
-        ]
+        [id, name, neighborhood, latitude, longitude, lastVerifiedAt, reviewCount, tacos, reviews]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -428,7 +459,6 @@ components:
         latitude: { type: number }
         longitude: { type: number }
         lastVerifiedAt: { type: [string, "null"], format: date-time }
-        photoUrl: { type: [string, "null"], format: uri }
         reviewCount: { type: integer, minimum: 0 }
         tacos: { type: array, items: { $ref: "#/components/schemas/TacoSummary" } }
         reviews:
@@ -459,6 +489,7 @@ components:
         value: { type: integer, minimum: 1, maximum: 5 }
         pricePaidMxn: { type: [number, "null"], minimum: 0, maximum: 10000 }
         body: { type: [string, "null"], maxLength: 500 }
+        photoUploadId: { oneOf: [{ type: string, format: uuid }, { type: "null" }] }
     ReviewWriteResult:
       type: object
       required:

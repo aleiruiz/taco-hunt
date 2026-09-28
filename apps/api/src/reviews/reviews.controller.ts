@@ -29,6 +29,7 @@ import { AuthRequiredGuard } from "../auth/auth-required.guard.js";
 import { CurrentProfile } from "../auth/current-profile.decorator.js";
 import type { AuthenticatedProfile } from "../auth/auth.types.js";
 import { DATABASE_POOL } from "../database/database.module.js";
+import { MediaStorageService } from "../media/storage.service.js";
 
 const reviewCreateRequestSchema = reviewCreateSchema.strict();
 
@@ -55,7 +56,10 @@ function decodeCursor<T>(value: string | undefined, schema: z.ZodType<T>): T | u
 export class ReviewsController {
   private readonly logger = new Logger(ReviewsController.name);
 
-  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
+    private readonly media: MediaStorageService,
+  ) {}
 
   @Post("/reviews")
   async createReview(@CurrentProfile() profile: AuthenticatedProfile, @Body() body: unknown) {
@@ -66,10 +70,6 @@ export class ReviewsController {
         details: { issues: parsed.error.issues },
       });
     }
-    if (parsed.data.photoUploadId) {
-      throw new BadRequestException("La carga de fotos aún no está disponible");
-    }
-
     const client = await this.connect();
     try {
       await client.query("begin");
@@ -78,9 +78,16 @@ export class ReviewsController {
         [parsed.data.spotTacoId],
       );
       if (!target.rowCount) throw new NotFoundException("Taco no encontrado");
+      if (parsed.data.photoUploadId && !this.media.enabled) {
+        throw new ServiceUnavailableException("El almacenamiento de fotos no está configurado");
+      }
+
+      const upload = parsed.data.photoUploadId
+        ? await this.claimUpload(client, profile.id, parsed.data.photoUploadId)
+        : null;
 
       const result = await client.query(
-        'insert into app_private.reviews (user_id,spot_taco_id,tortilla,filling,salsa,value,price_paid_mxn,body) values ($1,$2,$3,$4,$5,$6,$7,$8) returning id,spot_taco_id as "spotTacoId",tortilla,filling,salsa,value,round((tortilla+filling+salsa+value)/4.0::numeric,1)::float8 as score,price_paid_mxn::float8 as "pricePaidMxn",body,status,created_at as "createdAt",updated_at as "updatedAt"',
+        'insert into app_private.reviews (user_id,spot_taco_id,tortilla,filling,salsa,value,price_paid_mxn,body,photo_key) values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id,spot_taco_id as "spotTacoId",tortilla,filling,salsa,value,round((tortilla+filling+salsa+value)/4.0::numeric,1)::float8 as score,price_paid_mxn::float8 as "pricePaidMxn",body,status,created_at as "createdAt",updated_at as "updatedAt"',
         [
           profile.id,
           parsed.data.spotTacoId,
@@ -90,8 +97,15 @@ export class ReviewsController {
           parsed.data.value,
           parsed.data.pricePaidMxn ?? null,
           parsed.data.body ?? null,
+          upload?.objectKey ?? null,
         ],
       );
+      if (upload) {
+        await client.query(
+          "update app_private.media_uploads set state='claimed',claimed_review_id=$1 where id=$2 and state='pending'",
+          [result.rows[0].id, upload.id],
+        );
+      }
       await client.query("commit");
       return result.rows[0];
     } catch (error) {
@@ -136,26 +150,74 @@ export class ReviewsController {
       value: "value",
       pricePaidMxn: "price_paid_mxn",
       body: "body",
+      photoUploadId: "photo_key",
     };
-    const values: unknown[] = [];
-    const updates = Object.entries(parsed.data).map(([key, value]) => {
-      values.push(value);
-      return `${fields[key]}=$${values.length}`;
-    });
-    updates.push("updated_at=now()");
-    values.push(id, profile.id);
-
+    const client = await this.connect();
     try {
-      const result = await this.pool.query(
+      await client.query("begin");
+      const current = await client.query(
+        "select photo_key from app_private.reviews where id=$1 and user_id=$2 for update",
+        [id, profile.id],
+      );
+      if (!current.rowCount) throw new NotFoundException("Reseña no encontrada");
+      if (parsed.data.photoUploadId && !this.media.enabled) {
+        throw new ServiceUnavailableException("El almacenamiento de fotos no está configurado");
+      }
+
+      let photoKey = current.rows[0].photo_key as string | null;
+      const oldPhotoKey = photoKey;
+      let upload: { id: string; objectKey: string } | null = null;
+      if (Object.hasOwn(parsed.data, "photoUploadId")) {
+        if (parsed.data.photoUploadId === null) photoKey = null;
+        else if (parsed.data.photoUploadId) {
+          upload = await this.claimUpload(client, profile.id, parsed.data.photoUploadId);
+          photoKey = upload.objectKey;
+        }
+      }
+
+      const values: unknown[] = [];
+      const updates: string[] = [];
+      for (const [key, value] of Object.entries(parsed.data)) {
+        if (key === "photoUploadId") continue;
+        values.push(value);
+        updates.push(`${fields[key]}=$${values.length}`);
+      }
+      if (Object.hasOwn(parsed.data, "photoUploadId")) {
+        values.push(photoKey);
+        updates.push(`photo_key=$${values.length}`);
+      }
+      updates.push("updated_at=now()");
+      values.push(id, profile.id);
+      const result = await client.query(
         `update app_private.reviews set ${updates.join(",")} where id=$${values.length - 1} and user_id=$${values.length} returning id,spot_taco_id as "spotTacoId",tortilla,filling,salsa,value,round((tortilla+filling+salsa+value)/4.0::numeric,1)::float8 as score,price_paid_mxn::float8 as "pricePaidMxn",body,status,created_at as "createdAt",updated_at as "updatedAt"`,
         values,
       );
-      if (!result.rowCount) throw new NotFoundException("Reseña no encontrada");
+      if (upload) {
+        await client.query(
+          "update app_private.media_uploads set state='claimed',claimed_review_id=$1 where id=$2 and state='pending'",
+          [id, upload.id],
+        );
+      }
+      if (oldPhotoKey && oldPhotoKey !== photoKey) {
+        await client.query(
+          "update app_private.media_uploads set state='deleted',claimed_review_id=null,created_at=now() where object_key=$1",
+          [oldPhotoKey],
+        );
+      }
+      await client.query("commit");
+      if (oldPhotoKey && oldPhotoKey !== photoKey) {
+        await this.deletePhotoObject(oldPhotoKey);
+      }
       return result.rows[0];
     } catch (error) {
+      await this.rollback(client);
       if (error instanceof NotFoundException) throw error;
+      if (error instanceof ConflictException) throw error;
+      if (error instanceof BadRequestException) throw error;
       this.logQueryFailure("Review update query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    } finally {
+      client.release();
     }
   }
 
@@ -163,15 +225,27 @@ export class ReviewsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteReview(@CurrentProfile() profile: AuthenticatedProfile, @Param("id") rawId: string) {
     const id = this.parseId(rawId);
+    const client = await this.connect();
     try {
-      // Ownership is part of the DELETE predicate, and an absent row is already in the desired state.
-      await this.pool.query("delete from app_private.reviews where id=$1 and user_id=$2", [
-        id,
-        profile.id,
-      ]);
+      await client.query("begin");
+      const row = await client.query(
+        "delete from app_private.reviews where id=$1 and user_id=$2 returning photo_key",
+        [id, profile.id],
+      );
+      await client.query("commit");
+      if (row.rows[0]?.photo_key) {
+        await this.pool.query(
+          "update app_private.media_uploads set state='deleted',claimed_review_id=null,created_at=now() where claimed_review_id=$1",
+          [id],
+        );
+        await this.deletePhotoObject(row.rows[0].photo_key);
+      }
     } catch (error) {
+      await this.rollback(client);
       this.logQueryFailure("Review delete query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    } finally {
+      client.release();
     }
   }
 
@@ -234,6 +308,29 @@ export class ReviewsController {
       await client.query("rollback");
     } catch (error) {
       this.logQueryFailure("Review transaction rollback failed", error);
+    }
+  }
+
+  private async claimUpload(
+    client: PoolClient,
+    ownerId: string,
+    uploadId: string,
+  ): Promise<{ id: string; objectKey: string }> {
+    const upload = await client.query<{ id: string; object_key: string }>(
+      "select id,object_key from app_private.media_uploads where id=$1 and owner_id=$2 and state='pending' for update",
+      [uploadId, ownerId],
+    );
+    if (!upload.rowCount) {
+      throw new ConflictException("La carga no existe, pertenece a otra cuenta o ya fue usada");
+    }
+    return { id: upload.rows[0].id, objectKey: upload.rows[0].object_key };
+  }
+
+  private async deletePhotoObject(objectKey: string): Promise<void> {
+    try {
+      await this.media.remove([objectKey]);
+    } catch (error) {
+      this.logger.error("Review photo cleanup failed; use pnpm media:cleanup to retry", error);
     }
   }
 

@@ -30,6 +30,16 @@ pnpm db:status
 
 `pnpm db:reset` aplica las migraciones desde cero y carga puestos ficticios de desarrollo. Para detener los servicios locales usa `pnpm db:stop`.
 
+## Fotos de reseñas
+
+Las fotos se procesan y guardan en el bucket privado `review-photos`. Para habilitar la carga local, configura `SUPABASE_URL` y `SUPABASE_SECRET_KEY` en `.env` con la URL local y la clave `service_role` que muestra `pnpm db:status`. Estas credenciales son exclusivamente del servidor; nunca las incluyas en variables `EXPO_PUBLIC_`.
+
+El API acepta una imagen de hasta 2 MB en `POST /v1/review-photos` como multipart (`file`), valida el contenido decodificado, elimina metadatos, corrige orientación y genera WebP de hasta 1200 px y 300 KB. Devuelve un ID de carga de un solo uso que se envía como `photoUploadId` al crear o editar una reseña; usar `null` en la edición quita la foto. La eliminación de reseñas quita primero la referencia de base de datos y luego intenta borrar el objeto.
+
+Las respuestas públicas nunca incluyen una URL directa de Storage. Para mostrar una imagen, solicita `GET /v1/media/:reviewId`; el endpoint solo genera una URL firmada si la reseña continúa visible y el puesto y tipo de taco están aprobados. La URL vence en cinco minutos; fotos ocultas o no disponibles responden 404.
+
+Para revisar y limpiar cargas pendientes antiguas u objetos huérfanos, ejecuta `pnpm --filter @taco-hunt/api media:cleanup` en modo de vista previa. Para borrar los objetos listados, agrega `-- --delete`. El umbral predeterminado es 24 horas; se puede cambiar con `MEDIA_ORPHAN_AGE_HOURS` (1–8760). El comando necesita `DATABASE_URL`, `SUPABASE_URL` y `SUPABASE_SECRET_KEY` o `SUPABASE_SERVICE_ROLE_KEY` del lado servidor.
+
 ## Ejecutar la demo
 
 ## Calidad y formato

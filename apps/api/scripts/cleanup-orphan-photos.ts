@@ -1,0 +1,104 @@
+import pg from "pg";
+import { createClient } from "@supabase/supabase-js";
+
+const { Pool } = pg;
+const pool = new Pool({ connectionString: required("DATABASE_URL"), max: 1 });
+const storage = createClient(required("SUPABASE_URL"), storageKey(), {
+  auth: { autoRefreshToken: false, persistSession: false },
+}).storage.from(process.env.REVIEW_PHOTOS_BUCKET?.trim() || "review-photos");
+const olderThanHours = Number(process.env.MEDIA_ORPHAN_AGE_HOURS ?? 24);
+const dryRun = !process.argv.includes("--delete");
+
+if (!Number.isFinite(olderThanHours) || olderThanHours < 1 || olderThanHours > 8760) {
+  throw new Error("MEDIA_ORPHAN_AGE_HOURS must be between 1 and 8760");
+}
+
+async function main(): Promise<void> {
+  const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+  const pending = await pool.query<{ object_key: string }>(
+    "select object_key from app_private.media_uploads where state in ('pending','deleted') and created_at < $1",
+    [cutoff],
+  );
+  const known = new Set(
+    (
+      await pool.query<{ object_key: string }>(
+        "select object_key from app_private.media_uploads where state = 'claimed'",
+      )
+    ).rows.map((row) => row.object_key),
+  );
+  const staleKeys = pending.rows.map((row) => row.object_key);
+  const staleSet = new Set(staleKeys);
+  const orphanKeys = await listObjects().then((keys) =>
+    keys.filter((key) => !known.has(key) && !staleSet.has(key)),
+  );
+  const removeKeys = [...staleKeys, ...orphanKeys];
+
+  console.log(
+    JSON.stringify(
+      {
+        mode: dryRun ? "dry-run" : "delete",
+        olderThan: cutoff.toISOString(),
+        stalePendingRecords: staleKeys.length,
+        unregisteredObjects: orphanKeys.length,
+        objectKeys: removeKeys,
+      },
+      null,
+      2,
+    ),
+  );
+  if (dryRun) return;
+
+  for (let offset = 0; offset < removeKeys.length; offset += 100) {
+    const chunk = removeKeys.slice(offset, offset + 100);
+    const { error } = await storage.remove(chunk);
+    if (error) throw new Error(`Storage deletion failed: ${error.message}`);
+    await pool.query(
+      "update app_private.media_uploads set state='deleted',claimed_review_id=null,created_at=now() where object_key=any($1::text[]) and state in ('pending','deleted')",
+      [chunk],
+    );
+  }
+}
+
+async function listObjects(): Promise<string[]> {
+  const keys: string[] = [];
+  const prefixes = await listDirectory("");
+  for (const prefix of prefixes) keys.push(...(await listDirectory(prefix)));
+  return keys;
+}
+
+async function listDirectory(prefix: string): Promise<string[]> {
+  const keys: string[] = [];
+  const directories: string[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const { data, error } = await storage.list(prefix, {
+      limit: 100,
+      offset,
+      sortBy: { column: "created_at", order: "asc" },
+    });
+    if (error) throw new Error(`Storage listing failed: ${error.message}`);
+    for (const item of data ?? []) {
+      if (item.id === null) directories.push(prefix ? `${prefix}/${item.name}` : item.name);
+      else keys.push(prefix ? `${prefix}/${item.name}` : item.name);
+    }
+    if (!data || data.length < 100) break;
+  }
+  for (const directory of directories) keys.push(...(await listDirectory(directory)));
+  return keys;
+}
+
+function required(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+function storageKey(): string {
+  return process.env.SUPABASE_SECRET_KEY?.trim() || required("SUPABASE_SERVICE_ROLE_KEY");
+}
+
+main()
+  .catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : "Photo cleanup failed");
+    process.exitCode = 1;
+  })
+  .finally(() => pool.end());
