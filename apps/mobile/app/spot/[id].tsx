@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   pinTitle: { color: colors.ink, fontSize: 13, fontWeight: "800", marginBottom: 1 },
   directions: {
     paddingHorizontal: 12,
-    minHeight: 38,
+    minHeight: 44,
     borderRadius: 11,
     backgroundColor: colors.green,
     alignItems: "center",
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.green,
     paddingHorizontal: 17,
-    minHeight: 43,
+    minHeight: 44,
     justifyContent: "center",
   },
   retryText: { color: "white", fontWeight: "800" },
