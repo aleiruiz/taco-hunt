@@ -19,13 +19,13 @@ Este tablero sigue la especificación de docs/build-spec.md y el estado actual d
 
 ## P1: primera tanda paralela de producto
 
-| ID  | Tarea y resultado esperado                                                                                                                                                                                     | Bloqueada por | Área principal                             | Estado    |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ | --------- |
-| T03 | Completar exploración móvil: búsqueda, filtro por taco, mapa/lista, ubicación solo al pedirla, selección manual de zona, detalle y estados sin conexión. Puede usar adaptadores de datos mientras T05 termina. | T00           | apps/mobile/app/ y src/features/discovery/ | Libre     |
-| T04 | Añadir comandos de lint y tipos, CI reproducible, y documentar el primer arranque. La coordinación integra los cambios compartidos; la creación o ejecución de pruebas queda pendiente de petición expresa.    | T00           | .github/, raíz y docs/                     | Libre     |
-| T05 | Completar lecturas públicas: paginación estable, límites de zona, filtros, reseñas visibles y datos de fiabilidad; solo devolver puestos aprobados.                                                            | T01 y T02     | apps/api/src/spots/ y reviews/lecturas     | Bloqueada |
-| T06 | Implementar identidad del servidor: JWT verificado, perfiles, rol de administrador, bloqueos, límites de solicitudes y separación de claves.                                                                   | T01 y T02     | apps/api/src/auth/ y profiles/             | Bloqueada |
-| T07 | Implementar registro, acceso, recuperación, sesión y ajustes en móvil con Supabase Auth.                                                                                                                       | T03 y T06     | apps/mobile/src/auth/ y rutas de acceso    | Bloqueada |
+| ID  | Tarea y resultado esperado                                                                                                                                                                                     | Bloqueada por | Área principal                             | Estado                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ | ------------------------------------------------------------ |
+| T03 | Completar exploración móvil: búsqueda, filtro por taco, mapa/lista, ubicación solo al pedirla, selección manual de zona, detalle y estados sin conexión. Puede usar adaptadores de datos mientras T05 termina. | T00           | apps/mobile/app/ y src/features/discovery/ | Libre                                                        |
+| T04 | Añadir comandos de lint y tipos, CI reproducible, y documentar el primer arranque. La coordinación integra los cambios compartidos; la creación o ejecución de pruebas queda pendiente de petición expresa.    | T00           | .github/, raíz y docs/                     | Parcial: PR #4 integrado; follow-up listo para CI y guía E2E |
+| T05 | Completar lecturas públicas: paginación estable, límites de zona, filtros, reseñas visibles y datos de fiabilidad; solo devolver puestos aprobados.                                                            | T01 y T02     | apps/api/src/spots/ y reviews/lecturas     | Bloqueada                                                    |
+| T06 | Implementar identidad del servidor: JWT verificado, perfiles, rol de administrador, bloqueos, límites de solicitudes y separación de claves.                                                                   | T01 y T02     | apps/api/src/auth/ y profiles/             | Bloqueada                                                    |
+| T07 | Implementar registro, acceso, recuperación, sesión y ajustes en móvil con Supabase Auth.                                                                                                                       | T03 y T06     | apps/mobile/src/auth/ y rutas de acceso    | Bloqueada                                                    |
 
 T05 y T06 pueden correr en paralelo una vez cerradas T01 y T02; sus módulos y rutas tienen propietarios distintos. T07 comienza al cerrar T06, para integrar la sesión móvil contra la verificación del servidor.
 
@@ -41,6 +41,19 @@ T05 y T06 pueden correr en paralelo una vez cerradas T01 y T02; sus módulos y r
 | T13 | Importación CSV a candidatos privados, detección de duplicados, revisión y documentación de procedencia; ninguna publicación automática.                                              | T01 y T09      | db/scripts/ o supabase/scripts/                        | Bloqueada |
 
 T08, T09 y T10 pueden avanzar en paralelo con contratos congelados. T11, T12 y T13 forman otra tanda paralela cuando se liberen sus dependencias.
+
+## P2.5: descubrimiento, propuestas y moderación de taquerías
+
+| ID  | Tarea y resultado esperado                                                                                                                                                       | Bloqueada por | Área principal                      | Estado    |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------- | --------- |
+| T17 | Descubrimiento administrativo de candidatos con Google Places para Monterrey; conservar `place_id` y metadatos de descubrimiento, sin importar calificaciones, reseñas ni fotos. | T02, T06      | apps/api/src/places/ y moderación   | Bloqueada |
+| T18 | Propuestas de taquerías desde autocomplete o captura manual; el autor ve sus propuestas pendientes y ningún registro recibe calificación Taco Hunt antes de aprobarse.           | T02, T03, T06 | apps/api/src/proposals/ y móvil     | Bloqueada |
+| T19 | Panel de moderación para propuestas, reportes, fotos y duplicados, con aprobar, rechazar, solicitar cambios, fusionar y ocultar, además de auditoría.                            | T06, T09      | apps/mobile/ y apps/api/src/admin/  | Bloqueada |
+| T20 | Flujo de aprobación y procedencia: convertir una propuesta en puesto Taco Hunt, registrar fuente, verificación, moderador y campos propios.                                      | T18, T19      | apps/api/src/spots/ y admin         | Bloqueada |
+| T21 | Autocomplete de taquerías, colonias, municipios y direcciones con atribución de Google y captura manual alternativa.                                                             | T03, T17      | apps/mobile/src/features/discovery/ | Bloqueada |
+| T22 | Enlaces de direcciones hacia Google Maps o la aplicación de mapas instalada, sin almacenar rutas.                                                                                | T03, T20      | apps/mobile/                        | Bloqueada |
+| T23 | Revisión periódica de candidatos por `place_id`; enviar cambios o cierres a moderación sin sobrescribir datos Taco Hunt silenciosamente.                                         | T17, T20      | apps/api/src/places/ y jobs         | Bloqueada |
+| T24 | Controles de coste y seguridad de Maps/Places: claves restringidas, cuotas, deduplicación, alertas y apagado de emergencia.                                                      | T17, T21      | infraestructura y docs              | Bloqueada |
 
 ## P3: cierre deliberadamente bloqueado hasta el final
 

@@ -1,0 +1,250 @@
+openapi: 3.1.0
+info:
+  title: Taco Hunt API
+  version: 1.0.0
+  description: Contrato HTTP del API Taco Hunt. Las rutas de escritura requieren autenticación cuando se implementen.
+servers:
+  - url: http://localhost:3001
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Estado del API y conexión de base de datos
+      responses:
+        "200":
+          description: API disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { const: ok }
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /v1/taco-types:
+    get:
+      operationId: listTacoTypes
+      summary: Lista los tipos de taco activos
+      responses:
+        "200":
+          description: Tipos activos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/TacoType" }
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /v1/spots:
+    get:
+      operationId: listSpots
+      summary: Busca puestos aprobados dentro de un área
+      parameters:
+        - { in: query, name: north, schema: { type: number, minimum: 25, maximum: 27 } }
+        - { in: query, name: south, schema: { type: number, minimum: 25, maximum: 27 } }
+        - { in: query, name: east, schema: { type: number, minimum: -101.5, maximum: -99 } }
+        - { in: query, name: west, schema: { type: number, minimum: -101.5, maximum: -99 } }
+        - { in: query, name: q, schema: { type: string, maxLength: 100 } }
+        - { in: query, name: tacoType, schema: { type: string, maxLength: 80 } }
+        - { in: query, name: cursor, schema: { type: string, format: uuid } }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 50, default: 20 },
+          }
+      responses:
+        "200":
+          description: Puestos y cursor siguiente
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/SpotSummary" } }
+                  nextCursor: { type: [string, "null"], format: uuid }
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /v1/spots/{id}:
+    get:
+      operationId: getSpot
+      summary: Obtiene un puesto aprobado y sus tacos
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Puesto aprobado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpotDetail" }
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /v1/spots/{id}/reviews:
+    get:
+      operationId: listSpotReviews
+      summary: Reseñas públicas visibles de un puesto (implementación T05)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - { in: query, name: tacoType, schema: { type: string } }
+        - { in: query, name: cursor, schema: { type: string } }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 30, default: 20 },
+          }
+      responses:
+        "200": { description: Respuesta paginada de reseñas visibles }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/reviews:
+    post:
+      operationId: createReview
+      summary: Crea una reseña autenticada (implementación T08)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewCreate" }
+      responses:
+        "201": { description: Reseña creada }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
+  /v1/spot-proposals:
+    post:
+      operationId: proposeSpot
+      summary: Propone un puesto autenticado (implementación T09)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpotProposal" }
+      responses:
+        "201": { description: Propuesta pendiente }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ApiError:
+      description: Error con identificador de solicitud
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    ServiceUnavailable:
+      description: Servicio no disponible temporalmente
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+  schemas:
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              {
+                type: string,
+                enum:
+                  [
+                    VALIDATION_ERROR,
+                    UNAUTHORIZED,
+                    FORBIDDEN,
+                    NOT_FOUND,
+                    CONFLICT,
+                    RATE_LIMITED,
+                    SERVICE_UNAVAILABLE,
+                    INTERNAL_ERROR,
+                  ],
+              }
+            message: { type: string }
+            requestId: { type: string }
+            details: { type: object, additionalProperties: true }
+    TacoType:
+      type: object
+      required: [id, slug, nameEs]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        nameEs: { type: string }
+    TacoSummary:
+      type: object
+      required: [id, tacoTypeId, name, score, reviewCount]
+      properties:
+        id: { type: string, format: uuid }
+        tacoTypeId: { type: string, format: uuid }
+        name: { type: string }
+        score: { type: [number, "null"], minimum: 1, maximum: 5 }
+        reviewCount: { type: integer, minimum: 0 }
+    SpotSummary:
+      type: object
+      required: [id, name, neighborhood, latitude, longitude, lastVerifiedAt, reviewCount, bestTaco]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        lastVerifiedAt: { type: [string, "null"], format: date-time }
+        reviewCount: { type: integer, minimum: 0 }
+        bestTaco: { oneOf: [{ $ref: "#/components/schemas/TacoSummary" }, { type: "null" }] }
+    SpotDetail:
+      type: object
+      required: [id, name, neighborhood, latitude, longitude, lastVerifiedAt, tacos]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        lastVerifiedAt: { type: [string, "null"], format: date-time }
+        tacos: { type: array, items: { $ref: "#/components/schemas/TacoSummary" } }
+    ReviewCreate:
+      type: object
+      required: [spotTacoId, tortilla, filling, salsa, value]
+      additionalProperties: false
+      properties:
+        spotTacoId: { type: string, format: uuid }
+        tortilla: { type: integer, minimum: 1, maximum: 5 }
+        filling: { type: integer, minimum: 1, maximum: 5 }
+        salsa: { type: integer, minimum: 1, maximum: 5 }
+        value: { type: integer, minimum: 1, maximum: 5 }
+        pricePaidMxn: { type: number, minimum: 0, maximum: 10000 }
+        body: { type: string, maxLength: 500 }
+        photoUploadId: { type: string, format: uuid }
+    SpotProposal:
+      type: object
+      required: [name, neighborhood, latitude, longitude]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        neighborhood: { type: string, minLength: 2, maxLength: 120 }
+        latitude: { type: number, minimum: 25, maximum: 27 }
+        longitude: { type: number, minimum: -101.5, maximum: -99 }
+        note: { type: string, maxLength: 500 }
