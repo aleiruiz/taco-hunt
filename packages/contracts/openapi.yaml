@@ -11,7 +11,7 @@ paths:
       operationId: health
       summary: Estado del API y conexión de base de datos
       responses:
-        '200':
+        "200":
           description: API disponible
           content:
             application/json:
@@ -20,14 +20,14 @@ paths:
                 required: [status]
                 properties:
                   status: { const: ok }
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /v1/taco-types:
     get:
       operationId: listTacoTypes
       summary: Lista los tipos de taco activos
       responses:
-        '200':
+        "200":
           description: Tipos activos
           content:
             application/json:
@@ -37,9 +37,9 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: '#/components/schemas/TacoType' }
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                    items: { $ref: "#/components/schemas/TacoType" }
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /v1/spots:
     get:
       operationId: listSpots
@@ -52,9 +52,13 @@ paths:
         - { in: query, name: q, schema: { type: string, maxLength: 100 } }
         - { in: query, name: tacoType, schema: { type: string, maxLength: 80 } }
         - { in: query, name: cursor, schema: { type: string, format: uuid } }
-        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 50, default: 20 },
+          }
       responses:
-        '200':
+        "200":
           description: Puestos y cursor siguiente
           content:
             application/json:
@@ -62,12 +66,12 @@ paths:
                 type: object
                 required: [items, nextCursor]
                 properties:
-                  items: { type: array, items: { $ref: '#/components/schemas/SpotSummary' } }
-                  nextCursor: { type: [string, 'null'], format: uuid }
-        '400':
-          $ref: '#/components/responses/ApiError'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+                  items: { type: array, items: { $ref: "#/components/schemas/SpotSummary" } }
+                  nextCursor: { type: [string, "null"], format: uuid }
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /v1/spots/{id}:
     get:
       operationId: getSpot
@@ -78,17 +82,17 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        '200':
+        "200":
           description: Puesto aprobado
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/SpotDetail' }
-        '400':
-          $ref: '#/components/responses/ApiError'
-        '404':
-          $ref: '#/components/responses/ApiError'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+              schema: { $ref: "#/components/schemas/SpotDetail" }
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /v1/spots/{id}/reviews:
     get:
       operationId: listSpotReviews
@@ -100,10 +104,14 @@ paths:
           schema: { type: string, format: uuid }
         - { in: query, name: tacoType, schema: { type: string } }
         - { in: query, name: cursor, schema: { type: string } }
-        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 30, default: 20 } }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 30, default: 20 },
+          }
       responses:
-        '200': { description: Respuesta paginada de reseñas visibles }
-        '404': { $ref: '#/components/responses/ApiError' }
+        "200": { description: Respuesta paginada de reseñas visibles }
+        "404": { $ref: "#/components/responses/ApiError" }
   /v1/reviews:
     post:
       operationId: createReview
@@ -113,12 +121,12 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/ReviewCreate' }
+            schema: { $ref: "#/components/schemas/ReviewCreate" }
       responses:
-        '201': { description: Reseña creada }
-        '400': { $ref: '#/components/responses/ApiError' }
-        '401': { $ref: '#/components/responses/ApiError' }
-        '409': { $ref: '#/components/responses/ApiError' }
+        "201": { description: Reseña creada }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
   /v1/spot-proposals:
     post:
       operationId: proposeSpot
@@ -128,12 +136,12 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/SpotProposal' }
+            schema: { $ref: "#/components/schemas/SpotProposal" }
       responses:
-        '201': { description: Propuesta pendiente }
-        '400': { $ref: '#/components/responses/ApiError' }
-        '401': { $ref: '#/components/responses/ApiError' }
-        '409': { $ref: '#/components/responses/ApiError' }
+        "201": { description: Propuesta pendiente }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
 components:
   securitySchemes:
     bearerAuth:
@@ -145,12 +153,12 @@ components:
       description: Error con identificador de solicitud
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
     ServiceUnavailable:
       description: Servicio no disponible temporalmente
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
   schemas:
     ApiError:
       type: object
@@ -160,7 +168,21 @@ components:
           type: object
           required: [code, message, requestId]
           properties:
-            code: { type: string, enum: [VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, SERVICE_UNAVAILABLE, INTERNAL_ERROR] }
+            code:
+              {
+                type: string,
+                enum:
+                  [
+                    VALIDATION_ERROR,
+                    UNAUTHORIZED,
+                    FORBIDDEN,
+                    NOT_FOUND,
+                    CONFLICT,
+                    RATE_LIMITED,
+                    SERVICE_UNAVAILABLE,
+                    INTERNAL_ERROR,
+                  ],
+              }
             message: { type: string }
             requestId: { type: string }
             details: { type: object, additionalProperties: true }
@@ -178,7 +200,7 @@ components:
         id: { type: string, format: uuid }
         tacoTypeId: { type: string, format: uuid }
         name: { type: string }
-        score: { type: [number, 'null'], minimum: 1, maximum: 5 }
+        score: { type: [number, "null"], minimum: 1, maximum: 5 }
         reviewCount: { type: integer, minimum: 0 }
     SpotSummary:
       type: object
@@ -189,9 +211,9 @@ components:
         neighborhood: { type: string }
         latitude: { type: number }
         longitude: { type: number }
-        lastVerifiedAt: { type: [string, 'null'], format: date-time }
+        lastVerifiedAt: { type: [string, "null"], format: date-time }
         reviewCount: { type: integer, minimum: 0 }
-        bestTaco: { oneOf: [{ $ref: '#/components/schemas/TacoSummary' }, { type: 'null' }] }
+        bestTaco: { oneOf: [{ $ref: "#/components/schemas/TacoSummary" }, { type: "null" }] }
     SpotDetail:
       type: object
       required: [id, name, neighborhood, latitude, longitude, lastVerifiedAt, tacos]
@@ -201,8 +223,8 @@ components:
         neighborhood: { type: string }
         latitude: { type: number }
         longitude: { type: number }
-        lastVerifiedAt: { type: [string, 'null'], format: date-time }
-        tacos: { type: array, items: { $ref: '#/components/schemas/TacoSummary' } }
+        lastVerifiedAt: { type: [string, "null"], format: date-time }
+        tacos: { type: array, items: { $ref: "#/components/schemas/TacoSummary" } }
     ReviewCreate:
       type: object
       required: [spotTacoId, tortilla, filling, salsa, value]

@@ -69,23 +69,33 @@ export const spotDetailSchema = z.object({
 });
 export type SpotDetail = z.infer<typeof spotDetailSchema>;
 
-export const spotListQuerySchema = z.object({
-  north: z.coerce.number().min(25).max(27).optional(),
-  south: z.coerce.number().min(25).max(27).optional(),
-  east: z.coerce.number().min(-101.5).max(-99).optional(),
-  west: z.coerce.number().min(-101.5).max(-99).optional(),
-  q: z.string().trim().max(100).optional(),
-  tacoType: z.string().trim().max(80).optional(),
-  cursor: uuidSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-}).superRefine((query, context) => {
-  if (query.north !== undefined && query.south !== undefined && query.south > query.north) {
-    context.addIssue({ code: "custom", path: ["south"], message: "south debe ser menor o igual a north" });
-  }
-  if (query.east !== undefined && query.west !== undefined && query.west > query.east) {
-    context.addIssue({ code: "custom", path: ["west"], message: "west debe ser menor o igual a east" });
-  }
-});
+export const spotListQuerySchema = z
+  .object({
+    north: z.coerce.number().min(25).max(27).optional(),
+    south: z.coerce.number().min(25).max(27).optional(),
+    east: z.coerce.number().min(-101.5).max(-99).optional(),
+    west: z.coerce.number().min(-101.5).max(-99).optional(),
+    q: z.string().trim().max(100).optional(),
+    tacoType: z.string().trim().max(80).optional(),
+    cursor: uuidSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .superRefine((query, context) => {
+    if (query.north !== undefined && query.south !== undefined && query.south > query.north) {
+      context.addIssue({
+        code: "custom",
+        path: ["south"],
+        message: "south debe ser menor o igual a north",
+      });
+    }
+    if (query.east !== undefined && query.west !== undefined && query.west > query.east) {
+      context.addIssue({
+        code: "custom",
+        path: ["west"],
+        message: "west debe ser menor o igual a east",
+      });
+    }
+  });
 export type SpotListQuery = z.infer<typeof spotListQuerySchema>;
 
 export const ratingSchema = z.number().int().min(1).max(5);

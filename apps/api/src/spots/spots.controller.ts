@@ -13,23 +13,33 @@ import type { Pool } from "pg";
 import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
 
-const spotQuerySchema = z.object({
-  north: z.coerce.number().min(25).max(27).optional(),
-  south: z.coerce.number().min(25).max(27).optional(),
-  east: z.coerce.number().min(-101.5).max(-99).optional(),
-  west: z.coerce.number().min(-101.5).max(-99).optional(),
-  q: z.string().trim().max(100).optional(),
-  tacoType: z.string().trim().max(80).optional(),
-  limit: z.coerce.number().int().min(1).max(50).default(20),
-  cursor: z.string().uuid().optional(),
-}).superRefine((query, context) => {
-  if (query.north !== undefined && query.south !== undefined && query.south > query.north) {
-    context.addIssue({ code: "custom", path: ["south"], message: "south debe ser menor o igual a north" });
-  }
-  if (query.east !== undefined && query.west !== undefined && query.west > query.east) {
-    context.addIssue({ code: "custom", path: ["west"], message: "west debe ser menor o igual a east" });
-  }
-});
+const spotQuerySchema = z
+  .object({
+    north: z.coerce.number().min(25).max(27).optional(),
+    south: z.coerce.number().min(25).max(27).optional(),
+    east: z.coerce.number().min(-101.5).max(-99).optional(),
+    west: z.coerce.number().min(-101.5).max(-99).optional(),
+    q: z.string().trim().max(100).optional(),
+    tacoType: z.string().trim().max(80).optional(),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+    cursor: z.string().uuid().optional(),
+  })
+  .superRefine((query, context) => {
+    if (query.north !== undefined && query.south !== undefined && query.south > query.north) {
+      context.addIssue({
+        code: "custom",
+        path: ["south"],
+        message: "south debe ser menor o igual a north",
+      });
+    }
+    if (query.east !== undefined && query.west !== undefined && query.west > query.east) {
+      context.addIssue({
+        code: "custom",
+        path: ["west"],
+        message: "west debe ser menor o igual a east",
+      });
+    }
+  });
 
 @Controller()
 export class SpotsController {
@@ -53,7 +63,10 @@ export class SpotsController {
   async listSpots(@Query() query: Record<string, unknown>) {
     const parsed = spotQuerySchema.safeParse(query);
     if (!parsed.success) {
-      throw new BadRequestException({ message: "Parámetros inválidos", details: { issues: parsed.error.issues } });
+      throw new BadRequestException({
+        message: "Parámetros inválidos",
+        details: { issues: parsed.error.issues },
+      });
     }
 
     const p = parsed.data;
@@ -71,10 +84,15 @@ export class SpotsController {
       const pattern = `%${p.q.toLocaleLowerCase("es-MX").replace(/[\\%_]/g, "\\$&")}%`;
       const nameParam = values.push(pattern);
       const neighborhoodParam = values.push(pattern);
-      where.push(`(s.normalized_name like $${nameParam} or lower(s.neighborhood) like $${neighborhoodParam})`);
+      where.push(
+        `(s.normalized_name like $${nameParam} or lower(s.neighborhood) like $${neighborhoodParam})`,
+      );
     }
     if (p.tacoType) {
-      add("exists (select 1 from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id where st.spot_id=s.id and st.status='approved' and tt.slug=?)", p.tacoType);
+      add(
+        "exists (select 1 from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id where st.spot_id=s.id and st.status='approved' and tt.slug=?)",
+        p.tacoType,
+      );
     }
     if (p.cursor) add("s.id > ?::uuid", p.cursor);
     values.push(p.limit + 1);
@@ -83,7 +101,7 @@ export class SpotsController {
       const { rows } = await this.pool.query(sql, values);
       const more = rows.length > p.limit;
       const items = rows.slice(0, p.limit);
-      return { items, nextCursor: more ? items.at(-1)?.id ?? null : null };
+      return { items, nextCursor: more ? (items.at(-1)?.id ?? null) : null };
     } catch (error) {
       this.logger.error("Spot list query failed", error instanceof Error ? error.stack : undefined);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
@@ -96,18 +114,21 @@ export class SpotsController {
     if (!parsed.success) throw new BadRequestException({ message: "Identificador inválido" });
     try {
       const spot = await this.pool.query(
-        'select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,last_verified_at as "lastVerifiedAt" from app_private.spots where id=$1 and status=\'approved\'',
+        "select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,last_verified_at as \"lastVerifiedAt\" from app_private.spots where id=$1 and status='approved'",
         [parsed.data],
       );
       if (!spot.rowCount) throw new NotFoundException("Puesto no encontrado");
       const tacos = await this.pool.query(
-        'select st.id,tt.id as "tacoTypeId",coalesce(st.display_name,tt.name_es) as name, round(avg((r.tortilla+r.filling+r.salsa+r.value)/4.0)::numeric,1)::float8 as score,count(r.id)::int as "reviewCount" from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id left join app_private.reviews r on r.spot_taco_id=st.id and r.status=\'visible\' where st.spot_id=$1 and st.status=\'approved\' group by st.id,tt.id order by tt.name_es',
+        "select st.id,tt.id as \"tacoTypeId\",coalesce(st.display_name,tt.name_es) as name, round(avg((r.tortilla+r.filling+r.salsa+r.value)/4.0)::numeric,1)::float8 as score,count(r.id)::int as \"reviewCount\" from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=$1 and st.status='approved' group by st.id,tt.id order by tt.name_es",
         [parsed.data],
       );
       return { ...spot.rows[0], tacos: tacos.rows };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
-      this.logger.error("Spot detail query failed", error instanceof Error ? error.stack : undefined);
+      this.logger.error(
+        "Spot detail query failed",
+        error instanceof Error ? error.stack : undefined,
+      );
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
     }
   }

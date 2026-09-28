@@ -35,18 +35,22 @@ function getDatabaseUrl(): string {
 
 @Global()
 @Module({
-  providers: [{
-    provide: DATABASE_POOL,
-    useFactory: () => new Pool({
-      connectionString: getDatabaseUrl(),
-      max: 5,
-      connectionTimeoutMillis: 3000,
-    }),
-  }, {
-    provide: DatabasePoolLifecycle,
-    useFactory: (pool: InstanceType<typeof Pool>) => new DatabasePoolLifecycle(pool),
-    inject: [DATABASE_POOL],
-  }],
+  providers: [
+    {
+      provide: DATABASE_POOL,
+      useFactory: () =>
+        new Pool({
+          connectionString: getDatabaseUrl(),
+          max: 5,
+          connectionTimeoutMillis: 3000,
+        }),
+    },
+    {
+      provide: DatabasePoolLifecycle,
+      useFactory: (pool: InstanceType<typeof Pool>) => new DatabasePoolLifecycle(pool),
+      inject: [DATABASE_POOL],
+    },
+  ],
   exports: [DATABASE_POOL],
 })
 export class DatabaseModule {}
