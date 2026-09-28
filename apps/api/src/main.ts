@@ -110,7 +110,7 @@ app.get<{ Params: { id: string } }>("/v1/spots/:id", async (request, reply) => {
         .code(404)
         .send({ error: { code: "NOT_FOUND", message: "Puesto no encontrado" } });
     const tacos = await pool.query(
-      "select st.id,tt.id as \"tacoTypeId\",coalesce(st.display_name,tt.name_es) as name, round(avg((r.tortilla+r.filling+r.salsa+r.value)/4.0)::numeric,1)::float8 as score,count(r.id)::int as \"reviewCount\" from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=$1 and st.status='approved' group by st.id,tt.id order by tt.name_es",
+      `select st.id,tt.id as "tacoTypeId",coalesce(st.display_name,tt.name_es) as name, round(avg((r.tortilla+r.filling+r.salsa+r.value)/4.0)::numeric,1)::float8 as score,count(r.id)::int as "reviewCount" from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=$1 and st.status='approved' group by st.id,tt.id order by tt.name_es`,
       [id.data],
     );
     return { ...spot.rows[0], tacos: tacos.rows };
