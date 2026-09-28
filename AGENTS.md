@@ -10,6 +10,7 @@ Lee `docs/build-spec.md`, `docs/plan-delegacion.md` y `docs/orchestration.md` an
 - Envía un check-in al comenzar, al encontrar un bloqueo, al tener una decisión de contrato y al quedar listo para revisión. Indica estado, avance concreto, siguiente paso y bloqueo.
 - Al terminar, entrega un resumen de cambios, archivos afectados, comprobaciones realizadas y riesgos. Si GitHub está disponible, abre un PR pequeño hacia `main` con el ID de tarea. No mezcles tareas distintas en el mismo PR.
 - No incluyas claves, contraseñas, tokens ni datos reales de usuarios o locales en el repositorio, logs o PR.
+- Mantén el código legible: ejecuta `pnpm lint` y `pnpm typecheck` antes de entregar cambios, y aplica `pnpm format` a los archivos que modifiques. Si el entorno impide ejecutar alguno, informa el comando y el error concreto en el check-in/PR.
 - No añadas ni ejecutes pruebas salvo solicitud expresa del usuario. Si una tarea incluye pruebas como trabajo futuro, indícalo en la entrega sin ejecutarlas.
 
 ## Revisión
