@@ -4,12 +4,17 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { z } from "zod";
+import { placeAutocompleteQuerySchema } from "@taco-hunt/contracts";
 import { DATABASE_POOL } from "../database/database.module.js";
+import { RequestLimitService } from "../auth/request-limit.service.js";
+
+const GOOGLE_ATTRIBUTION = "Con la tecnología de Google";
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -42,7 +47,10 @@ type GooglePlacesResponse = { places?: GooglePlace[] };
 export class PlacesService {
   private readonly logger = new Logger(PlacesService.name);
 
-  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
+    private readonly limits: RequestLimitService,
+  ) {}
 
   async discover(input: PlacesSearchInput) {
     const parsed = placesDiscoverySchema.safeParse(input);
@@ -110,6 +118,175 @@ export class PlacesService {
       );
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
     }
+  }
+
+  /**
+   * Combines local approved-spot matches with Google Places predictions for neighborhoods,
+   * municipalities and addresses. Only place_id + display text are fetched here (no ratings,
+   * reviews or photos); coordinates are resolved separately in {@link resolvePlace}, once the
+   * user picks a suggestion, to keep Google call volume bounded per keystroke.
+   */
+  async autocomplete(rawQuery: string, profileId: string) {
+    const parsed = placeAutocompleteQuerySchema.safeParse({ q: rawQuery });
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros de autocompletado inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    this.limits.consume("places-autocomplete-user", profileId, 30, 60_000);
+
+    const query = parsed.data.q;
+    const [localMatches, googleMatches] = await Promise.all([
+      this.searchLocalSpots(query),
+      this.googleAutocomplete(query).catch((error) => {
+        this.logger.warn(
+          `Google Places autocomplete unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return [];
+      }),
+    ]);
+
+    return {
+      items: [...localMatches, ...googleMatches],
+      attribution: googleMatches.length > 0 ? GOOGLE_ATTRIBUTION : null,
+    };
+  }
+
+  /** Resolves a Google place_id into coordinates and a display neighborhood, called once on selection. */
+  async resolvePlace(placeId: string, profileId: string) {
+    const trimmed = placeId.trim();
+    if (!trimmed) throw new BadRequestException("placeId requerido");
+    this.limits.consume("places-resolve-user", profileId, 20, 60_000);
+
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+
+    try {
+      const endpoint =
+        process.env.GOOGLE_PLACES_DETAILS_URL?.trim() ||
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(trimmed)}`;
+      const response = await fetch(endpoint, {
+        headers: {
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "location",
+            "addressComponents",
+          ].join(","),
+        },
+      });
+      if (response.status === 404) throw new NotFoundException("Lugar no encontrado");
+      if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
+
+      const place = (await response.json()) as GooglePlace & {
+        addressComponents?: Array<{ longText?: unknown; types?: unknown }>;
+      };
+      const latitude = numberValue(place.location?.latitude);
+      const longitude = numberValue(place.location?.longitude);
+      const name = stringValue(place.displayName?.text);
+      if (latitude === null || longitude === null || !name) {
+        throw new BadGatewayException("Google Places devolvió datos incompletos");
+      }
+      if (
+        !monterreyBounds.shape.latitude.safeParse(latitude).success ||
+        !monterreyBounds.shape.longitude.safeParse(longitude).success
+      ) {
+        throw new BadRequestException(
+          "Ese lugar queda fuera de la cobertura de Monterrey y su área metropolitana",
+        );
+      }
+
+      return {
+        placeId: trimmed,
+        name,
+        neighborhood: neighborhoodFromComponents(place.addressComponents) ?? name,
+        formattedAddress: stringValue(place.formattedAddress),
+        latitude,
+        longitude,
+        attribution: GOOGLE_ATTRIBUTION,
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof BadGatewayException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        "Google Places details failed",
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException("Google Places no está disponible");
+    }
+  }
+
+  private async searchLocalSpots(query: string) {
+    const { rows } = await this.pool.query(
+      `select id, name, neighborhood, latitude::float8 as latitude, longitude::float8 as longitude
+       from app_private.spots
+       where status='approved' and (normalized_name ilike $1 or neighborhood ilike $1)
+       order by name asc
+       limit 5`,
+      [`%${normalizeName(query)}%`],
+    );
+    return rows.map((row) => ({
+      kind: "spot" as const,
+      id: row.id as string,
+      name: row.name as string,
+      neighborhood: row.neighborhood as string,
+      latitude: row.latitude as number,
+      longitude: row.longitude as number,
+    }));
+  }
+
+  private async googleAutocomplete(query: string) {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    if (!apiKey) return [];
+
+    const endpoint =
+      process.env.GOOGLE_PLACES_AUTOCOMPLETE_URL?.trim() ||
+      "https://places.googleapis.com/v1/places:autocomplete";
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey },
+      body: JSON.stringify({
+        input: query,
+        languageCode: "es",
+        includedRegionCodes: ["mx"],
+        locationBias: {
+          circle: {
+            center: { latitude: 25.6866, longitude: -100.3161 },
+            radius: 25_000,
+          },
+        },
+      }),
+    });
+    if (!response.ok) throw new Error(`Google Places autocomplete returned ${response.status}`);
+
+    const payload = (await response.json()) as {
+      suggestions?: Array<{
+        placePrediction?: {
+          placeId?: unknown;
+          text?: { text?: unknown };
+          structuredFormat?: { secondaryText?: { text?: unknown } };
+        };
+      }>;
+    };
+    const suggestions = Array.isArray(payload.suggestions) ? payload.suggestions : [];
+    return suggestions
+      .map((suggestion) => suggestion.placePrediction)
+      .filter((prediction): prediction is NonNullable<typeof prediction> => Boolean(prediction))
+      .map((prediction) => ({
+        kind: "google" as const,
+        placeId: stringValue(prediction.placeId) ?? "",
+        text: stringValue(prediction.text?.text) ?? "",
+        secondaryText: stringValue(prediction.structuredFormat?.secondaryText?.text),
+      }))
+      .filter((item) => item.placeId && item.text);
   }
 
   private async searchGooglePlaces(input: PlacesSearchInput): Promise<GooglePlace[]> {
@@ -207,6 +384,21 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function neighborhoodFromComponents(
+  components: Array<{ longText?: unknown; types?: unknown }> | undefined,
+): string | null {
+  if (!Array.isArray(components)) return null;
+  const priority = ["sublocality", "neighborhood", "locality", "administrative_area_level_2"];
+  for (const type of priority) {
+    const match = components.find(
+      (component) => Array.isArray(component.types) && component.types.includes(type),
+    );
+    const text = match && stringValue(match.longText);
+    if (text) return text;
+  }
+  return null;
 }
 
 function normalizeName(name: string): string {
