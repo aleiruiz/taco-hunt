@@ -487,7 +487,7 @@ paths:
         required: false
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ModerationReason" }
+            schema: { $ref: "#/components/schemas/ModerationReasonOptional" }
       responses:
         "200": { description: Reseña oculta }
         "400": { $ref: "#/components/responses/ApiError" }
@@ -505,7 +505,7 @@ paths:
         required: false
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ModerationReason" }
+            schema: { $ref: "#/components/schemas/ModerationReasonOptional" }
       responses:
         "200": { description: Reseña visible }
         "400": { $ref: "#/components/responses/ApiError" }
@@ -523,7 +523,7 @@ paths:
         required: false
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ModerationReason" }
+            schema: { $ref: "#/components/schemas/ModerationReasonOptional" }
       responses:
         "200": { description: Reporte cerrado }
         "400": { $ref: "#/components/responses/ApiError" }
@@ -883,6 +883,11 @@ components:
       additionalProperties: false
       properties:
         reason: { type: string, minLength: 1, maxLength: 500 }
+    ModerationReasonOptional:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500, default: "Acción de moderación" }
     ModerationAuditEntry:
       type: object
       required: [id, moderatorId, targetType, targetId, action, createdAt, reason]
