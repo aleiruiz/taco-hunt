@@ -27,4 +27,3 @@ Lee `docs/build-spec.md`, `docs/plan-delegacion.md` y `docs/orchestration.md` an
 - Aplica las dependencias del plan. T14 espera a T01–T13; T15 espera a T14; T16 espera a T15 y a los requisitos externos.
 - No marques una tarea como terminada por el resumen del agente: exige PR integrado en `main`, o un cambio local integrado cuando GitHub no esté disponible. La finalización de revisión requiere que CodeRabbit haya revisado el PR y que el orquestador haya verificado los hallazgos y CI; no requiere un revisor par.
 - Tras cada integración, actualiza el estado y asigna la siguiente tarea libre por prioridad. No reserves un puesto de trabajo para revisar PRs; úsalo para la siguiente tarea elegible.
-
