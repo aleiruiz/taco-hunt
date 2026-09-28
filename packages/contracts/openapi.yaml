@@ -462,8 +462,17 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpotApproval" }
       responses:
-        "200": { description: Puesto aprobado }
+        "200":
+          description: Puesto aprobado con procedencia y verificación registradas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpotApprovalResult" }
         "400": { $ref: "#/components/responses/ApiError" }
         "401": { $ref: "#/components/responses/ApiError" }
         "403": { $ref: "#/components/responses/ApiError" }
@@ -928,6 +937,27 @@ components:
             pattern: '\S',
             default: "Acción de moderación",
           }
+    SpotApproval:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceType: { type: string, enum: [user, owner, licensed, fictional] }
+        sourceRef: { type: string, minLength: 1, maxLength: 200 }
+        verifiedAt: { type: string, format: date-time }
+        verificationNote: { type: string, minLength: 1, maxLength: 500 }
+    SpotApprovalResult:
+      type: object
+      required: [id, status, sourceType, lastVerifiedAt, approvedBy, approvedAt, verifiedBy]
+      properties:
+        id: { type: string, format: uuid }
+        status: { const: approved }
+        sourceType: { type: string, enum: [user, owner, licensed, fictional] }
+        sourceRef: { type: [string, "null"], maxLength: 200 }
+        lastVerifiedAt: { type: string, format: date-time }
+        approvedBy: { type: string, format: uuid }
+        approvedAt: { type: string, format: date-time }
+        verifiedBy: { type: string, format: uuid }
+        verificationNote: { type: [string, "null"], maxLength: 500 }
     ModerationAuditEntry:
       type: object
       required: [id, moderatorId, targetType, targetId, action, createdAt, reason]

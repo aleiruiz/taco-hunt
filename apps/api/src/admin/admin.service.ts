@@ -15,6 +15,12 @@ import { DATABASE_POOL } from "../database/database.module.js";
 export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
 type ModerationAction =
   "approve" | "reject" | "request_changes" | "hide" | "unhide" | "hide_photo" | "close" | "merge";
+type SpotApproval = {
+  sourceType?: "user" | "owner" | "licensed" | "fictional";
+  sourceRef?: string;
+  verifiedAt?: string;
+  verificationNote?: string;
+};
 
 @Injectable()
 export class AdminService {
@@ -29,7 +35,10 @@ export class AdminService {
           `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,
              s.longitude::float8 as longitude,s.proposal_note as note,s.created_by as "createdBy",
              s.created_at as "createdAt",
-             s.status,
+             s.status,s.source_type as "sourceType",s.source_ref as "sourceRef",
+             s.last_verified_at as "lastVerifiedAt",s.approved_by as "approvedBy",
+             s.approved_at as "approvedAt",s.verified_by as "verifiedBy",
+             s.verification_note as "verificationNote",
              latest.internal_reason as "moderationReason"
            from app_private.spots s
            left join lateral (
@@ -140,8 +149,8 @@ export class AdminService {
     }
   }
 
-  approveSpot(id: string, moderator: string) {
-    return this.mutate("spot", id, moderator, "approve", null);
+  approveSpot(id: string, moderator: string, approval: SpotApproval) {
+    return this.mutate("spot", id, moderator, "approve", null, undefined, approval);
   }
 
   rejectSpot(id: string, moderator: string, reason: string) {
@@ -187,12 +196,21 @@ export class AdminService {
     action: ModerationAction,
     reason: string | null,
     canonicalId?: string,
+    approval?: SpotApproval,
   ) {
     let client: PoolClient | undefined;
     try {
       client = await this.pool.connect();
       await client.query("begin");
-      const updated = await this.applyAction(client, targetType, id, action, canonicalId);
+      const updated = await this.applyAction(
+        client,
+        targetType,
+        id,
+        action,
+        canonicalId,
+        moderator,
+        approval,
+      );
       if (!updated.rowCount) throw new NotFoundException("Elemento pendiente no encontrado");
       await client.query(
         `insert into app_private.moderation_audit(moderator_id,target_type,target_id,action,internal_reason)
@@ -200,7 +218,7 @@ export class AdminService {
         [moderator, targetType, id, action, reason],
       );
       await client.query("commit");
-      return { id, status: statusFor(action) };
+      return { ...(updated.rows[0] ?? {}), id, status: statusFor(action) };
     } catch (error) {
       if (client) await client.query("rollback").catch(() => undefined);
       if (error instanceof NotFoundException) throw error;
@@ -216,11 +234,30 @@ export class AdminService {
     id: string,
     action: ModerationAction,
     canonicalId?: string,
+    moderator?: string,
+    approval?: SpotApproval,
   ) {
     if (type === "spot" && action === "approve") {
       return client.query(
-        "update app_private.spots set status='approved',updated_at=now() where id=$1 and status in ('pending','changes_requested')",
-        [id],
+        `update app_private.spots
+           set status='approved',
+               source_type=coalesce($2,source_type),
+               source_ref=coalesce($3,source_ref),
+               last_verified_at=coalesce($4::timestamptz,now()),
+               approved_by=$5,approved_at=now(),verified_by=$5,
+               verification_note=coalesce($6,verification_note),updated_at=now()
+         where id=$1 and status in ('pending','changes_requested')
+         returning id,status,source_type as "sourceType",source_ref as "sourceRef",
+           last_verified_at as "lastVerifiedAt",approved_by as "approvedBy",approved_at as "approvedAt",
+           verified_by as "verifiedBy",verification_note as "verificationNote"`,
+        [
+          id,
+          approval?.sourceType ?? null,
+          approval?.sourceRef ?? null,
+          approval?.verifiedAt ?? null,
+          moderator,
+          approval?.verificationNote ?? null,
+        ],
       );
     }
     if (type === "spot" && action === "reject") {

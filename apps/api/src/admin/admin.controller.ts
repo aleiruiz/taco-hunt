@@ -20,6 +20,14 @@ const auditQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   before: z.string().min(1).max(512).optional(),
 });
+const approvalSchema = z
+  .object({
+    sourceType: z.enum(["user", "owner", "licensed", "fictional"]).optional(),
+    sourceRef: z.string().trim().min(1).max(200).optional(),
+    verifiedAt: z.string().datetime({ offset: true }).optional(),
+    verificationNote: z.string().trim().min(1).max(500).optional(),
+  })
+  .default({});
 
 @Controller("/admin")
 @UseGuards(AdminGuard)
@@ -49,8 +57,22 @@ export class AdminController {
   }
 
   @Post("/spot-proposals/:id/approve")
-  approveSpot(@Param("id") id: string, @CurrentProfile() moderator: AuthenticatedProfile) {
-    return this.admin.approveSpot(this.parseId(id), moderator.id);
+  approveSpot(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    const parsed = approvalSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Datos de procedencia inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    if (parsed.data.sourceType === "licensed" && !parsed.data.sourceRef) {
+      throw new BadRequestException("sourceRef es obligatorio para una fuente licenciada");
+    }
+    return this.admin.approveSpot(this.parseId(id), moderator.id, parsed.data);
   }
 
   @Post("/spot-proposals/:id/reject")
