@@ -882,12 +882,19 @@ components:
       required: [reason]
       additionalProperties: false
       properties:
-        reason: { type: string, minLength: 1, maxLength: 500 }
+        reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
     ModerationReasonOptional:
       type: object
       additionalProperties: false
       properties:
-        reason: { type: string, minLength: 1, maxLength: 500, default: "Acción de moderación" }
+        reason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 500,
+            pattern: '\S',
+            default: "Acción de moderación",
+          }
     ModerationAuditEntry:
       type: object
       required: [id, moderatorId, targetType, targetId, action, createdAt, reason]
