@@ -26,7 +26,7 @@
    "branch": "codex/T23-place-refresh",
    "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
    "sessionId": null,
-   "note": "Orchestrator picking this up next, in this worktree, while T21's PR is in CI/review."
+   "note": "Implemented by the orchestrator in this worktree. PR #24 opened 2026-09-28T23:45Z, CI running, auto_fix monitor on. Not merged yet."
   },
   {
    "taskId": "T14",
@@ -241,14 +241,14 @@
    "coderabbitReviewedSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53"
   },
   "T23": {
-   "status": "ready",
    "dependsOn": [
     "T17",
     "T20"
    ],
-   "note": "Dependencies merged. Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Fresh worktree/branch prepared off main db08a13 (see workers[]); no worker session started yet.",
-   "pr": null,
-   "headSha": null,
+   "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR.",
+   "status": "in_review",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
+   "headSha": "7a07921c01694cb2f73d1b886d3f5f309d81dd7a",
    "coderabbitReviewedSha": null
   },
   "T24": {
