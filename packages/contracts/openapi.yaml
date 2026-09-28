@@ -44,6 +44,7 @@ paths:
     get:
       operationId: listSpots
       summary: Busca puestos aprobados dentro de un área
+      description: Results are ordered by distance from the bounding-box center, then normalized name and UUID. The opaque keyset cursor contains this full sort tuple; preserve all filters and bounds while paging. The effective bounding box is capped at 9,000 km².
       parameters:
         - { in: query, name: north, schema: { type: number, minimum: 25, maximum: 27 } }
         - { in: query, name: south, schema: { type: number, minimum: 25, maximum: 27 } }
@@ -51,7 +52,12 @@ paths:
         - { in: query, name: west, schema: { type: number, minimum: -101.5, maximum: -99 } }
         - { in: query, name: q, schema: { type: string, maxLength: 100 } }
         - { in: query, name: tacoType, schema: { type: string, maxLength: 80 } }
-        - { in: query, name: cursor, schema: { type: string, format: uuid } }
+        - {
+            in: query,
+            name: cursor,
+            description: Opaque keyset cursor returned by the previous page. Keep query filters and bounds unchanged between pages.,
+            schema: { type: string, maxLength: 512 },
+          }
         - {
             in: query,
             name: limit,
@@ -67,7 +73,7 @@ paths:
                 required: [items, nextCursor]
                 properties:
                   items: { type: array, items: { $ref: "#/components/schemas/SpotSummary" } }
-                  nextCursor: { type: [string, "null"], format: uuid }
+                  nextCursor: { type: [string, "null"], maxLength: 512 }
         "400":
           $ref: "#/components/responses/ApiError"
         "503":
@@ -76,6 +82,7 @@ paths:
     get:
       operationId: getSpot
       summary: Obtiene un puesto aprobado y sus tacos
+      description: Includes aggregate visible-review counts and up to five recent visible reviews. Pending or rejected stands return 404.
       parameters:
         - in: path
           name: id
@@ -96,21 +103,38 @@ paths:
   /v1/spots/{id}/reviews:
     get:
       operationId: listSpotReviews
-      summary: Reseñas públicas visibles de un puesto (implementación T05)
+      summary: Lista reseñas visibles de un puesto aprobado
       parameters:
         - in: path
           name: id
           required: true
           schema: { type: string, format: uuid }
         - { in: query, name: tacoType, schema: { type: string } }
-        - { in: query, name: cursor, schema: { type: string } }
+        - {
+            in: query,
+            name: cursor,
+            description: Opaque descending keyset cursor returned by the previous page. Keep the tacoType filter unchanged between pages.,
+            schema: { type: string, maxLength: 512 },
+          }
         - {
             in: query,
             name: limit,
             schema: { type: integer, minimum: 1, maximum: 30, default: 20 },
           }
       responses:
-        "200": { description: Respuesta paginada de reseñas visibles }
+        "200":
+          description: Reseñas visibles y cursor siguiente
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextCursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/PublicReview" }
+                  nextCursor: { type: [string, "null"], maxLength: 512 }
+        "400": { $ref: "#/components/responses/ApiError" }
         "404": { $ref: "#/components/responses/ApiError" }
   /v1/reviews:
     post:
@@ -202,21 +226,75 @@ components:
         name: { type: string }
         score: { type: [number, "null"], minimum: 1, maximum: 5 }
         reviewCount: { type: integer, minimum: 0 }
+    PublicReview:
+      type: object
+      required:
+        [
+          id,
+          tacoTypeId,
+          tacoName,
+          displayName,
+          tortilla,
+          filling,
+          salsa,
+          value,
+          score,
+          pricePaidMxn,
+          body,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        tacoTypeId: { type: string, format: uuid }
+        tacoName: { type: string }
+        displayName: { type: [string, "null"] }
+        tortilla: { type: integer, minimum: 1, maximum: 5 }
+        filling: { type: integer, minimum: 1, maximum: 5 }
+        salsa: { type: integer, minimum: 1, maximum: 5 }
+        value: { type: integer, minimum: 1, maximum: 5 }
+        score: { type: number, minimum: 1, maximum: 5 }
+        pricePaidMxn: { type: [number, "null"], minimum: 0 }
+        body: { type: [string, "null"], maxLength: 500 }
+        createdAt: { type: string, format: date-time }
     SpotSummary:
       type: object
-      required: [id, name, neighborhood, latitude, longitude, lastVerifiedAt, reviewCount, bestTaco]
+      required:
+        [
+          id,
+          name,
+          neighborhood,
+          latitude,
+          longitude,
+          photoUrl,
+          lastVerifiedAt,
+          reviewCount,
+          bestTaco,
+        ]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         neighborhood: { type: string }
         latitude: { type: number }
         longitude: { type: number }
+        photoUrl: { type: [string, "null"], format: uri }
         lastVerifiedAt: { type: [string, "null"], format: date-time }
         reviewCount: { type: integer, minimum: 0 }
         bestTaco: { oneOf: [{ $ref: "#/components/schemas/TacoSummary" }, { type: "null" }] }
     SpotDetail:
       type: object
-      required: [id, name, neighborhood, latitude, longitude, lastVerifiedAt, tacos]
+      required:
+        [
+          id,
+          name,
+          neighborhood,
+          latitude,
+          longitude,
+          lastVerifiedAt,
+          photoUrl,
+          reviewCount,
+          tacos,
+          reviews,
+        ]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -224,7 +302,13 @@ components:
         latitude: { type: number }
         longitude: { type: number }
         lastVerifiedAt: { type: [string, "null"], format: date-time }
+        photoUrl: { type: [string, "null"], format: uri }
+        reviewCount: { type: integer, minimum: 0 }
         tacos: { type: array, items: { $ref: "#/components/schemas/TacoSummary" } }
+        reviews:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/PublicReview" }
     ReviewCreate:
       type: object
       required: [spotTacoId, tortilla, filling, salsa, value]
