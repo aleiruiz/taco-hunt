@@ -34,7 +34,7 @@
    "branch": "codex/T14-account-lifecycle",
    "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
    "sessionId": null,
-   "note": "Worktree prepared fresh off main 2026-09-28. Per AGENTS.md, use a stronger model than the Sonnet 5 default for this task (account-deletion correctness). No session started yet; owner must start it."
+   "note": "Implemented by the orchestrator on Sonnet 5 (owner declined the recommended model escalation). PR #25 opened 2026-09-29T00:45Z, CI running, auto_fix monitor on. Not merged yet."
   }
  ],
  "tasks": {
@@ -282,9 +282,10 @@
     "T19",
     "T20"
    ],
-   "note": "All dependencies merged (T01-T13, T18-T20). Per AGENTS.md, escalate to a stronger model for this task given account-deletion correctness. Lower priority than open P2.5 tasks (T21, T23) per plan tier order, but eligible now. Fresh worktree/branch prepared off main db08a13 (see workers[]); no worker session started yet.",
-   "pr": null,
-   "headSha": null,
+   "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
+   "status": "in_review",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
+   "headSha": "188e8b948d6c47d584e2af72c664ce87bdaba68a",
    "coderabbitReviewedSha": null
   },
   "T15": {
