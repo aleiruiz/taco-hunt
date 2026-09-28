@@ -44,10 +44,13 @@ jobs:
         run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Lint
+        if: always()
         run: pnpm lint
 
       - name: Typecheck
+        if: always()
         run: pnpm typecheck
 
       - name: Check formatting
+        if: always()
         run: pnpm exec prettier --check .github/workflows/ci.yml
