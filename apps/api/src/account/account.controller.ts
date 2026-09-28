@@ -60,13 +60,17 @@ export class AccountController {
   }
 
   private async deletePhotoObjects(objectKeys: string[]): Promise<void> {
-    try {
-      await this.media.remove(objectKeys);
-    } catch (error) {
-      this.logger.error(
-        "Account deletion succeeded but review photo cleanup failed; use pnpm media:cleanup to retry",
-        error instanceof Error ? error.stack : undefined,
-      );
+    const STORAGE_BATCH_SIZE = 1_000;
+    for (let offset = 0; offset < objectKeys.length; offset += STORAGE_BATCH_SIZE) {
+      const batch = objectKeys.slice(offset, offset + STORAGE_BATCH_SIZE);
+      try {
+        await this.media.remove(batch);
+      } catch (error) {
+        this.logger.error(
+          "Account deletion succeeded but review photo cleanup failed for a batch; use pnpm media:cleanup to retry",
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
     }
   }
 }
