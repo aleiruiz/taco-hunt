@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Link, type Href, useRouter } from "expo-router";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -134,7 +134,7 @@ export default function ExploreScreen() {
         </ScrollView>
         <View style={styles.sectionRow}><Text style={styles.sectionTitle}>Puestos para descubrir</Text><Text style={styles.count}>{items.length} lugares</Text></View>
         <View style={styles.modeRow}><Pressable accessibilityRole="button" accessibilityState={{ selected: mode === "lista" }} onPress={() => setMode("lista")} style={[styles.modeButton, mode === "lista" && styles.modeSelected]}><Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>☷  Lista</Text></Pressable><Pressable accessibilityRole="button" accessibilityState={{ selected: mode === "mapa" }} onPress={() => setMode("mapa")} style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}><Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>⌖  Mapa</Text></Pressable></View>
-        {mode === "mapa" && !error && !loading && items.length > 0 && <View accessibilityLabel="Mapa de puestos" style={styles.map}><MapView provider={PROVIDER_GOOGLE} style={StyleSheet.absoluteFill} initialRegion={mapRegion} region={mapRegion} accessibilityLabel="Mapa de puestos en la zona seleccionada" showsUserLocation={false}>
+        {mode === "mapa" && !error && !loading && items.length > 0 && <View accessibilityLabel="Mapa de puestos" style={styles.map}><MapView provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined} style={StyleSheet.absoluteFill} initialRegion={mapRegion} region={mapRegion} accessibilityLabel="Mapa de puestos en la zona seleccionada" showsUserLocation={false}>
           {items.map((item) => <Marker key={item.id} coordinate={{ latitude: item.latitude, longitude: item.longitude }} title={item.name} description={item.neighborhood} onCalloutPress={() => router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)} />)}
         </MapView><Text style={styles.mapCaption}>Toca un marcador para ver el puesto · {items.length} puestos</Text></View>}
         {!loading && !error && mode === "mapa" && items.length === 0 && <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}><Text style={styles.mapEmptyIcon}>⌖</Text><Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text><Text style={styles.muted}>Prueba otra zona o quita el filtro de taco para ver más lugares.</Text></View>}
