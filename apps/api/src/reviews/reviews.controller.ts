@@ -33,7 +33,7 @@ import { DATABASE_POOL } from "../database/database.module.js";
 const reviewCreateRequestSchema = reviewCreateSchema.strict();
 
 const reviewCursorSchema = z.object({
-  createdAt: z.string().datetime({ offset: true }),
+  createdAt: z.string().datetime({ offset: true, precision: 6 }),
   id: uuidSchema,
 });
 
@@ -198,7 +198,7 @@ export class ReviewsController {
 
     try {
       const { rows } = await this.pool.query(
-        `select r.id,r.spot_taco_id as "spotTacoId",s.id as "spotId",s.name as "spotName",s.neighborhood,tt.id as "tacoTypeId",coalesce(st.display_name,tt.name_es) as "tacoName",r.tortilla,r.filling,r.salsa,r.value,round((r.tortilla+r.filling+r.salsa+r.value)/4.0::numeric,1)::float8 as score,r.price_paid_mxn::float8 as "pricePaidMxn",r.body,r.status,to_char(r.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAt",to_char(r.updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "updatedAt" from app_private.reviews r join app_private.spot_tacos st on st.id=r.spot_taco_id join app_private.spots s on s.id=st.spot_id join app_private.taco_types tt on tt.id=st.taco_type_id where ${filters.join(" and ")} order by r.created_at desc,r.id desc limit $${values.length}`,
+        `select r.id,r.spot_taco_id as "spotTacoId",case when s.status='approved' then s.id else null end as "spotId",case when s.status='approved' then s.name else 'Puesto no disponible' end as "spotName",case when s.status='approved' then s.neighborhood else 'No disponible' end as neighborhood,case when s.status='approved' and st.status='approved' and tt.active then tt.id else null end as "tacoTypeId",case when s.status='approved' and st.status='approved' and tt.active then coalesce(st.display_name,tt.name_es) else 'Taco no disponible' end as "tacoName",r.tortilla,r.filling,r.salsa,r.value,round((r.tortilla+r.filling+r.salsa+r.value)/4.0::numeric,1)::float8 as score,r.price_paid_mxn::float8 as "pricePaidMxn",r.body,r.status,to_char(r.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAt",to_char(r.updated_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "updatedAt" from app_private.reviews r join app_private.spot_tacos st on st.id=r.spot_taco_id join app_private.spots s on s.id=st.spot_id join app_private.taco_types tt on tt.id=st.taco_type_id where ${filters.join(" and ")} order by r.created_at desc,r.id desc limit $${values.length}`,
         values,
       );
       const more = rows.length > parsed.data.limit;

@@ -514,10 +514,10 @@ components:
       properties:
         id: { type: string, format: uuid }
         spotTacoId: { type: string, format: uuid }
-        spotId: { type: string, format: uuid }
+        spotId: { type: [string, "null"], format: uuid }
         spotName: { type: string }
         neighborhood: { type: string }
-        tacoTypeId: { type: string, format: uuid }
+        tacoTypeId: { type: [string, "null"], format: uuid }
         tacoName: { type: string }
         tortilla: { type: integer, minimum: 1, maximum: 5 }
         filling: { type: integer, minimum: 1, maximum: 5 }

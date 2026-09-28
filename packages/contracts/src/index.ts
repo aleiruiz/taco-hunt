@@ -183,10 +183,10 @@ export type ReviewWriteResult = z.infer<typeof reviewWriteResultSchema>;
 export const ownReviewSchema = z.object({
   id: uuidSchema,
   spotTacoId: uuidSchema,
-  spotId: uuidSchema,
+  spotId: uuidSchema.nullable(),
   spotName: z.string(),
   neighborhood: z.string(),
-  tacoTypeId: uuidSchema,
+  tacoTypeId: uuidSchema.nullable(),
   tacoName: z.string(),
   tortilla: ratingSchema,
   filling: ratingSchema,
