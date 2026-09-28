@@ -23,9 +23,9 @@ Con Docker Desktop iniciado y las dependencias instaladas, corre desde la raíz 
 pnpm db:start
 pnpm db:reset
 .\supabase\dev-role.ps1 provision
-pnpm exec supabase db query --local --output table --query "select count(*) as fixture_spots from app_private.spots where source_type = 'fictional';"
-pnpm exec supabase db query --local --output table --query "select count(*) as fixture_tacos from app_private.spot_tacos st join app_private.spots s on s.id = st.spot_id where s.source_type = 'fictional';"
-pnpm exec supabase db query --local --output table --query "select has_schema_privilege('anon', 'app_private', 'USAGE') as anon_schema, has_table_privilege('taco_hunt_api', 'app_private.import_candidates', 'SELECT') as api_import_read, has_table_privilege('taco_hunt_api', 'app_private.spots', 'SELECT') as api_spot_read;"
+pnpm exec supabase db query --local "select count(*) as fixture_spots from app_private.spots where source_type = 'fictional';" --output table
+pnpm exec supabase db query --local "select count(*) as fixture_tacos from app_private.spot_tacos st join app_private.spots s on s.id = st.spot_id where s.source_type = 'fictional';" --output table
+pnpm exec supabase db query --local "select has_schema_privilege('anon', 'app_private', 'USAGE') as anon_schema, has_table_privilege('taco_hunt_api', 'app_private.import_candidates', 'SELECT') as api_import_read, has_table_privilege('taco_hunt_api', 'app_private.spots', 'SELECT') as api_spot_read;" --output table
 ```
 
 El resultado esperado es 10 puestos y 20 relaciones de taco; `anon_schema` y `api_import_read` deben ser `false`, mientras `api_spot_read` debe ser `true`. Repite `pnpm db:reset` y las consultas para comprobar que las cantidades e IDs sembrados se mantienen. `provision` debe correrse después del reset para restaurar la clave local.
@@ -38,7 +38,7 @@ Para rotar la clave sin reiniciar la base (equivale a provisionar una nueva):
 .\supabase\dev-role.ps1 rotate
 ```
 
-El script usa `pnpm exec supabase db query --local --file` con un archivo SQL temporal que elimina al terminar. Si el comando falla, no actualiza `.env`; vuelve a intentarlo cuando el stack local esté activo. La conexión esperada queda como `postgresql://taco_hunt_api:<secreto-local>@127.0.0.1:55422/postgres`.
+El script usa la CLI local instalada en `node_modules/.bin` y `supabase db query --local --file` con un archivo SQL temporal que elimina al terminar. Si el comando falla, no actualiza `.env`; vuelve a intentarlo cuando el stack local esté activo. La conexión esperada queda como `postgresql://taco_hunt_api:<secreto-local>@127.0.0.1:55422/postgres`.
 
 ## Contrato para el API
 

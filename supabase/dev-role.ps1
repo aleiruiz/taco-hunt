@@ -6,9 +6,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $envFile = Join-Path $repoRoot '.env'
+$supabaseCli = Join-Path $repoRoot 'node_modules/.bin/supabase.cmd'
 
 if (-not (Test-Path -LiteralPath $envFile)) {
   throw 'No existe .env. Copia .env.example a .env antes de provisionar el rol local.'
+}
+if (-not (Test-Path -LiteralPath $supabaseCli)) {
+  throw 'No se encontró la CLI local. Ejecuta pnpm install antes de provisionar el rol.'
 }
 
 # Generate a URL-safe, high-entropy password and use it only in this process and .env.
@@ -22,7 +26,7 @@ $sqlFile = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToStri
 $sql = "alter role taco_hunt_api with login password '$password';`n"
 try {
   Set-Content -LiteralPath $sqlFile -Value $sql -NoNewline
-  & pnpm exec supabase db query --local --file $sqlFile --output json | Out-Null
+  & $supabaseCli db query --local --file $sqlFile --output json | Out-Null
   if ($LASTEXITCODE -ne 0) {
     throw 'No se pudo provisionar el rol API en Supabase local; la clave no se guardó.'
   }
