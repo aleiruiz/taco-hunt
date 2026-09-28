@@ -2,7 +2,9 @@
   "name": "@taco-hunt/mobile",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=20.19.4" },
+  "engines": {
+    "node": ">=20.19.4"
+  },
   "main": "index.js",
   "scripts": {
     "start": "node start.mjs",

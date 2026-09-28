@@ -1,16 +1,190 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Link, type Href } from "expo-router";
 
-type Spot = { id: string; name: string; neighborhood: string; reviewCount: number; bestTaco: { name: string; score: number | null } | null };
+type Spot = {
+  id: string;
+  name: string;
+  neighborhood: string;
+  reviewCount: number;
+  bestTaco: { name: string; score: number | null } | null;
+};
 type Page = { items: Spot[]; nextCursor: string | null };
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
-const colors = { ink: "#302723", muted: "#6C5D53", red: "#E95032", green: "#276C4F", paper: "#FFFAF1", line: "#DFD0BA" };
+const colors = {
+  ink: "#302723",
+  muted: "#6C5D53",
+  red: "#E95032",
+  green: "#276C4F",
+  paper: "#FFFAF1",
+  line: "#DFD0BA",
+};
 
 export default function ExploreScreen() {
-  const [items, setItems] = useState<Spot[]>([]); const [query, setQuery] = useState(""); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
-  const load = async (q = query) => { setLoading(true); setError(""); try { const params = new URLSearchParams({ limit: "30" }); if (q.trim()) params.set("q", q.trim()); const response = await fetch(`${API}/spots?${params}`); if (!response.ok) throw new Error(); setItems(((await response.json()) as Page).items); } catch { setError("No hay conexión con Taco Hunt. Revisa que la API esté iniciada."); } finally { setLoading(false); } };
-  useEffect(() => { void load(""); }, []);
-  return <View style={styles.screen}><Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text><Text style={styles.title}>¿Qué se te antoja hoy?</Text><Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text><TextInput value={query} onChangeText={setQuery} onSubmitEditing={() => void load()} placeholder="Busca un puesto o una colonia" placeholderTextColor="#8A7A6E" returnKeyType="search" style={styles.search} accessibilityLabel="Buscar puesto o colonia"/><View style={styles.sectionRow}><Text style={styles.sectionTitle}>Puestos para descubrir</Text><Text style={styles.count}>{items.length} lugares</Text></View>{loading ? <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} /> : error ? <Pressable onPress={() => void load()} style={styles.empty}><Text style={styles.emptyTitle}>Sin conexión</Text><Text style={styles.muted}>{error} Toca para reintentar.</Text></Pressable> : <FlatList data={items} keyExtractor={(item) => item.id} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.red} />} contentContainerStyle={{ paddingBottom: 32 }} ListEmptyComponent={<View style={styles.empty}><Text style={styles.emptyTitle}>Aún no hay puestos en esta búsqueda</Text><Text style={styles.muted}>Prueba con otra colonia o vuelve más tarde.</Text></View>} renderItem={({ item }) => <Link href={{ pathname: "/spot/[id]", params: { id: item.id } } as unknown as Href} asChild><Pressable style={styles.card}><View style={styles.taco}><Text style={{ fontSize: 25 }}>🌮</Text></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.muted}>{item.neighborhood}</Text><Text style={styles.meta}>{item.bestTaco ? `${item.bestTaco.name} · ${item.bestTaco.score === null ? "Sin reseñas" : `${item.bestTaco.score.toFixed(1)} ★`}` : "Tacos por descubrir"}</Text></View><Text style={styles.arrow}>›</Text></Pressable></Link>} />}</View>;
+  const [items, setItems] = useState<Spot[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const load = async (q = query) => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ limit: "30" });
+      if (q.trim()) params.set("q", q.trim());
+      const response = await fetch(`${API}/spots?${params}`);
+      if (!response.ok) throw new Error();
+      setItems(((await response.json()) as Page).items);
+    } catch {
+      setError("No hay conexión con Taco Hunt. Revisa que la API esté iniciada.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    void load("");
+  }, []);
+  return (
+    <View style={styles.screen}>
+      <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
+      <Text style={styles.title}>¿Qué se te antoja hoy?</Text>
+      <Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text>
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        onSubmitEditing={() => void load()}
+        placeholder="Busca un puesto o una colonia"
+        placeholderTextColor="#8A7A6E"
+        returnKeyType="search"
+        style={styles.search}
+        accessibilityLabel="Buscar puesto o colonia"
+      />
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Puestos para descubrir</Text>
+        <Text style={styles.count}>{items.length} lugares</Text>
+      </View>
+      {loading ? (
+        <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
+      ) : error ? (
+        <Pressable onPress={() => void load()} style={styles.empty}>
+          <Text style={styles.emptyTitle}>Sin conexión</Text>
+          <Text style={styles.muted}>{error} Toca para reintentar.</Text>
+        </Pressable>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={() => void load()}
+              tintColor={colors.red}
+            />
+          }
+          contentContainerStyle={{ paddingBottom: 32 }}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>Aún no hay puestos en esta búsqueda</Text>
+              <Text style={styles.muted}>Prueba con otra colonia o vuelve más tarde.</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <Link
+              href={{ pathname: "/spot/[id]", params: { id: item.id } } as unknown as Href}
+              asChild
+            >
+              <Pressable style={styles.card}>
+                <View style={styles.taco}>
+                  <Text style={{ fontSize: 25 }}>🌮</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  <Text style={styles.muted}>{item.neighborhood}</Text>
+                  <Text style={styles.meta}>
+                    {item.bestTaco
+                      ? `${item.bestTaco.name} · ${item.bestTaco.score === null ? "Sin reseñas" : `${item.bestTaco.score.toFixed(1)} ★`}`
+                      : "Tacos por descubrir"}
+                  </Text>
+                </View>
+                <Text style={styles.arrow}>›</Text>
+              </Pressable>
+            </Link>
+          )}
+        />
+      )}
+    </View>
+  );
 }
-const styles = StyleSheet.create({ screen: { flex: 1, paddingHorizontal: 22, paddingTop: 66, backgroundColor: "#FBF3E6" }, kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 }, title: { marginTop: 11, color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", letterSpacing: -1 }, subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 }, search: { marginTop: 23, borderWidth: 1, borderColor: colors.line, borderRadius: 15, backgroundColor: colors.paper, paddingHorizontal: 16, height: 52, color: colors.ink, fontSize: 15 }, sectionRow: { marginTop: 27, marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" }, count: { color: colors.muted, fontSize: 12, fontWeight: "700" }, card: { minHeight: 91, padding: 13, marginBottom: 10, borderRadius: 18, borderColor: "#E8DCCB", borderWidth: 1, backgroundColor: colors.paper, flexDirection: "row", gap: 13, alignItems: "center" }, taco: { width: 57, height: 57, borderRadius: 15, backgroundColor: "#F9DEAE", alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" }, muted: { color: colors.muted, fontSize: 13, marginTop: 3 }, meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 }, arrow: { color: colors.muted, fontSize: 28, paddingHorizontal: 4 }, empty: { marginTop: 24, borderRadius: 18, backgroundColor: colors.paper, padding: 20, alignItems: "center" }, emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" } });
+const styles = StyleSheet.create({
+  screen: { flex: 1, paddingHorizontal: 22, paddingTop: 66, backgroundColor: "#FBF3E6" },
+  kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
+  title: {
+    marginTop: 11,
+    color: colors.ink,
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "900",
+    letterSpacing: -1,
+  },
+  subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 },
+  search: {
+    marginTop: 23,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 15,
+    backgroundColor: colors.paper,
+    paddingHorizontal: 16,
+    height: 52,
+    color: colors.ink,
+    fontSize: 15,
+  },
+  sectionRow: {
+    marginTop: 27,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" },
+  count: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  card: {
+    minHeight: 91,
+    padding: 13,
+    marginBottom: 10,
+    borderRadius: 18,
+    borderColor: "#E8DCCB",
+    borderWidth: 1,
+    backgroundColor: colors.paper,
+    flexDirection: "row",
+    gap: 13,
+    alignItems: "center",
+  },
+  taco: {
+    width: 57,
+    height: 57,
+    borderRadius: 15,
+    backgroundColor: "#F9DEAE",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
+  muted: { color: colors.muted, fontSize: 13, marginTop: 3 },
+  meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 },
+  arrow: { color: colors.muted, fontSize: 28, paddingHorizontal: 4 },
+  empty: {
+    marginTop: 24,
+    borderRadius: 18,
+    backgroundColor: colors.paper,
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" },
+});
