@@ -4,13 +4,13 @@ import { normalizeName } from "../src/proposals/duplicate-detector.js";
 const { Pool } = pg;
 const pool = new Pool({ connectionString: required("DATABASE_URL"), max: 1 });
 const apiKey = required("GOOGLE_PLACES_API_KEY");
-const detailsEndpoint =
-  process.env.GOOGLE_PLACES_DETAILS_URL?.trim() || "https://places.googleapis.com/v1/places";
+const detailsEndpoint = resolveDetailsEndpoint();
 const limit = Number(process.env.PLACES_REFRESH_LIMIT ?? 25);
 const delayMs = Number(process.env.PLACES_REFRESH_DELAY_MS ?? 200);
 const movedThresholdMeters = 150;
 const apply = process.argv.includes("--apply");
 const REPORT_TAG = "[places-refresh]";
+const FETCH_TIMEOUT_MS = 5_000;
 
 type EligibleSpot = {
   id: string;
@@ -35,12 +35,30 @@ type Finding = { spot: EligibleSpot; placeId: string; issues: string[] };
 if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
   throw new Error("PLACES_REFRESH_LIMIT must be between 1 and 200");
 }
+if (!Number.isFinite(delayMs) || delayMs < 0) {
+  throw new Error("PLACES_REFRESH_DELAY_MS must be a non-negative finite number");
+}
+
+function resolveDetailsEndpoint(): string {
+  const configured = process.env.GOOGLE_PLACES_DETAILS_URL?.trim();
+  if (!configured) return "https://places.googleapis.com/v1/places";
+  const parsed = new URL(configured);
+  const isLoopback = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
+  if (parsed.protocol !== "https:" && !isLoopback) {
+    throw new Error(
+      "GOOGLE_PLACES_DETAILS_URL must use https:// (only a loopback host may use http:// for local testing)",
+    );
+  }
+  return configured;
+}
 
 async function main(): Promise<void> {
   const spots = await eligibleSpots(limit);
   const findings: Finding[] = [];
   let confirmed = 0;
   let skippedNoPlaceId = 0;
+  let skippedStale = 0;
+  let skippedErrors = 0;
 
   for (const spot of spots) {
     const placeId = extractPlaceId(spot.sourceRef);
@@ -49,17 +67,25 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const details = await fetchDetails(placeId);
-    const issues = compare(spot, details);
-    if (issues.length === 0) {
-      confirmed += 1;
-      if (apply) {
-        await pool.query("update app_private.spots set last_verified_at=now() where id=$1", [
-          spot.id,
-        ]);
+    try {
+      const details = await fetchDetails(placeId);
+      const issues = compare(spot, details);
+      if (issues.length === 0) {
+        if (!apply) {
+          confirmed += 1;
+        } else if (await confirmStillFresh(spot)) {
+          confirmed += 1;
+        } else {
+          skippedStale += 1;
+        }
+      } else {
+        findings.push({ spot, placeId, issues });
       }
-    } else {
-      findings.push({ spot, placeId, issues });
+    } catch (error) {
+      skippedErrors += 1;
+      console.error(
+        `Skipping spot ${spot.id} (${spot.name}): ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
     if (delayMs > 0) await sleep(delayMs);
   }
@@ -80,6 +106,8 @@ async function main(): Promise<void> {
         mode: apply ? "apply" : "dry-run",
         checked: spots.length,
         skippedNoPlaceId,
+        skippedStale: apply ? skippedStale : undefined,
+        skippedErrors,
         confirmedFresh: confirmed,
         findings: findings.map((finding) => ({
           spotId: finding.spot.id,
@@ -110,15 +138,33 @@ async function eligibleSpots(max: number): Promise<EligibleSpot[]> {
     longitude: number;
     sourceRef: string;
   }>(
-    `select id, name, neighborhood, latitude::float8 as latitude, longitude::float8 as longitude,
-       source_ref as "sourceRef"
-     from app_private.spots
-     where status='approved' and source_ref like 'autocomplete:%'
-     order by coalesce(last_verified_at, created_at) asc
+    `select s.id, s.name, s.neighborhood, s.latitude::float8 as latitude,
+       s.longitude::float8 as longitude, s.source_ref as "sourceRef"
+     from app_private.spots s
+     where s.status='approved' and s.source_ref like 'autocomplete:%'
+       and not exists (
+         select 1 from app_private.reports r
+         where r.target_type='spot' and r.target_id=s.id and r.status='open'
+       )
+     order by coalesce(s.last_verified_at, s.created_at) asc
      limit $1`,
     [max],
   );
   return rows;
+}
+
+/**
+ * Marks a spot verified only if it still matches what was just compared against Google —
+ * guards against a moderator editing or unapproving the spot while fetchDetails was in flight.
+ */
+async function confirmStillFresh(spot: EligibleSpot): Promise<boolean> {
+  const result = await pool.query(
+    `update app_private.spots
+     set last_verified_at=now()
+     where id=$1 and status='approved' and name=$2 and latitude::float8=$3 and longitude::float8=$4`,
+    [spot.id, spot.name, spot.latitude, spot.longitude],
+  );
+  return result.rowCount !== null && result.rowCount > 0;
 }
 
 function extractPlaceId(sourceRef: string): string | null {
@@ -139,6 +185,7 @@ async function fetchDetails(placeId: string): Promise<GoogleDetails> {
         "businessStatus",
       ].join(","),
     },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (response.status === 404) return { status: "not_found" };
   if (!response.ok) throw new Error(`Google Places details returned ${response.status}`);
@@ -173,21 +220,31 @@ function compare(spot: EligibleSpot, details: GoogleDetails): string[] {
   } else if (details.businessStatus === "CLOSED_TEMPORARILY") {
     issues.push("Google lo marca como cerrado temporalmente.");
   }
-  if (details.name && normalizeName(details.name) !== normalizeName(spot.name)) {
+
+  if (
+    !details.name ||
+    typeof details.latitude !== "number" ||
+    typeof details.longitude !== "number"
+  ) {
+    issues.push(
+      "La respuesta de Google Place Details no incluyó nombre o ubicación completos; no se pudo confirmar como vigente.",
+    );
+    return issues;
+  }
+
+  if (normalizeName(details.name) !== normalizeName(spot.name)) {
     issues.push(
       `Google reporta un nombre distinto: "${details.name}" (Taco Hunt: "${spot.name}").`,
     );
   }
-  if (typeof details.latitude === "number" && typeof details.longitude === "number") {
-    const distance = distanceMeters(
-      spot.latitude,
-      spot.longitude,
-      details.latitude,
-      details.longitude,
-    );
-    if (distance > movedThresholdMeters) {
-      issues.push(`Google ubica el lugar a ${Math.round(distance)} m de la posición guardada.`);
-    }
+  const distance = distanceMeters(
+    spot.latitude,
+    spot.longitude,
+    details.latitude,
+    details.longitude,
+  );
+  if (distance > movedThresholdMeters) {
+    issues.push(`Google ubica el lugar a ${Math.round(distance)} m de la posición guardada.`);
   }
   return issues;
 }
@@ -203,8 +260,8 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number):
 async function fileReport(finding: Finding): Promise<boolean> {
   const existing = await pool.query(
     `select 1 from app_private.reports
-     where target_type='spot' and target_id=$1 and status='open' and note like $2 limit 1`,
-    [finding.spot.id, `${REPORT_TAG}%`],
+     where target_type='spot' and target_id=$1 and status='open' limit 1`,
+    [finding.spot.id],
   );
   if (existing.rowCount) return false;
 
