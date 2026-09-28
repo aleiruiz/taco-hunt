@@ -124,8 +124,8 @@ function validate(rows) {
 }
 
 function buildSql(rows, batchId) {
-  const values = rows.map((row, index) => {
-    const candidateId = uuidFromHash(`${batchId}:${index}:${row.normalizedName}:${row.latitude.toFixed(6)}:${row.longitude.toFixed(6)}`);
+  const values = rows.map((row) => {
+    const candidateId = uuidFromHash(`${batchId}:${row.normalizedName}:${row.latitude.toFixed(6)}:${row.longitude.toFixed(6)}`);
     const originalPayload = JSON.stringify(row);
     return `(${quoteSql(candidateId)}::uuid, ${quoteSql(originalPayload)}::jsonb, ${quoteSql(row.normalizedName)}, ${row.latitude.toFixed(6)}, ${row.longitude.toFixed(6)}, ${quoteSql(row.source_type)}, ${quoteSql(row.license)}, ${row.last_verified_at ? `${quoteSql(row.last_verified_at)}::timestamptz` : "null"}, ${quoteSql(row.source_ref)})`;
   });
