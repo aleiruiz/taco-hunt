@@ -2,7 +2,41 @@
  "schemaVersion": 2,
  "maxWorkers": 3,
  "baseBranch": "main",
- "workers": [],
+ "infra": {
+  "ciQualityGate": {
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/22",
+   "status": "merged",
+   "headSha": "48e5f644b8211a92b9019508f4368f70e69168f4",
+   "coderabbitReviewedSha": "48e5f644b8211a92b9019508f4368f70e69168f4",
+   "note": "Merged 2026-09-28T19:53Z with 2 unresolved CodeRabbit findings on the reviewed head: (1) use !cancelled() instead of always(); (2) formatting step checks only .github/workflows/ci.yml instead of repo-wide pnpm format:check. Main CI no longer enforces repo-wide formatting. Needs owner decision."
+  }
+ },
+ "workers": [
+  {
+   "taskId": "T21",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T21-mobile-autocomplete",
+   "branch": "codex/T21-mobile-autocomplete",
+   "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator itself in this worktree (owner opted into the orchestrator implementing tasks directly instead of spawning separate worker sessions; see CLAUDE.md). PR #23 opened 2026-09-28T23:00Z, CI running, auto_fix monitor on. Not merged yet."
+  },
+  {
+   "taskId": "T23",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T23-place-refresh",
+   "branch": "codex/T23-place-refresh",
+   "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator in this worktree. PR #24 opened 2026-09-28T23:45Z, CI running, auto_fix monitor on. Not merged yet."
+  },
+  {
+   "taskId": "T14",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T14-account-lifecycle",
+   "branch": "codex/T14-account-lifecycle",
+   "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator on Sonnet 5 (owner declined the recommended model escalation). PR #25 opened 2026-09-29T00:45Z, CI running, auto_fix monitor on. Not merged yet."
+  }
+ ],
  "tasks": {
   "T00": {
    "status": "merged",
@@ -185,36 +219,36 @@
    "coderabbitReviewedSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db"
   },
   "T21": {
-   "status": "ready",
    "dependsOn": [
     "T03",
     "T17"
    ],
-   "note": "Dependencies merged. Local worktrees (t21-address-autocomplete, t21-autocomplete-recovery) exist but sit on stale commits with no work ahead of main and no PR; no active worker. Eligible for assignment.",
-   "pr": null,
-   "headSha": null,
+   "note": "Old worktrees (t21-address-autocomplete, t21-autocomplete-recovery) held uncommitted WIP that was never turned into a PR; snapshotted to branches codex/T21-address-autocomplete-abandoned (f1f3256) and codex/T21-mobile-autocomplete-recovery (58e715f) for reference, then discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: GET /v1/places/autocomplete + GET /v1/places/:placeId/resolve, wired into propose.tsx's autocomplete mode. Typecheck/lint/format clean; not exercised against a live Google Places key or a device/Expo (unavailable in this environment) — flagged in the PR.",
+   "status": "in_review",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/23",
+   "headSha": "c5a039d786fe421767fab140beea3609edcd4279",
    "coderabbitReviewedSha": null
   },
   "T22": {
-   "status": "changes_requested",
+   "status": "merged",
    "dependsOn": [
     "T03",
     "T20"
    ],
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/21",
-   "note": "Open, mergeable, CI green (lint/types/format + GitGuardian). CodeRabbit reviewed current head e8022e4 with 1 actionable finding: apps/mobile/src/lib/directions.ts:31 - Android geo: URI isn't honored by the intended non-Google map apps. Needs an author fix (or documented rationale) before merge. No active worker tracked for this PR right now.",
-   "headSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53",
+   "note": "Merged 2026-09-28T18:22Z as 644c7c4. Author pushed 6f951e8 (documented Apple Maps link + Android/Google Maps rationale for the geo: finding) and requested a re-review, but merged before CodeRabbit reviewed 6f951e8. Last CodeRabbit review covers e8022e4 only. Main CI on the merge commit failed. Flagged, not re-opened.",
+   "headSha": "6f951e850c05f8f4c8cbab9964e34ed397c76155",
    "coderabbitReviewedSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53"
   },
   "T23": {
-   "status": "ready",
    "dependsOn": [
     "T17",
     "T20"
    ],
-   "note": "Dependencies merged. Local worktree (t23-place-refresh) exists but sits on a stale commit with no work ahead of main and no PR; no active worker. Eligible for assignment.",
-   "pr": null,
-   "headSha": null,
+   "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR.",
+   "status": "in_review",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
+   "headSha": "7a07921c01694cb2f73d1b886d3f5f309d81dd7a",
    "coderabbitReviewedSha": null
   },
   "T24": {
@@ -248,9 +282,10 @@
     "T19",
     "T20"
    ],
-   "note": "All dependencies merged (T01-T13, T18-T20). Per AGENTS.md, escalate to a stronger model for this task given account-deletion correctness. Lower priority than open P2.5 tasks (T21, T23) per plan tier order, but eligible now.",
-   "pr": null,
-   "headSha": null,
+   "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
+   "status": "in_review",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
+   "headSha": "188e8b948d6c47d584e2af72c664ce87bdaba68a",
    "coderabbitReviewedSha": null
   },
   "T15": {
