@@ -14,7 +14,6 @@ import { AdminModule } from "./admin/admin.module.js";
 import { PlacesModule } from "./places/places.module.js";
 
 @Module({
-<<<<<<< HEAD
   imports: [
     DatabaseModule,
     AuthModule,
@@ -24,9 +23,6 @@ import { PlacesModule } from "./places/places.module.js";
     AdminModule,
     PlacesModule,
   ],
-=======
-  imports: [DatabaseModule, AuthModule, ProposalsModule, ReportsModule, AdminModule, PlacesModule],
->>>>>>> ac88bc7 (feat(api): add admin Google Places discovery)
   controllers: [HealthController, SpotsController, ReviewsController, FavoritesController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })
