@@ -29,15 +29,15 @@ export class AdminService {
           `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,
              s.longitude::float8 as longitude,s.proposal_note as note,s.created_by as "createdBy",
              s.created_at as "createdAt",
-             case when latest.action='request_changes' then 'changes_requested' else 'pending' end as status,
+             s.status,
              latest.internal_reason as "moderationReason"
            from app_private.spots s
            left join lateral (
              select action,internal_reason from app_private.moderation_audit
-             where target_type='spot' and target_id=s.id
+             where target_type='spot' and target_id=s.id and action='request_changes'
              order by created_at desc,id desc limit 1
            ) latest on true
-           where s.status='pending' order by s.created_at asc limit 100`,
+           where s.status in ('pending','changes_requested') order by s.created_at asc limit 100`,
         );
         return { items: rows };
       }
@@ -78,7 +78,7 @@ export class AdminService {
                power(sin(radians(pending.longitude::float8-approved.longitude::float8)/2),2)
              ))))::int as "distanceMeters"
            from app_private.spots pending join app_private.spots approved on approved.status='approved'
-           where pending.status='pending' and pending.id <> approved.id
+           where pending.status in ('pending','changes_requested') and pending.id <> approved.id
              and pending.latitude between approved.latitude - 0.002 and approved.latitude + 0.002
              and pending.longitude between approved.longitude - 0.002 and approved.longitude + 0.002
              and 6371000 * 2 * asin(sqrt(least(1,
@@ -219,26 +219,27 @@ export class AdminService {
   ) {
     if (type === "spot" && action === "approve") {
       return client.query(
-        "update app_private.spots set status='approved',updated_at=now() where id=$1 and status='pending'",
+        "update app_private.spots set status='approved',updated_at=now() where id=$1 and status in ('pending','changes_requested')",
         [id],
       );
     }
     if (type === "spot" && action === "reject") {
       return client.query(
-        "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status='pending'",
+        "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status in ('pending','changes_requested')",
         [id],
       );
     }
     if (type === "spot" && action === "request_changes") {
-      return client.query("select id from app_private.spots where id=$1 and status='pending'", [
-        id,
-      ]);
+      return client.query(
+        "update app_private.spots set status='changes_requested',updated_at=now() where id=$1 and status='pending'",
+        [id],
+      );
     }
     if (type === "spot" && action === "merge") {
       if (!canonicalId || canonicalId === id)
         throw new BadRequestException("Puesto canónico inválido");
       return client.query(
-        "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status='pending' and exists (select 1 from app_private.spots where id=$2 and status='approved')",
+        "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status in ('pending','changes_requested') and exists (select 1 from app_private.spots where id=$2 and status='approved')",
         [id, canonicalId],
       );
     }
