@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global console, process */
 
 import { readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
@@ -73,18 +74,29 @@ function parseCsv(text) {
     if (row.some((value) => value.trim() !== "")) rows.push(row);
   }
   if (rows.length < 2) throw new Error("CSV must contain a header and at least one data row");
-  const headers = rows[0].map((value, index) => (index === 0 ? value.replace(/^\uFEFF/, "") : value).trim());
-  if (headers.length !== REQUIRED_COLUMNS.length || headers.some((value, index) => value !== REQUIRED_COLUMNS[index])) {
+  const headers = rows[0].map((value, index) =>
+    (index === 0 ? value.replace(/^\uFEFF/, "") : value).trim(),
+  );
+  if (
+    headers.length !== REQUIRED_COLUMNS.length ||
+    headers.some((value, index) => value !== REQUIRED_COLUMNS[index])
+  ) {
     throw new Error(`CSV header must be exactly: ${REQUIRED_COLUMNS.join(",")}`);
   }
   return rows.slice(1).map((values, index) => {
-    if (values.length !== headers.length) throw new Error(`Row ${index + 2} has ${values.length} columns; expected ${headers.length}`);
+    if (values.length !== headers.length)
+      throw new Error(`Row ${index + 2} has ${values.length} columns; expected ${headers.length}`);
     return Object.fromEntries(headers.map((header, column) => [header, values[column].trim()]));
   });
 }
 
 function normalizeName(name) {
-  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es-MX").replace(/[^a-z0-9]+/g, " ").trim();
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-MX")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function uuidFromHash(value) {
@@ -108,14 +120,30 @@ function validate(rows) {
     const latitude = Number(row.latitude);
     const longitude = Number(row.longitude);
     if (!name || name.length > 120) throw new Error(`Row ${line}: name must be 1-120 characters`);
-    if (!neighborhood || neighborhood.length > 120) throw new Error(`Row ${line}: neighborhood must be 1-120 characters`);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < MONTERREY_BOUNDS.minLat || latitude > MONTERREY_BOUNDS.maxLat || longitude < MONTERREY_BOUNDS.minLng || longitude > MONTERREY_BOUNDS.maxLng) {
-      throw new Error(`Row ${line}: coordinates must be inside the documented Monterrey contribution bounds`);
+    if (!neighborhood || neighborhood.length > 120)
+      throw new Error(`Row ${line}: neighborhood must be 1-120 characters`);
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < MONTERREY_BOUNDS.minLat ||
+      latitude > MONTERREY_BOUNDS.maxLat ||
+      longitude < MONTERREY_BOUNDS.minLng ||
+      longitude > MONTERREY_BOUNDS.maxLng
+    ) {
+      throw new Error(
+        `Row ${line}: coordinates must be inside the documented Monterrey contribution bounds`,
+      );
     }
-    if (!ALLOWED_SOURCE_TYPES.has(row.source_type)) throw new Error(`Row ${line}: source_type must be one of ${[...ALLOWED_SOURCE_TYPES].join(", ")}`);
-    if (!row.source_ref || !row.license) throw new Error(`Row ${line}: source_ref and license are required`);
-    if (row.notes.length > 1000) throw new Error(`Row ${line}: notes must be at most 1000 characters`);
-    if (row.last_verified_at && Number.isNaN(Date.parse(row.last_verified_at))) throw new Error(`Row ${line}: last_verified_at is not a valid date`);
+    if (!ALLOWED_SOURCE_TYPES.has(row.source_type))
+      throw new Error(
+        `Row ${line}: source_type must be one of ${[...ALLOWED_SOURCE_TYPES].join(", ")}`,
+      );
+    if (!row.source_ref || !row.license)
+      throw new Error(`Row ${line}: source_ref and license are required`);
+    if (row.notes.length > 1000)
+      throw new Error(`Row ${line}: notes must be at most 1000 characters`);
+    if (row.last_verified_at && Number.isNaN(Date.parse(row.last_verified_at)))
+      throw new Error(`Row ${line}: last_verified_at is not a valid date`);
     const duplicateKey = `${normalizedName}|${latitude.toFixed(6)}|${longitude.toFixed(6)}`;
     if (seen.has(duplicateKey)) throw new Error(`Row ${line}: duplicate input key ${duplicateKey}`);
     seen.add(duplicateKey);
@@ -125,7 +153,9 @@ function validate(rows) {
 
 function buildSql(rows, batchId) {
   const values = rows.map((row) => {
-    const candidateId = uuidFromHash(`${batchId}:${row.normalizedName}:${row.latitude.toFixed(6)}:${row.longitude.toFixed(6)}`);
+    const candidateId = uuidFromHash(
+      `${batchId}:${row.normalizedName}:${row.latitude.toFixed(6)}:${row.longitude.toFixed(6)}`,
+    );
     const originalPayload = JSON.stringify(row);
     return `(${quoteSql(candidateId)}::uuid, ${quoteSql(originalPayload)}::jsonb, ${quoteSql(row.normalizedName)}, ${row.latitude.toFixed(6)}, ${row.longitude.toFixed(6)}, ${quoteSql(row.source_type)}, ${quoteSql(row.license)}, ${row.last_verified_at ? `${quoteSql(row.last_verified_at)}::timestamptz` : "null"}, ${quoteSql(row.source_ref)})`;
   });
@@ -159,10 +189,28 @@ async function main() {
   const csvBytes = await readFile(resolve(args.csv));
   const csv = new TextDecoder("utf-8", { fatal: true }).decode(csvBytes);
   const rows = validate(parseCsv(csv));
-  const batchId = args["batch-id"] ?? uuidFromHash(rows.map((row) => JSON.stringify(row)).sort().join("\n"));
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(batchId)) throw new Error("--batch-id must be a UUID");
+  const batchId =
+    args["batch-id"] ??
+    uuidFromHash(
+      rows
+        .map((row) => JSON.stringify(row))
+        .sort()
+        .join("\n"),
+    );
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(batchId))
+    throw new Error("--batch-id must be a UUID");
   const sql = buildSql(rows, batchId);
-  const report = [`batch_id: ${batchId}`, `rows: ${rows.length}`, "mode: staging candidates only", "", "Validated rows:", ...rows.map((row, index) => `${index + 1}. ${row.name} (${row.latitude.toFixed(6)}, ${row.longitude.toFixed(6)}) · source=${row.source_type} · license=${row.license}`)].join("\n");
+  const report = [
+    `batch_id: ${batchId}`,
+    `rows: ${rows.length}`,
+    "mode: staging candidates only",
+    "",
+    "Validated rows:",
+    ...rows.map(
+      (row, index) =>
+        `${index + 1}. ${row.name} (${row.latitude.toFixed(6)}, ${row.longitude.toFixed(6)}) · source=${row.source_type} · license=${row.license}`,
+    ),
+  ].join("\n");
   if (args.report) await writeFile(resolve(args.report), `${report}\n`, "utf8");
   if (args.dryRun) {
     console.log(`${report}\n\nDry run: no database changes made.`);
@@ -172,9 +220,16 @@ async function main() {
   const sqlFile = join(tempDir, "import.sql");
   try {
     await writeFile(sqlFile, sql, "utf8");
-    const result = spawnSync("pnpm", ["exec", "supabase", "db", "query", "--local", "--file", sqlFile], { encoding: "utf8", stdio: "inherit" });
-    if (result.status !== 0) throw new Error(`Supabase local query failed with exit code ${result.status}`);
-    console.log(`${report}\n\nImported ${rows.length} private candidate(s) for moderator review. No spots were published.`);
+    const result = spawnSync(
+      "pnpm",
+      ["exec", "supabase", "db", "query", "--local", "--file", sqlFile],
+      { encoding: "utf8", stdio: "inherit" },
+    );
+    if (result.status !== 0)
+      throw new Error(`Supabase local query failed with exit code ${result.status}`);
+    console.log(
+      `${report}\n\nImported ${rows.length} private candidate(s) for moderator review. No spots were published.`,
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
