@@ -124,7 +124,7 @@ export default function ExploreScreen() {
         <TextInput value={query} onChangeText={setQuery} onSubmitEditing={() => void load()} placeholder="Busca un puesto o una colonia" placeholderTextColor="#8A7A6E" returnKeyType="search" style={styles.search} accessibilityLabel="Buscar puesto o colonia" />
         <View style={styles.controls}>
           <Pressable accessibilityRole="button" onPress={() => void locate()} style={styles.locationButton}><Text style={styles.locationText}>{locating ? "Buscando…" : "⌖  Usar mi ubicación"}</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityExpanded={areaPicker} onPress={() => setAreaPicker((open) => !open)} style={styles.areaButton}><Text style={styles.areaText}>⌄  {area.label}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityState={{ expanded: areaPicker }} onPress={() => setAreaPicker((open) => !open)} style={styles.areaButton}><Text style={styles.areaText}>⌄  {area.label}</Text></Pressable>
         </View>
         {areaPicker && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.areaOptions}>{AREAS.map((option) => <Pressable key={option.label} onPress={() => chooseArea(option)} style={[styles.areaChip, area.label === option.label && styles.selectedChip]}><Text style={[styles.chipText, area.label === option.label && styles.selectedChipText]}>{option.label}</Text></Pressable>)}</ScrollView>}
         <Text style={styles.filterLabel}>SE TE ANTOJA</Text>
