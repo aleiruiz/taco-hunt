@@ -9,6 +9,7 @@ type Taco = { id: string; tacoTypeId?: string; name: string; score: number | nul
 type Spot = { id: string; name: string; neighborhood: string; latitude: number; longitude: number; lastVerifiedAt: string | null; reviewCount: number; bestTaco: Taco | null };
 type Page = { items: Spot[]; nextCursor: string | null };
 type Area = { label: string; north: number; south: number; east: number; west: number };
+const API_COVERAGE = { north: 27, south: 25, east: -99, west: -101.5 };
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const AREAS: Area[] = [
   { label: "Monterrey", north: 25.78, south: 25.60, east: -100.20, west: -100.40 },
@@ -18,6 +19,15 @@ const AREAS: Area[] = [
   { label: "Apodaca", north: 25.82, south: 25.72, east: -100.08, west: -100.23 },
 ];
 const colors = { ink: "#302723", muted: "#6C5D53", red: "#E95032", green: "#276C4F", paper: "#FFFAF1", line: "#DFD0BA", cream: "#FBF3E6" };
+
+function clipAreaToApiCoverage(area: Area): Area | null {
+  const north = Math.min(API_COVERAGE.north, area.north);
+  const south = Math.max(API_COVERAGE.south, area.south);
+  const east = Math.min(API_COVERAGE.east, area.east);
+  const west = Math.max(API_COVERAGE.west, area.west);
+  if (south >= north || west >= east) return null;
+  return { ...area, north, south, east, west };
+}
 
 export default function ExploreScreen() {
   const [items, setItems] = useState<Spot[]>([]);
@@ -44,7 +54,13 @@ export default function ExploreScreen() {
   const load = useCallback(async (q = query, selectedType = activeType, selectedArea = area) => {
     setLoading(true); setError("");
     try {
-      const params = new URLSearchParams({ limit: "30", north: String(selectedArea.north), south: String(selectedArea.south), east: String(selectedArea.east), west: String(selectedArea.west) });
+      const bounds = clipAreaToApiCoverage(selectedArea);
+      if (!bounds) {
+        setItems([]);
+        setError("Esta zona queda fuera de la cobertura disponible. Elige una zona de Monterrey y su área metropolitana.");
+        return;
+      }
+      const params = new URLSearchParams({ limit: "30", north: String(bounds.north), south: String(bounds.south), east: String(bounds.east), west: String(bounds.west) });
       if (q.trim()) params.set("q", q.trim());
       if (selectedType) params.set("tacoType", selectedType.slug);
       const response = await fetch(`${API}/spots?${params}`);
@@ -69,7 +85,15 @@ export default function ExploreScreen() {
       }
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const { latitude, longitude } = position.coords;
-      const areaAtLocation: Area = { label: "Cerca de ti", north: latitude + 0.08, south: latitude - 0.08, east: longitude + 0.10, west: longitude - 0.10 };
+      if (latitude < API_COVERAGE.south || latitude > API_COVERAGE.north || longitude < API_COVERAGE.west || longitude > API_COVERAGE.east) {
+        setError("Tu ubicación está fuera de la cobertura de Monterrey y su área metropolitana. Puedes elegir una zona manualmente.");
+        return;
+      }
+      const areaAtLocation = clipAreaToApiCoverage({ label: "Cerca de ti", north: latitude + 0.08, south: latitude - 0.08, east: longitude + 0.10, west: longitude - 0.10 });
+      if (!areaAtLocation) {
+        setError("No hay cobertura disponible cerca de tu ubicación. Puedes elegir una zona manualmente.");
+        return;
+      }
       setArea(areaAtLocation);
       await load(query, activeType, areaAtLocation);
     } catch {
@@ -110,12 +134,12 @@ export default function ExploreScreen() {
         </ScrollView>
         <View style={styles.sectionRow}><Text style={styles.sectionTitle}>Puestos para descubrir</Text><Text style={styles.count}>{items.length} lugares</Text></View>
         <View style={styles.modeRow}><Pressable accessibilityRole="button" accessibilityState={{ selected: mode === "lista" }} onPress={() => setMode("lista")} style={[styles.modeButton, mode === "lista" && styles.modeSelected]}><Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>☷  Lista</Text></Pressable><Pressable accessibilityRole="button" accessibilityState={{ selected: mode === "mapa" }} onPress={() => setMode("mapa")} style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}><Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>⌖  Mapa</Text></Pressable></View>
-        {mode === "mapa" && !error && <View accessibilityLabel="Mapa de puestos" style={styles.map}><MapView style={StyleSheet.absoluteFill} initialRegion={mapRegion} region={mapRegion} accessibilityLabel="Mapa de puestos en la zona seleccionada" showsUserLocation={false}>
+        {mode === "mapa" && !error && !loading && items.length > 0 && <View accessibilityLabel="Mapa de puestos" style={styles.map}><MapView style={StyleSheet.absoluteFill} initialRegion={mapRegion} region={mapRegion} accessibilityLabel="Mapa de puestos en la zona seleccionada" showsUserLocation={false}>
           {items.map((item) => <Marker key={item.id} coordinate={{ latitude: item.latitude, longitude: item.longitude }} title={item.name} description={item.neighborhood} onCalloutPress={() => router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)} />)}
         </MapView><Text style={styles.mapCaption}>Toca un marcador para ver el puesto · {items.length} puestos</Text></View>}
+        {!loading && !error && mode === "mapa" && items.length === 0 && <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}><Text style={styles.mapEmptyIcon}>⌖</Text><Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text><Text style={styles.muted}>Prueba otra zona o quita el filtro de taco para ver más lugares.</Text></View>}
         {loading && <ActivityIndicator color={colors.red} style={{ marginTop: 28 }} />}
         {!loading && error ? <Pressable accessibilityRole="button" onPress={() => void load()} style={styles.empty}><Text style={styles.emptyTitle}>Sin conexión</Text><Text style={styles.muted}>{error} Toca para reintentar.</Text></Pressable> : null}
-        {!loading && !error && mode === "mapa" && items.length === 0 ? <View style={styles.empty}><Text style={styles.emptyTitle}>No hay puestos en esta zona</Text><Text style={styles.muted}>Prueba otra zona o cambia el filtro.</Text></View> : null}
       </>}
       ListEmptyComponent={mode === "lista" && !loading && !error ? <View style={styles.empty}><Text style={styles.emptyTitle}>Aún no hay puestos en esta búsqueda</Text><Text style={styles.muted}>Prueba con otra colonia o vuelve más tarde.</Text></View> : null}
       renderItem={({ item }) => <Link href={{ pathname: "/spot/[id]", params: { id: item.id } } as unknown as Href} asChild><Pressable accessibilityRole="link" style={styles.card}><View style={styles.taco}><Text style={{ fontSize: 25 }}>🌮</Text></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.muted}>{item.neighborhood}</Text><Text style={styles.meta}>{item.bestTaco ? `${item.bestTaco.name} · ${item.bestTaco.score === null ? "Sin reseñas" : `${item.bestTaco.score.toFixed(1)} ★`}` : "Tacos por descubrir"}</Text></View><Text style={styles.arrow}>›</Text></Pressable></Link>}
@@ -124,5 +148,5 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.cream }, listContent: { paddingHorizontal: 22, paddingTop: 60, paddingBottom: 36 }, kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 }, title: { marginTop: 11, color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", letterSpacing: -1 }, subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 }, search: { marginTop: 20, borderWidth: 1, borderColor: colors.line, borderRadius: 15, backgroundColor: colors.paper, paddingHorizontal: 16, height: 52, color: colors.ink, fontSize: 15 }, controls: { flexDirection: "row", gap: 9, marginTop: 11 }, locationButton: { backgroundColor: colors.green, borderRadius: 13, minHeight: 43, alignItems: "center", justifyContent: "center", paddingHorizontal: 13 }, locationText: { color: "white", fontWeight: "800", fontSize: 12 }, areaButton: { flex: 1, borderWidth: 1, borderColor: colors.line, borderRadius: 13, minHeight: 43, alignItems: "center", justifyContent: "center", backgroundColor: colors.paper }, areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 }, areaOptions: { marginTop: 9, maxHeight: 42 }, areaChip: { marginRight: 8, paddingHorizontal: 13, height: 36, justifyContent: "center", borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1 }, filterLabel: { marginTop: 20, marginBottom: 9, color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }, typeRow: { maxHeight: 42 }, typeChip: { paddingHorizontal: 14, height: 36, justifyContent: "center", borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1 }, chipText: { color: colors.ink, fontWeight: "700", fontSize: 12 }, selectedChip: { backgroundColor: colors.ink, borderColor: colors.ink }, selectedChipText: { color: "white" }, sectionRow: { marginTop: 23, marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" }, count: { color: colors.muted, fontSize: 12, fontWeight: "700" }, modeRow: { flexDirection: "row", padding: 3, backgroundColor: "#EFE4D5", borderRadius: 12, marginBottom: 12 }, modeButton: { flex: 1, minHeight: 37, alignItems: "center", justifyContent: "center", borderRadius: 9 }, modeSelected: { backgroundColor: colors.paper }, modeText: { color: colors.muted, fontWeight: "700", fontSize: 12 }, modeSelectedText: { color: colors.ink }, card: { minHeight: 91, padding: 13, marginBottom: 10, borderRadius: 18, borderColor: "#E8DCCB", borderWidth: 1, backgroundColor: colors.paper, flexDirection: "row", gap: 13, alignItems: "center" }, taco: { width: 57, height: 57, borderRadius: 15, backgroundColor: "#F9DEAE", alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" }, muted: { color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }, meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 }, arrow: { color: colors.muted, fontSize: 23, paddingHorizontal: 4, fontWeight: "800" }, empty: { marginTop: 16, borderRadius: 18, backgroundColor: colors.paper, padding: 20, alignItems: "center" }, emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" }, map: { height: 245, borderRadius: 18, backgroundColor: "#E8E6D7", overflow: "hidden", marginBottom: 11 }, mapCaption: { position: "absolute", bottom: 9, left: 12, color: colors.muted, fontSize: 10, fontWeight: "700", backgroundColor: colors.paper, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  screen: { flex: 1, backgroundColor: colors.cream }, listContent: { paddingHorizontal: 22, paddingTop: 60, paddingBottom: 36 }, kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 }, title: { marginTop: 11, color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", letterSpacing: -1 }, subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 }, search: { marginTop: 20, borderWidth: 1, borderColor: colors.line, borderRadius: 15, backgroundColor: colors.paper, paddingHorizontal: 16, height: 52, color: colors.ink, fontSize: 15 }, controls: { flexDirection: "row", gap: 9, marginTop: 11 }, locationButton: { backgroundColor: colors.green, borderRadius: 13, minHeight: 43, alignItems: "center", justifyContent: "center", paddingHorizontal: 13 }, locationText: { color: "white", fontWeight: "800", fontSize: 12 }, areaButton: { flex: 1, borderWidth: 1, borderColor: colors.line, borderRadius: 13, minHeight: 43, alignItems: "center", justifyContent: "center", backgroundColor: colors.paper }, areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 }, areaOptions: { marginTop: 9, maxHeight: 42 }, areaChip: { marginRight: 8, paddingHorizontal: 13, height: 36, justifyContent: "center", borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1 }, filterLabel: { marginTop: 20, marginBottom: 9, color: colors.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 }, typeRow: { maxHeight: 42 }, typeChip: { paddingHorizontal: 14, height: 36, justifyContent: "center", borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1 }, chipText: { color: colors.ink, fontWeight: "700", fontSize: 12 }, selectedChip: { backgroundColor: colors.ink, borderColor: colors.ink }, selectedChipText: { color: "white" }, sectionRow: { marginTop: 23, marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: "800" }, count: { color: colors.muted, fontSize: 12, fontWeight: "700" }, modeRow: { flexDirection: "row", padding: 3, backgroundColor: "#EFE4D5", borderRadius: 12, marginBottom: 12 }, modeButton: { flex: 1, minHeight: 37, alignItems: "center", justifyContent: "center", borderRadius: 9 }, modeSelected: { backgroundColor: colors.paper }, modeText: { color: colors.muted, fontWeight: "700", fontSize: 12 }, modeSelectedText: { color: colors.ink }, card: { minHeight: 91, padding: 13, marginBottom: 10, borderRadius: 18, borderColor: "#E8DCCB", borderWidth: 1, backgroundColor: colors.paper, flexDirection: "row", gap: 13, alignItems: "center" }, taco: { width: 57, height: 57, borderRadius: 15, backgroundColor: "#F9DEAE", alignItems: "center", justifyContent: "center" }, cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" }, muted: { color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 19 }, meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 }, arrow: { color: colors.muted, fontSize: 23, paddingHorizontal: 4, fontWeight: "800" }, empty: { marginTop: 16, borderRadius: 18, backgroundColor: colors.paper, padding: 20, alignItems: "center" }, emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" }, map: { height: 245, borderRadius: 18, backgroundColor: "#E8E6D7", overflow: "hidden", marginBottom: 11 }, mapEmpty: { height: 245, marginBottom: 11, padding: 24, borderRadius: 18, backgroundColor: colors.paper, borderColor: colors.line, borderWidth: 1, alignItems: "center", justifyContent: "center" }, mapEmptyIcon: { color: colors.red, fontSize: 42, fontWeight: "800" }, mapEmptyTitle: { color: colors.ink, fontSize: 16, fontWeight: "900", textAlign: "center", marginTop: 8, marginBottom: 5 }, mapCaption: { position: "absolute", bottom: 9, left: 12, color: colors.muted, fontSize: 10, fontWeight: "700", backgroundColor: colors.paper, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
 });
