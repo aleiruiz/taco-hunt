@@ -82,6 +82,8 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
     setError("");
     try {
       const resolved = await resolvePlace(session, placeId);
+      requestId.current += 1;
+      setSearching(false);
       onSelectPlace({
         name: resolved.name,
         neighborhood: resolved.neighborhood,
