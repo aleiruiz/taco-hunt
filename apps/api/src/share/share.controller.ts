@@ -11,6 +11,7 @@ import type { Pool } from "pg";
 import { uuidSchema } from "@taco-hunt/contracts";
 import { DATABASE_POOL } from "../database/database.module.js";
 
+/** Escapes ampersands, angle brackets, and quotes for HTML text and quoted attributes. */
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -24,6 +25,7 @@ function escapeHtml(value: string): string {
   });
 }
 
+/** Returns PUBLIC_BASE_URL or the example fallback, with trailing slashes removed. */
 function publicBaseUrl(): string {
   const configured = process.env.PUBLIC_BASE_URL?.trim() || "https://taco-hunt.example";
   return configured.replace(/\/+$/, "");
@@ -31,8 +33,15 @@ function publicBaseUrl(): string {
 
 @Controller("s")
 export class ShareController {
+  /** Injects the database pool used to read public spot details. */
   constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
 
+  /**
+   * Renders an approved spot's public details, Open Graph metadata, and app link.
+   * @param rawId - UUID of the spot to share.
+   * @throws {NotFoundException} If the ID is invalid or no approved spot exists.
+   * @throws {ServiceUnavailableException} If the preview cannot be generated.
+   */
   @Get(":id")
   @Header("Content-Type", "text/html; charset=utf-8")
   async preview(@Param("id") rawId: string): Promise<string> {

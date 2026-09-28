@@ -22,6 +22,11 @@ export class ProposalsService {
 
   constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
 
+  /**
+   * Creates a pending spot for the profile and returns nearby approved candidates.
+   * @throws {ConflictException} If a spot within 100 meters has the same normalized name.
+   * @throws {ServiceUnavailableException} If the database operation fails.
+   */
   async createSpot(profile: AuthenticatedProfile, input: SpotProposal) {
     try {
       const normalizedName = normalizeName(input.name);

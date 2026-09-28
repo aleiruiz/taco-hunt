@@ -38,6 +38,7 @@ export class AdminService {
 
   constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
 
+  /** Returns up to 100 moderation items; report items omit the reporter's identity. */
   async queue(kind: QueueKind) {
     try {
       if (kind === "spots") {
@@ -127,6 +128,13 @@ export class AdminService {
     }
   }
 
+  /**
+   * Returns up to ten approved spots within 100 meters, classified by normalized name.
+   * @param name - Proposed spot name to compare with existing names.
+   * @param latitude - Search center latitude in degrees.
+   * @param longitude - Search center longitude in degrees.
+   * @throws {ServiceUnavailableException} If the database query fails.
+   */
   async findDuplicates(
     name: string,
     latitude: number,

@@ -19,6 +19,7 @@ function getTrustProxyHops(): number | false {
   return hops === 0 ? false : hops;
 }
 
+/** Starts the API with multipart uploads, CORS, and unprefixed health and share routes. */
 async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3001);
   const app = await NestFactory.create<NestFastifyApplication>(

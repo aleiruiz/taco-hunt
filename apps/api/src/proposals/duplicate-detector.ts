@@ -10,6 +10,7 @@ export type DuplicateCandidate = {
   match: DuplicateMatch;
 };
 
+/** Normalizes a spot name by removing accents, lowercasing, and collapsing whitespace. */
 export function normalizeName(name: string): string {
   return name
     .normalize("NFKD")
@@ -19,10 +20,16 @@ export function normalizeName(name: string): string {
     .replace(/\s+/g, " ");
 }
 
+/** Classifies an already nearby candidate as strong when normalized names match. */
 export function classifyDuplicate(inputName: string, candidateName: string): DuplicateMatch {
   return normalizeName(inputName) === normalizeName(candidateName) ? "strong" : "nearby";
 }
 
+/**
+ * Builds a query for up to ten approved spots within 100 meters of a search center.
+ * Bind $1 to the normalized name, $2 to latitude, and $3 to longitude in degrees.
+ * Results prioritize matching names, then distance and name.
+ */
 export function duplicateCandidateSql(): string {
   return `
     select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,

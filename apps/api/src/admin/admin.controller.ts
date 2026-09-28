@@ -99,6 +99,10 @@ export class AdminController {
     return this.admin.auditHistory(parsed.data.limit, parsed.data.before);
   }
 
+  /**
+   * Validates the name and Monterrey-area coordinates for an admin duplicate search.
+   * @throws {BadRequestException} If any query parameter is invalid.
+   */
   @Get("/duplicate-candidates")
   duplicates(@Query() query: Record<string, unknown>) {
     const parsed = duplicateQuerySchema.safeParse(query);
