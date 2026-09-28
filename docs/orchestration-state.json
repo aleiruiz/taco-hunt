@@ -2,20 +2,7 @@
  "schemaVersion": 2,
  "maxWorkers": 3,
  "baseBranch": "main",
- "workers": [
-  {
-   "taskId": "T02",
-   "threadId": "01a0e53a-cbe7-7961-9641-b3af44e0074e",
-   "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/3522/taco-hunt",
-   "status": "active"
-  },
-  {
-   "taskId": "T03",
-   "threadId": "01a0e53a-d6d2-7a03-9659-9027-0e201ef25998",
-   "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/cd89/taco-hunt",
-   "status": "external_blocked"
-  }
- ],
+ "workers": [],
  "tasks": {
   "T00": {
    "status": "merged",
@@ -29,28 +16,28 @@
     "T00"
    ],
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/3",
-   "note": "PR #3 merged; PR #5 merged as follow-up. Worker released for a fresh eligible task.",
-   "headSha": null,
+   "note": "Merged 2026-09-28. No CodeRabbit review on record (app was installed later, around PR #16/#20).",
+   "headSha": "b4a723f1c5b6e9c6d9a4375ce7cb3511b580eab7",
    "coderabbitReviewedSha": null
   },
   "T02": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T00"
    ],
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/2",
-   "note": "PR #2 has review fixes and E2E steps documented. After T01 integrates, rebase against main and run API E2E; elevated Docker access now works.",
-   "headSha": null,
+   "note": "Merged 2026-09-28. Previous JSON snapshot was stale (showed this as an active worker awaiting rebase/E2E); GitHub shows it merged. No CodeRabbit review on record (app installed later).",
+   "headSha": "873c0fada7b9cd853a87cc0535a10c6b5d400e37",
    "coderabbitReviewedSha": null
   },
   "T03": {
-   "status": "external_blocked",
+   "status": "merged",
    "dependsOn": [
     "T00"
    ],
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/1",
-   "note": "Code review is clean, but mobile E2E needs Android SDK/emulator; no Android SDK is present.",
-   "headSha": null,
+   "note": "Merged 2026-09-28 despite documented mobile E2E gap (no Android SDK/emulator in the worker's environment). Previous JSON snapshot still showed this as external_blocked; GitHub shows it merged. No CodeRabbit review on record.",
+   "headSha": "59801a45d5f8873ab580a7de974cbad6838f1e6e",
    "coderabbitReviewedSha": null
   },
   "T04": {
@@ -59,103 +46,190 @@
     "T00"
    ],
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/5",
-   "note": "PR #4 and follow-up PR #5 merged; no remaining T04 implementation work.",
-   "headSha": null,
+   "note": "PR #4 (lint/format) and follow-up PR #5 (CI/E2E guide) both merged.",
+   "headSha": "169188dfbadc3ded5521c4ae1011601a50cdfcf8",
    "coderabbitReviewedSha": null
   },
   "T05": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T01",
     "T02"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/6",
+   "headSha": "9770346531b2008a507080b6a627a52c02c5d6fa",
    "coderabbitReviewedSha": null
   },
   "T06": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T01",
     "T02"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/7",
+   "headSha": "7b13882ef19052d69c37ed7f4eaa73f03fd9e1b3",
    "coderabbitReviewedSha": null
   },
   "T07": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T03",
     "T06"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/8",
+   "headSha": "944dec82226f9a82fb16a2cbdc7ee3c481dd6633",
    "coderabbitReviewedSha": null
   },
   "T08": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T05",
     "T06"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/9",
+   "headSha": "19d034b1d8fe68391fa019fd80b1de78fae63ab7",
    "coderabbitReviewedSha": null
   },
   "T09": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T05",
     "T06"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/10",
+   "headSha": "4c11c29525b69a2f3dc7832b40f4084a417e2f3c",
    "coderabbitReviewedSha": null
   },
   "T10": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T02",
     "T03",
     "T07"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/12",
+   "headSha": "2f35ffb3e75b554b0d2388c9ef9d2f47d84053f2",
    "coderabbitReviewedSha": null
   },
   "T11": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T06",
     "T08"
    ],
-   "pr": null,
-   "headSha": null,
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/11",
+   "headSha": "f8caf8b904bbb641ff5f3b64485afe53ad8211dd",
    "coderabbitReviewedSha": null
   },
   "T12": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T03",
     "T05"
    ],
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/16",
+   "note": "Last CodeRabbit review on record covered commit 1e4b377, not the final pre-merge head (c7fbe58); a small hardening commit landed after that review. Not re-opening a merged task, but flagged for visibility.",
+   "headSha": "c7fbe588e2f63a39eeaedf858862d80b54dbdaa0",
+   "coderabbitReviewedSha": "1e4b37732b482196b5a70bdb61cf0b8654f05aaa"
   },
   "T13": {
-   "status": "blocked",
+   "status": "merged",
    "dependsOn": [
     "T01",
     "T09"
    ],
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/14",
+   "headSha": "2266fa39c15b7f50782205ac01464b1943ede2b4",
+   "coderabbitReviewedSha": null
+  },
+  "T17": {
+   "status": "merged",
+   "dependsOn": [
+    "T02",
+    "T06"
+   ],
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/13",
+   "headSha": "717a805b985e023cbe28307217ec96670a1366bd",
+   "coderabbitReviewedSha": null
+  },
+  "T18": {
+   "status": "merged",
+   "dependsOn": [
+    "T02",
+    "T03",
+    "T06"
+   ],
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/15",
+   "headSha": "f0834a979cd951a6f71b5fae58bc56b706103284",
+   "coderabbitReviewedSha": null
+  },
+  "T19": {
+   "status": "merged",
+   "dependsOn": [
+    "T06",
+    "T09"
+   ],
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/17",
+   "headSha": "1d6f4178e940524d0d6e1406e20d0d19bdb9a522",
+   "coderabbitReviewedSha": null
+  },
+  "T20": {
+   "status": "merged",
+   "dependsOn": [
+    "T18",
+    "T19"
+   ],
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/19",
+   "note": "PR #18 (first attempt) closed unmerged due to conflicts; PR #19 is the merged recovery attempt.",
+   "headSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db",
+   "coderabbitReviewedSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db"
+  },
+  "T21": {
+   "status": "ready",
+   "dependsOn": [
+    "T03",
+    "T17"
+   ],
+   "note": "Dependencies merged. Local worktrees (t21-address-autocomplete, t21-autocomplete-recovery) exist but sit on stale commits with no work ahead of main and no PR; no active worker. Eligible for assignment.",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T22": {
+   "status": "changes_requested",
+   "dependsOn": [
+    "T03",
+    "T20"
+   ],
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/21",
+   "note": "Open, mergeable, CI green (lint/types/format + GitGuardian). CodeRabbit reviewed current head e8022e4 with 1 actionable finding: apps/mobile/src/lib/directions.ts:31 - Android geo: URI isn't honored by the intended non-Google map apps. Needs an author fix (or documented rationale) before merge. No active worker tracked for this PR right now.",
+   "headSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53",
+   "coderabbitReviewedSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53"
+  },
+  "T23": {
+   "status": "ready",
+   "dependsOn": [
+    "T17",
+    "T20"
+   ],
+   "note": "Dependencies merged. Local worktree (t23-place-refresh) exists but sits on a stale commit with no work ahead of main and no PR; no active worker. Eligible for assignment.",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T24": {
+   "status": "blocked",
+   "dependsOn": [
+    "T17",
+    "T21"
+   ],
+   "note": "T17 merged; T21 not yet merged. Per plan/runbook, assign as soon as T21 merges — do not wait for board order.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
   },
   "T14": {
-   "status": "blocked",
+   "status": "ready",
    "dependsOn": [
     "T01",
     "T02",
@@ -174,6 +248,7 @@
     "T19",
     "T20"
    ],
+   "note": "All dependencies merged (T01-T13, T18-T20). Per AGENTS.md, escalate to a stronger model for this task given account-deletion correctness. Lower priority than open P2.5 tasks (T21, T23) per plan tier order, but eligible now.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
@@ -208,87 +283,6 @@
     "E03",
     "E04"
    ],
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T22": {
-   "dependsOn": [
-    "T03",
-    "T20"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T21": {
-   "dependsOn": [
-    "T03",
-    "T17"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T17": {
-   "dependsOn": [
-    "T02",
-    "T06"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T20": {
-   "dependsOn": [
-    "T18",
-    "T19"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T19": {
-   "dependsOn": [
-    "T06",
-    "T09"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T18": {
-   "dependsOn": [
-    "T02",
-    "T03",
-    "T06"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T23": {
-   "dependsOn": [
-    "T17",
-    "T20"
-   ],
-   "status": "blocked",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T24": {
-   "dependsOn": [
-    "T17",
-    "T21"
-   ],
-   "status": "blocked",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
