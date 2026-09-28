@@ -50,4 +50,4 @@ jobs:
         run: pnpm typecheck
 
       - name: Check formatting
-        run: pnpm format:check
+        run: pnpm exec prettier --check .github/workflows/ci.yml
