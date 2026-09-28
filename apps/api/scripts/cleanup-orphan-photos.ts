@@ -84,7 +84,17 @@ async function listStoragePage(
   prefix: string,
   offset: number,
 ): Promise<Array<{ name: string; id: string | null; created_at: string | null }>> {
-  const result = await storage.list(prefix, offset);
+  const { data, error } = await storage.list(prefix, {
+    limit: 100,
+    offset,
+    sortBy: { column: "created_at", order: "asc" },
+  });
+  if (error) throw new Error(`Storage listing failed: ${error.message}`);
+  const result = (data ?? []).map((item) => ({
+    name: item.name,
+    id: item.id ?? null,
+    created_at: item.created_at ?? null,
+  }));
   return result;
 }
 
