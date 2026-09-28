@@ -139,7 +139,7 @@ paths:
   /v1/reviews:
     post:
       operationId: createReview
-      summary: Crea una reseña autenticada (implementación T08)
+      summary: Crea una reseña autenticada
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -147,10 +147,136 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ReviewCreate" }
       responses:
-        "201": { description: Reseña creada }
+        "201":
+          description: Reseña creada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewWriteResult" }
         "400": { $ref: "#/components/responses/ApiError" }
         "401": { $ref: "#/components/responses/ApiError" }
         "409": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/reviews/{id}:
+    patch:
+      operationId: updateOwnReview
+      summary: Edita una reseña propia
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewPatch" }
+      responses:
+        "200":
+          description: Reseña actualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewWriteResult" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+    delete:
+      operationId: deleteOwnReview
+      summary: Elimina una reseña propia; repetir la operación es seguro
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Reseña eliminada o ya inexistente }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/me/reviews:
+    get:
+      operationId: listOwnReviews
+      summary: Lista el historial propio de reseñas, incluidas las ocultas
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - {
+            in: query,
+            name: cursor,
+            description: Cursor opaco descendente retornado en la página anterior.,
+            schema: { type: string, maxLength: 512 },
+          }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 50, default: 20 },
+          }
+      responses:
+        "200":
+          description: Historial propio y cursor siguiente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnReviewPage" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/me/favorites:
+    get:
+      operationId: listOwnFavorites
+      summary: Lista favoritos que siguen aprobados y públicos
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - {
+            in: query,
+            name: cursor,
+            description: Cursor opaco descendente retornado en la página anterior.,
+            schema: { type: string, maxLength: 512 },
+          }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 50, default: 20 },
+          }
+      responses:
+        "200":
+          description: Favoritos y cursor siguiente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FavoritePage" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/me/favorites/{spotId}:
+    put:
+      operationId: addOwnFavorite
+      summary: Guarda un puesto aprobado como favorito de forma idempotente
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: spotId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Favorito guardado o ya existente }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+    delete:
+      operationId: removeOwnFavorite
+      summary: Elimina un favorito de forma idempotente
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: spotId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Favorito eliminado o ya inexistente }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
   /v1/spot-proposals:
     post:
       operationId: proposeSpot
@@ -322,6 +448,106 @@ components:
         pricePaidMxn: { type: number, minimum: 0, maximum: 10000 }
         body: { type: string, maxLength: 500 }
         photoUploadId: { type: string, format: uuid }
+    ReviewPatch:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        tortilla: { type: integer, minimum: 1, maximum: 5 }
+        filling: { type: integer, minimum: 1, maximum: 5 }
+        salsa: { type: integer, minimum: 1, maximum: 5 }
+        value: { type: integer, minimum: 1, maximum: 5 }
+        pricePaidMxn: { type: [number, "null"], minimum: 0, maximum: 10000 }
+        body: { type: [string, "null"], maxLength: 500 }
+    ReviewWriteResult:
+      type: object
+      required:
+        [
+          id,
+          spotTacoId,
+          tortilla,
+          filling,
+          salsa,
+          value,
+          score,
+          pricePaidMxn,
+          body,
+          status,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        spotTacoId: { type: string, format: uuid }
+        tortilla: { type: integer, minimum: 1, maximum: 5 }
+        filling: { type: integer, minimum: 1, maximum: 5 }
+        salsa: { type: integer, minimum: 1, maximum: 5 }
+        value: { type: integer, minimum: 1, maximum: 5 }
+        score: { type: number, minimum: 1, maximum: 5 }
+        pricePaidMxn: { type: [number, "null"], minimum: 0 }
+        body: { type: [string, "null"], maxLength: 500 }
+        status: { type: string, enum: [visible, hidden] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OwnReview:
+      type: object
+      required:
+        [
+          id,
+          spotTacoId,
+          spotId,
+          spotName,
+          neighborhood,
+          tacoTypeId,
+          tacoName,
+          tortilla,
+          filling,
+          salsa,
+          value,
+          score,
+          pricePaidMxn,
+          body,
+          status,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        spotTacoId: { type: string, format: uuid }
+        spotId: { type: [string, "null"], format: uuid }
+        spotName: { type: string }
+        neighborhood: { type: string }
+        tacoTypeId: { type: [string, "null"], format: uuid }
+        tacoName: { type: string }
+        tortilla: { type: integer, minimum: 1, maximum: 5 }
+        filling: { type: integer, minimum: 1, maximum: 5 }
+        salsa: { type: integer, minimum: 1, maximum: 5 }
+        value: { type: integer, minimum: 1, maximum: 5 }
+        score: { type: number, minimum: 1, maximum: 5 }
+        pricePaidMxn: { type: [number, "null"], minimum: 0 }
+        body: { type: [string, "null"], maxLength: 500 }
+        status: { type: string, enum: [visible, hidden] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OwnReviewPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/OwnReview" } }
+        nextCursor: { type: [string, "null"], maxLength: 512 }
+    Favorite:
+      allOf:
+        - $ref: "#/components/schemas/SpotSummary"
+        - type: object
+          required: [favoritedAt]
+          properties:
+            favoritedAt: { type: string, format: date-time }
+    FavoritePage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Favorite" } }
+        nextCursor: { type: [string, "null"], maxLength: 512 }
     SpotProposal:
       type: object
       required: [name, neighborhood, latitude, longitude]

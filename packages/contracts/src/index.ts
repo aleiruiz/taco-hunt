@@ -133,16 +133,88 @@ export const reviewListQuerySchema = z.object({
 export type ReviewListQuery = z.infer<typeof reviewListQuerySchema>;
 
 export const ratingSchema = z.number().int().min(1).max(5);
-export const reviewCreateSchema = z.object({
+export const reviewCreateSchema = z
+  .object({
+    spotTacoId: uuidSchema,
+    tortilla: ratingSchema,
+    filling: ratingSchema,
+    salsa: ratingSchema,
+    value: ratingSchema,
+    pricePaidMxn: z.number().nonnegative().max(10000).optional(),
+    body: z.string().max(500).optional(),
+    photoUploadId: uuidSchema.optional(),
+  })
+  .strict();
+export const reviewPatchSchema = z
+  .object({
+    tortilla: ratingSchema.optional(),
+    filling: ratingSchema.optional(),
+    salsa: ratingSchema.optional(),
+    value: ratingSchema.optional(),
+    pricePaidMxn: z.number().nonnegative().max(10000).nullable().optional(),
+    body: z.string().max(500).nullable().optional(),
+  })
+  .strict()
+  .refine((patch) => Object.keys(patch).length > 0, "Incluye al menos un campo para actualizar");
+export type ReviewPatch = z.infer<typeof reviewPatchSchema>;
+
+export const personalPageQuerySchema = z.object({
+  cursor: cursorTokenSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+export type PersonalPageQuery = z.infer<typeof personalPageQuerySchema>;
+
+export const reviewWriteResultSchema = z.object({
+  id: uuidSchema,
   spotTacoId: uuidSchema,
   tortilla: ratingSchema,
   filling: ratingSchema,
   salsa: ratingSchema,
   value: ratingSchema,
-  pricePaidMxn: z.number().nonnegative().max(10000).optional(),
-  body: z.string().max(500).optional(),
-  photoUploadId: uuidSchema.optional(),
+  score: z.number().min(1).max(5),
+  pricePaidMxn: z.number().nonnegative().nullable(),
+  body: z.string().max(500).nullable(),
+  status: z.enum(["visible", "hidden"]),
+  createdAt: isoTimestampSchema,
+  updatedAt: isoTimestampSchema,
 });
+export type ReviewWriteResult = z.infer<typeof reviewWriteResultSchema>;
+
+export const ownReviewSchema = z.object({
+  id: uuidSchema,
+  spotTacoId: uuidSchema,
+  spotId: uuidSchema.nullable(),
+  spotName: z.string(),
+  neighborhood: z.string(),
+  tacoTypeId: uuidSchema.nullable(),
+  tacoName: z.string(),
+  tortilla: ratingSchema,
+  filling: ratingSchema,
+  salsa: ratingSchema,
+  value: ratingSchema,
+  score: z.number().min(1).max(5),
+  pricePaidMxn: z.number().nonnegative().nullable(),
+  body: z.string().max(500).nullable(),
+  status: z.enum(["visible", "hidden"]),
+  createdAt: isoTimestampSchema,
+  updatedAt: isoTimestampSchema,
+});
+export type OwnReview = z.infer<typeof ownReviewSchema>;
+
+export const ownReviewPageSchema = z.object({
+  items: z.array(ownReviewSchema),
+  nextCursor: cursorTokenSchema.nullable(),
+});
+export type OwnReviewPage = z.infer<typeof ownReviewPageSchema>;
+
+export const favoriteSchema = spotSummarySchema.extend({ favoritedAt: isoTimestampSchema });
+export type Favorite = z.infer<typeof favoriteSchema>;
+
+export const favoritePageSchema = z.object({
+  items: z.array(favoriteSchema),
+  nextCursor: cursorTokenSchema.nullable(),
+});
+export type FavoritePage = z.infer<typeof favoritePageSchema>;
 export const spotProposalSchema = z.object({
   name: z.string().trim().min(2).max(120),
   neighborhood: z.string().trim().min(2).max(120),

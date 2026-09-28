@@ -5,10 +5,12 @@ import { HealthController } from "./health/health.controller.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { SpotsController } from "./spots/spots.controller.js";
 import { AuthModule } from "./auth/auth.module.js";
+import { FavoritesController } from "./favorites/favorites.controller.js";
+import { ReviewsController } from "./reviews/reviews.controller.js";
 
 @Module({
   imports: [DatabaseModule, AuthModule],
-  controllers: [HealthController, SpotsController],
+  controllers: [HealthController, SpotsController, ReviewsController, FavoritesController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })
 export class AppModule {}
