@@ -36,21 +36,23 @@ jobs:
           cache: pnpm
 
       - name: Install locked dependencies
+        id: install_root
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Expo and React Native currently require npm's legacy peer resolution.
       - name: Install standalone mobile dependencies
+        id: install_mobile
         working-directory: apps/mobile
         run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Lint
-        if: always()
+        if: ${{ always() && steps.install_root.outcome == 'success' && steps.install_mobile.outcome == 'success' }}
         run: pnpm lint
 
       - name: Typecheck
-        if: always()
+        if: ${{ always() && steps.install_root.outcome == 'success' && steps.install_mobile.outcome == 'success' }}
         run: pnpm typecheck
 
       - name: Check formatting
-        if: always()
+        if: ${{ always() && steps.install_root.outcome == 'success' && steps.install_mobile.outcome == 'success' }}
         run: pnpm exec prettier --check .github/workflows/ci.yml
