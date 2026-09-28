@@ -319,7 +319,7 @@ paths:
   /v1/me/proposals:
     get:
       operationId: listMyProposals
-      summary: Lista propuestas de puestos propias
+      summary: Lista las propuestas propias de puestos y tacos
       security: [{ bearerAuth: [] }]
       responses:
         "200":
@@ -328,9 +328,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [items]
+                required: [spotProposals, tacoProposals]
                 properties:
-                  items: { type: array, items: { $ref: "#/components/schemas/SpotProposalStatus" } }
+                  spotProposals:
+                    { type: array, items: { $ref: "#/components/schemas/SpotProposalStatus" } }
+                  tacoProposals:
+                    { type: array, items: { $ref: "#/components/schemas/TacoProposalStatus" } }
         "401": { $ref: "#/components/responses/ApiError" }
   /v1/reports:
     post:
@@ -843,6 +846,17 @@ components:
         tacoTypeId: { type: string, format: uuid }
         displayName: { type: [string, "null"] }
         status: { const: pending }
+        createdAt: { type: string, format: date-time }
+    TacoProposalStatus:
+      type: object
+      required: [id, spotId, spotName, tacoTypeId, name, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        spotId: { type: string, format: uuid }
+        spotName: { type: string }
+        tacoTypeId: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
         createdAt: { type: string, format: date-time }
     ReportCreate:
       type: object

@@ -78,7 +78,7 @@ export class ProposalsService {
     }
   }
 
-  async createTaco(input: TacoProposal) {
+  async createTaco(profile: AuthenticatedProfile, input: TacoProposal) {
     try {
       const spot = await this.pool.query(
         "select id from app_private.spots where id=$1 and status='approved'",
@@ -91,10 +91,10 @@ export class ProposalsService {
       );
       if (!tacoType.rowCount) throw new NotFoundException("Tipo de taco no encontrado");
       const { rows } = await this.pool.query(
-        `insert into app_private.spot_tacos (spot_id,taco_type_id,display_name,status)
-         values ($1,$2,$3,'pending')
+        `insert into app_private.spot_tacos (spot_id,taco_type_id,display_name,status,created_by)
+         values ($1,$2,$3,'pending',$4)
          returning id,spot_id as "spotId",taco_type_id as "tacoTypeId",display_name as "displayName",status,created_at as "createdAt"`,
-        [input.spotId, input.tacoTypeId, input.displayName ?? null],
+        [input.spotId, input.tacoTypeId, input.displayName ?? null, profile.id],
       );
       return rows[0];
     } catch (error) {
@@ -109,13 +109,23 @@ export class ProposalsService {
 
   async listMine(profile: AuthenticatedProfile) {
     try {
-      const { rows } = await this.pool.query(
-        `select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,
+      const [spots, tacos] = await Promise.all([
+        this.pool.query(
+          `select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,
            proposal_note as note,status,created_at as "createdAt"
          from app_private.spots where created_by=$1 order by created_at desc limit 100`,
-        [profile.id],
-      );
-      return { items: rows };
+          [profile.id],
+        ),
+        this.pool.query(
+          `select st.id,st.spot_id as "spotId",s.name as "spotName",st.taco_type_id as "tacoTypeId",
+             coalesce(st.display_name,tt.name_es) as name,st.status,st.created_at as "createdAt"
+           from app_private.spot_tacos st join app_private.spots s on s.id=st.spot_id
+           join app_private.taco_types tt on tt.id=st.taco_type_id
+           where st.created_by=$1 order by st.created_at desc limit 100`,
+          [profile.id],
+        ),
+      ]);
+      return { spotProposals: spots.rows, tacoProposals: tacos.rows };
     } catch (error) {
       this.logFailure("Own proposal list query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");

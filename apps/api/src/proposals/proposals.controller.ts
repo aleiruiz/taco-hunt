@@ -22,14 +22,14 @@ export class ProposalsController {
   }
 
   @Post("/taco-proposals")
-  async createTaco(@Body() body: unknown) {
+  async createTaco(@CurrentProfile() profile: AuthenticatedProfile, @Body() body: unknown) {
     const parsed = tacoProposalSchema.safeParse(body);
     if (!parsed.success)
       throw new BadRequestException({
         message: "Propuesta inválida",
         details: { issues: parsed.error.issues },
       });
-    return this.proposals.createTaco(parsed.data);
+    return this.proposals.createTaco(profile, parsed.data);
   }
 
   @Get("/me/proposals")

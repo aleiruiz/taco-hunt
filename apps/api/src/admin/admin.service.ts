@@ -35,6 +35,7 @@ export class AdminService {
       if (kind === "tacos") {
         const { rows } = await this.pool.query(
           `select st.id,st.spot_id as "spotId",s.name as "spotName",st.taco_type_id as "tacoTypeId",
+             st.created_by as "createdBy",
              coalesce(st.display_name,tt.name_es) as name,st.created_at as "createdAt"
            from app_private.spot_tacos st join app_private.spots s on s.id=st.spot_id
            join app_private.taco_types tt on tt.id=st.taco_type_id
