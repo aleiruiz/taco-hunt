@@ -1,0 +1,235 @@
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Inject,
+  Logger,
+  NotFoundException,
+  Param,
+  Query,
+  ServiceUnavailableException,
+} from "@nestjs/common";
+import type { Pool } from "pg";
+import { reviewListQuerySchema, spotListQuerySchema, uuidSchema } from "@taco-hunt/contracts";
+import { z } from "zod";
+import { DATABASE_POOL } from "../database/database.module.js";
+
+const spotCursorSchema = z.object({
+  distanceKm: z.number().finite().nonnegative(),
+  normalizedName: z.string().max(120),
+  id: uuidSchema,
+});
+
+const reviewCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true }),
+  id: uuidSchema,
+});
+
+function encodeCursor(value: unknown): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function decodeCursor<T>(value: string | undefined, schema: z.ZodType<T>): T | undefined {
+  if (!value) return undefined;
+  try {
+    return schema.parse(JSON.parse(Buffer.from(value, "base64url").toString("utf8")));
+  } catch {
+    throw new BadRequestException({ message: "Cursor inválido" });
+  }
+}
+
+@Controller()
+export class SpotsController {
+  private readonly logger = new Logger(SpotsController.name);
+
+  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+
+  @Get("/taco-types")
+  async tacoTypes() {
+    try {
+      const { rows } = await this.pool.query(
+        'select id,slug,name_es as "nameEs" from app_private.taco_types where active order by name_es',
+      );
+      return { items: rows };
+    } catch (error) {
+      this.logQueryFailure("Taco type list query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  @Get("/spots")
+  async listSpots(@Query() query: Record<string, unknown>) {
+    const parsed = spotListQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+
+    const p = parsed.data;
+    const after = decodeCursor(p.cursor, spotCursorSchema);
+    const north = p.north ?? 26.1;
+    const south = p.south ?? 25.4;
+    const east = p.east ?? -99.8;
+    const west = p.west ?? -100.9;
+    if (south > north || west > east) {
+      throw new BadRequestException({ message: "Los límites del área son inválidos" });
+    }
+    const areaKm2 =
+      (north - south) *
+      (east - west) *
+      Math.cos((((north + south) / 2) * Math.PI) / 180) *
+      111.32 ** 2;
+    if (areaKm2 > 9_000) {
+      throw new BadRequestException({ message: "El área de búsqueda es demasiado grande" });
+    }
+
+    const values: unknown[] = [];
+    const where = ["s.status='approved'"];
+    const add = (sql: string, value: unknown) => {
+      values.push(value);
+      where.push(sql.replace("?", `$${values.length}`));
+    };
+    add("s.latitude <= ?", north);
+    add("s.latitude >= ?", south);
+    add("s.longitude <= ?", east);
+    add("s.longitude >= ?", west);
+    if (p.q) {
+      const pattern = `%${p.q.toLocaleLowerCase("es-MX").replace(/[\\%_]/g, "\\$&")}%`;
+      const nameParam = values.push(pattern);
+      const neighborhoodParam = values.push(pattern);
+      where.push(
+        `(s.normalized_name like $${nameParam} or lower(s.neighborhood) like $${neighborhoodParam})`,
+      );
+    }
+    if (p.tacoType) {
+      add(
+        "exists (select 1 from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id where st.spot_id=s.id and st.status='approved' and tt.active and tt.slug=?)",
+        p.tacoType,
+      );
+    }
+    values.push((north + south) / 2);
+    const centerLat = `$${values.length}`;
+    values.push((east + west) / 2);
+    const centerLon = `$${values.length}`;
+    const distanceExpression = `(6371 * 2 * asin(sqrt(least(1, power(sin(radians(s.latitude::float8 - ${centerLat}) / 2), 2) + cos(radians(${centerLat})) * cos(radians(s.latitude::float8)) * power(sin(radians(s.longitude::float8 - ${centerLon}) / 2), 2)))))`;
+    if (after) {
+      values.push(after.distanceKm, after.normalizedName, after.id);
+      where.push(
+        `(${distanceExpression},s.normalized_name,s.id) > ($${values.length - 2},$${values.length - 1},$${values.length}::uuid)`,
+      );
+    }
+    values.push(p.limit + 1);
+    const sql = `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.last_verified_at as "lastVerifiedAt",s.normalized_name as "cursorName",${distanceExpression} as "distanceKm",count(distinct r.id)::int as "reviewCount",(select jsonb_build_object('id',st.id,'tacoTypeId',tt.id,'name',coalesce(st.display_name,tt.name_es),'score',round(avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0)::numeric,1),'reviewCount',count(r2.id)::int) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r2 on r2.spot_taco_id=st.id and r2.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r2.id) desc,avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0) desc nulls last limit 1) as "bestTaco" from app_private.spots s left join app_private.spot_tacos st0 on st0.spot_id=s.id and st0.status='approved' left join app_private.taco_types tt0 on tt0.id=st0.taco_type_id and tt0.active left join app_private.reviews r on r.spot_taco_id=st0.id and r.status='visible' and tt0.id is not null where ${where.join(" and ")} group by s.id order by "distanceKm",s.normalized_name,s.id limit $${values.length}`;
+    try {
+      const { rows } = await this.pool.query(sql, values);
+      const more = rows.length > p.limit;
+      const page = rows.slice(0, p.limit);
+      const items = page.map(({ cursorName: _cursorName, distanceKm: _distanceKm, ...row }) => ({
+        ...row,
+        photoUrl: null,
+      }));
+      const last = page.at(-1);
+      return {
+        items,
+        nextCursor:
+          more && last
+            ? encodeCursor({
+                distanceKm: last.distanceKm,
+                normalizedName: last.cursorName,
+                id: last.id,
+              })
+            : null,
+      };
+    } catch (error) {
+      this.logQueryFailure("Spot list query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  @Get("/spots/:id/reviews")
+  async listSpotReviews(@Param("id") rawId: string, @Query() query: Record<string, unknown>) {
+    const parsedId = uuidSchema.safeParse(rawId);
+    if (!parsedId.success) throw new BadRequestException({ message: "Identificador inválido" });
+    const parsedQuery = reviewListQuerySchema.safeParse(query);
+    if (!parsedQuery.success) {
+      throw new BadRequestException({
+        message: "Parámetros inválidos",
+        details: { issues: parsedQuery.error.issues },
+      });
+    }
+    const p = parsedQuery.data;
+    const after = decodeCursor(p.cursor, reviewCursorSchema);
+    try {
+      const spot = await this.pool.query(
+        "select id from app_private.spots where id=$1 and status='approved'",
+        [parsedId.data],
+      );
+      if (!spot.rowCount) throw new NotFoundException("Puesto no encontrado");
+
+      const values: unknown[] = [parsedId.data];
+      const filters = [
+        "s.id=$1",
+        "s.status='approved'",
+        "st.status='approved'",
+        "tt.active",
+        "r.status='visible'",
+      ];
+      if (p.tacoType) {
+        values.push(p.tacoType);
+        filters.push(`tt.slug=$${values.length}`);
+      }
+      if (after) {
+        values.push(after.createdAt, after.id);
+        filters.push(`(r.created_at,r.id) < ($${values.length - 1},$${values.length}::uuid)`);
+      }
+      values.push(p.limit + 1);
+      const { rows } = await this.pool.query(
+        `select r.id,tt.id as "tacoTypeId",coalesce(st.display_name,tt.name_es) as "tacoName",p.display_name as "displayName",r.tortilla,r.filling,r.salsa,r.value,round((r.tortilla+r.filling+r.salsa+r.value)/4.0::numeric,1)::float8 as score,r.price_paid_mxn::float8 as "pricePaidMxn",r.body,to_char(r.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAt" from app_private.reviews r join app_private.spot_tacos st on st.id=r.spot_taco_id join app_private.taco_types tt on tt.id=st.taco_type_id join app_private.spots s on s.id=st.spot_id join app_private.profiles p on p.id=r.user_id where ${filters.join(" and ")} order by r.created_at desc,r.id desc limit $${values.length}`,
+        values,
+      );
+      const more = rows.length > p.limit;
+      const items = rows.slice(0, p.limit);
+      const last = items.at(-1);
+      return {
+        items,
+        nextCursor: more && last ? encodeCursor({ createdAt: last.createdAt, id: last.id }) : null,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      this.logQueryFailure("Spot review list query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  @Get("/spots/:id")
+  async getSpot(@Param("id") rawId: string) {
+    const parsed = uuidSchema.safeParse(rawId);
+    if (!parsed.success) throw new BadRequestException({ message: "Identificador inválido" });
+    try {
+      const spot = await this.pool.query(
+        "select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.last_verified_at as \"lastVerifiedAt\",count(distinct r.id)::int as \"reviewCount\" from app_private.spots s left join app_private.spot_tacos st on st.spot_id=s.id and st.status='approved' left join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' and tt.id is not null where s.id=$1 and s.status='approved' group by s.id",
+        [parsed.data],
+      );
+      if (!spot.rowCount) throw new NotFoundException("Puesto no encontrado");
+      const tacos = await this.pool.query(
+        "select st.id,tt.id as \"tacoTypeId\",coalesce(st.display_name,tt.name_es) as name, round(avg((r.tortilla+r.filling+r.salsa+r.value)/4.0)::numeric,1)::float8 as score,count(r.id)::int as \"reviewCount\" from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=$1 and st.status='approved' group by st.id,tt.id order by tt.name_es",
+        [parsed.data],
+      );
+      const reviews = await this.pool.query(
+        'select r.id,tt.id as "tacoTypeId",coalesce(st.display_name,tt.name_es) as "tacoName",p.display_name as "displayName",r.tortilla,r.filling,r.salsa,r.value,round((r.tortilla+r.filling+r.salsa+r.value)/4.0::numeric,1)::float8 as score,r.price_paid_mxn::float8 as "pricePaidMxn",r.body,to_char(r.created_at at time zone \'UTC\',\'YYYY-MM-DD"T"HH24:MI:SS.US"Z"\') as "createdAt" from app_private.reviews r join app_private.spot_tacos st on st.id=r.spot_taco_id join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active join app_private.profiles p on p.id=r.user_id where st.spot_id=$1 and st.status=\'approved\' and r.status=\'visible\' order by r.created_at desc,r.id desc limit 5',
+        [parsed.data],
+      );
+      return { ...spot.rows[0], photoUrl: null, tacos: tacos.rows, reviews: reviews.rows };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      this.logQueryFailure("Spot detail query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  private logQueryFailure(message: string, error: unknown): void {
+    this.logger.error(message, error instanceof Error ? error.stack : undefined);
+  }
+}

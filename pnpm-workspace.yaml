@@ -5,4 +5,3 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
-  unrs-resolver: false

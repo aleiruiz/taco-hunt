@@ -16,8 +16,8 @@ create table app_private.spots (
   name text not null check (length(trim(name)) between 1 and 120),
   normalized_name text not null,
   neighborhood text not null check (length(trim(neighborhood)) between 1 and 120),
-  latitude numeric(9,6) not null check (latitude between 25.0 and 27.0),
-  longitude numeric(9,6) not null check (longitude between -101.5 and -99.0),
+  latitude numeric(9,6) not null check (latitude between 14.0 and 33.0),
+  longitude numeric(9,6) not null check (longitude between -119.0 and -86.0),
   hours_json jsonb,
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
   created_by uuid references app_private.profiles(id) on delete set null,
@@ -27,6 +27,9 @@ create table app_private.spots (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Approved public rows must have useful names and valid Mexican coordinates.
+alter table app_private.spots add constraint spots_approved_name_nonempty
+  check (status <> 'approved' or length(trim(name)) > 0);
 create index spots_status_normalized_name_idx on app_private.spots(status, normalized_name);
 create index spots_status_neighborhood_idx on app_private.spots(status, neighborhood);
 
@@ -123,19 +126,42 @@ create table app_private.import_candidates (
   created_at timestamptz not null default now()
 );
 
-insert into app_private.taco_types(slug,name_es) values
- ('pastor','Pastor'),('trompo','Trompo'),('barbacoa','Barbacoa'),('bistec','Bistec'),
- ('carne-asada','Carne asada'),('chicharron','Chicharrón'),('lengua','Lengua'),('suadero','Suadero'),
- ('tripita','Tripita'),('discada','Discada');
-
--- API runtime is a dedicated server-only login; mobile roles have no product-table access.
+-- The local API password is provisioned out of band by `supabase/dev-role.ps1`.
+-- No runtime secret is generated or stored in migration history.
 do $$ begin
   if not exists (select 1 from pg_roles where rolname = 'taco_hunt_api') then
-    create role taco_hunt_api login password 'local-api-only-change-before-deploy';
+    create role taco_hunt_api login;
   end if;
 end $$;
+
 grant usage on schema app_private to taco_hunt_api;
-grant select, insert, update, delete on all tables in schema app_private to taco_hunt_api;
+grant select on app_private.taco_types to taco_hunt_api;
+grant select, insert, update, delete on
+  app_private.profiles,
+  app_private.spots,
+  app_private.spot_tacos,
+  app_private.reviews,
+  app_private.favorites,
+  app_private.reports,
+  app_private.media_uploads
+to taco_hunt_api;
+grant select, insert on app_private.moderation_audit to taco_hunt_api;
 grant usage, select on all sequences in schema app_private to taco_hunt_api;
-alter default privileges in schema app_private grant select, insert, update, delete on tables to taco_hunt_api;
-alter default privileges in schema app_private grant usage, select on sequences to taco_hunt_api;
+
+-- The Data API roles cannot access product tables, even if the schema is exposed later.
+revoke all on all tables in schema app_private from public, anon, authenticated, service_role;
+revoke all on all sequences in schema app_private from public, anon, authenticated, service_role;
+revoke all on schema app_private from public, anon, authenticated, service_role;
+
+insert into app_private.taco_types(id,slug,name_es) values
+ ('10000000-0000-4000-8000-000000000001','pastor','Pastor'),
+ ('10000000-0000-4000-8000-000000000002','trompo','Trompo'),
+ ('10000000-0000-4000-8000-000000000003','barbacoa','Barbacoa'),
+ ('10000000-0000-4000-8000-000000000004','bistec','Bistec'),
+ ('10000000-0000-4000-8000-000000000005','carne-asada','Carne asada'),
+ ('10000000-0000-4000-8000-000000000006','chicharron','Chicharrón'),
+ ('10000000-0000-4000-8000-000000000007','lengua','Lengua'),
+ ('10000000-0000-4000-8000-000000000008','suadero','Suadero'),
+ ('10000000-0000-4000-8000-000000000009','tripita','Tripita'),
+ ('10000000-0000-4000-8000-000000000010','discada','Discada')
+on conflict (slug) do nothing;
