@@ -177,6 +177,7 @@ export class PlacesService {
             "addressComponents",
           ].join(","),
         },
+        signal: AbortSignal.timeout(5_000),
       });
       if (response.status === 404) throw new NotFoundException("Lugar no encontrado");
       if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
@@ -231,7 +232,7 @@ export class PlacesService {
        where status='approved' and (normalized_name ilike $1 or neighborhood ilike $1)
        order by name asc
        limit 5`,
-      [`%${normalizeName(query)}%`],
+      [`%${escapeLikePattern(normalizeName(query))}%`],
     );
     return rows.map((row) => ({
       kind: "spot" as const,
@@ -264,6 +265,7 @@ export class PlacesService {
           },
         },
       }),
+      signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) throw new Error(`Google Places autocomplete returned ${response.status}`);
 
@@ -399,6 +401,10 @@ function neighborhoodFromComponents(
     if (text) return text;
   }
   return null;
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }
 
 function normalizeName(name: string): string {

@@ -37,8 +37,13 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
   const [resolvingPlaceId, setResolvingPlaceId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const requestId = useRef(0);
+  const skipNextSearch = useRef(false);
 
   useEffect(() => {
+    if (skipNextSearch.current) {
+      skipNextSearch.current = false;
+      return;
+    }
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setItems([]);
@@ -84,6 +89,7 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
         longitude: resolved.longitude,
         placeId: resolved.placeId,
       });
+      skipNextSearch.current = true;
       setQuery(resolved.name);
       setItems([]);
     } catch (cause) {
