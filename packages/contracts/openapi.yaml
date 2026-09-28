@@ -919,12 +919,15 @@ components:
         note: { type: [string, "null"], maxLength: 500 }
     NearbySpotCandidate:
       type: object
-      required: [id, name, neighborhood, distanceMeters]
+      required: [id, name, neighborhood, latitude, longitude, distanceMeters, match]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         neighborhood: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
         distanceMeters: { type: integer, minimum: 0, maximum: 100 }
+        match: { type: string, enum: [strong, nearby] }
     TacoProposal:
       type: object
       required: [spotId, tacoTypeId]
