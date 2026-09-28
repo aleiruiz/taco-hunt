@@ -8,9 +8,12 @@ import { AuthModule } from "./auth/auth.module.js";
 import { FavoritesController } from "./favorites/favorites.controller.js";
 import { ReviewsController } from "./reviews/reviews.controller.js";
 import { MediaModule } from "./media/media.module.js";
+import { ProposalsModule } from "./proposals/proposals.module.js";
+import { ReportsModule } from "./reports/reports.module.js";
+import { AdminModule } from "./admin/admin.module.js";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, MediaModule],
+  imports: [DatabaseModule, AuthModule, MediaModule, ProposalsModule, ReportsModule, AdminModule],
   controllers: [HealthController, SpotsController, ReviewsController, FavoritesController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })
