@@ -14,6 +14,16 @@ import { DATABASE_POOL } from "../database/database.module.js";
 
 export type QueueKind = "spots" | "tacos" | "reports";
 type ModerationAction = "approve" | "reject" | "hide" | "unhide" | "close";
+type SpotApproval = {
+  sourceType?: "user" | "owner" | "licensed" | "fictional";
+  sourceRef?: string;
+  sourceLicenseRef?: string;
+  verificationNote?: string;
+  name?: string;
+  neighborhood?: string;
+  latitude?: number;
+  longitude?: number;
+};
 
 @Injectable()
 export class AdminService {
@@ -93,8 +103,8 @@ export class AdminService {
     }
   }
 
-  approveSpot(id: string, moderator: string) {
-    return this.mutate("spot", id, moderator, "approve", null);
+  approveSpot(id: string, moderator: string, approval: SpotApproval = {}) {
+    return this.mutate("spot", id, moderator, "approve", null, approval);
   }
 
   rejectSpot(id: string, moderator: string, reason: string) {
@@ -127,12 +137,13 @@ export class AdminService {
     moderator: string,
     action: ModerationAction,
     reason: string | null,
+    approval: SpotApproval = {},
   ) {
     let client: PoolClient | undefined;
     try {
       client = await this.pool.connect();
       await client.query("begin");
-      const updated = await this.applyAction(client, targetType, id, action);
+      const updated = await this.applyAction(client, targetType, id, action, approval, moderator);
       if (!updated.rowCount) throw new NotFoundException("Elemento pendiente no encontrado");
       await client.query(
         `insert into app_private.moderation_audit(moderator_id,target_type,target_id,action,internal_reason)
@@ -140,6 +151,18 @@ export class AdminService {
         [moderator, targetType, id, action, reason],
       );
       await client.query("commit");
+      if (targetType === "spot" && action === "approve") {
+        const { rows } = await client.query(
+          `select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,
+             status,source_type as "sourceType",source_ref as "sourceRef",
+             source_license_ref as "sourceLicenseRef",verified_by as "verifiedBy",
+             verified_at as "verifiedAt",verification_note as "verificationNote",
+             approved_by as "approvedBy",approved_at as "approvedAt"
+           from app_private.spots where id=$1`,
+          [id],
+        );
+        return { ...rows[0], status: statusFor(action) };
+      }
       return { id, status: statusFor(action) };
     } catch (error) {
       if (client) await client.query("rollback").catch(() => undefined);
@@ -150,11 +173,37 @@ export class AdminService {
     }
   }
 
-  private applyAction(client: PoolClient, type: string, id: string, action: ModerationAction) {
+  private applyAction(
+    client: PoolClient,
+    type: string,
+    id: string,
+    action: ModerationAction,
+    approval: SpotApproval,
+    moderator: string,
+  ) {
     if (type === "spot" && action === "approve") {
       return client.query(
-        "update app_private.spots set status='approved',updated_at=now() where id=$1 and status='pending'",
-        [id],
+        `update app_private.spots set status='approved',
+           source_type=coalesce($2,source_type),source_ref=coalesce($3,source_ref),
+           source_license_ref=coalesce($4,source_license_ref),verified_by=$5,verified_at=now(),
+           verification_note=coalesce($6,verification_note),approved_by=$5,approved_at=now(),
+           name=coalesce($7,name),normalized_name=coalesce($8,normalized_name),
+           neighborhood=coalesce($9,neighborhood),latitude=coalesce($10,latitude),
+           longitude=coalesce($11,longitude),updated_at=now()
+         where id=$1 and status in ('pending','changes_requested')`,
+        [
+          id,
+          approval.sourceType ?? null,
+          approval.sourceRef ?? null,
+          approval.sourceLicenseRef ?? null,
+          moderator,
+          approval.verificationNote ?? null,
+          approval.name ?? null,
+          approval.name ? normalizeName(approval.name) : null,
+          approval.neighborhood ?? null,
+          approval.latitude ?? null,
+          approval.longitude ?? null,
+        ],
       );
     }
     if (type === "spot" && action === "reject") {
@@ -201,6 +250,15 @@ export class AdminService {
     this.logger.error(message, error instanceof Error ? error.stack : undefined);
     throw new ServiceUnavailableException("Servicio temporalmente no disponible");
   }
+}
+
+function normalizeName(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-MX")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function decodeAuditCursor(value: string | undefined) {

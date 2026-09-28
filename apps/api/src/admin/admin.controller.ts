@@ -20,6 +20,34 @@ const auditQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   before: z.string().min(1).max(512).optional(),
 });
+const approveSpotSchema = z
+  .object({
+    sourceType: z.enum(["user", "owner", "licensed", "fictional"]).optional(),
+    sourceRef: z.string().trim().min(1).max(500).optional(),
+    sourceLicenseRef: z.string().trim().min(1).max(500).optional(),
+    verificationNote: z.string().trim().min(1).max(500).optional(),
+    name: z.string().trim().min(1).max(120).optional(),
+    neighborhood: z.string().trim().min(1).max(120).optional(),
+    latitude: z.number().min(25).max(27).optional(),
+    longitude: z.number().min(-101.5).max(-99).optional(),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.sourceType === "licensed" && !value.sourceLicenseRef) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceLicenseRef"],
+        message: "sourceLicenseRef es obligatorio para una fuente licenciada",
+      });
+    }
+    if ((value.latitude === undefined) !== (value.longitude === undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["latitude"],
+        message: "latitude y longitude deben enviarse juntas",
+      });
+    }
+  });
 
 @Controller("/admin")
 @UseGuards(AdminGuard)
@@ -46,8 +74,18 @@ export class AdminController {
   }
 
   @Post("/spot-proposals/:id/approve")
-  approveSpot(@Param("id") id: string, @CurrentProfile() moderator: AuthenticatedProfile) {
-    return this.admin.approveSpot(this.parseId(id), moderator.id);
+  approveSpot(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    const parsed = approveSpotSchema.safeParse(body ?? {});
+    if (!parsed.success)
+      throw new BadRequestException({
+        message: "Datos de procedencia inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    return this.admin.approveSpot(this.parseId(id), moderator.id, parsed.data);
   }
 
   @Post("/spot-proposals/:id/reject")
