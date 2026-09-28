@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Taco Hunt API
   version: 1.0.0
-  description: Contrato HTTP del API Taco Hunt. Las rutas de escritura requieren autenticación cuando se implementen.
+  description: Contrato HTTP del API Taco Hunt. Las rutas de escritura requieren autenticación.
 servers:
   - url: http://localhost:3001
 paths:
@@ -288,10 +288,248 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/SpotProposal" }
       responses:
-        "201": { description: Propuesta pendiente }
+        "201":
+          description: Propuesta pendiente y posibles puestos cercanos para revisar
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpotProposalResult" }
         "400": { $ref: "#/components/responses/ApiError" }
         "401": { $ref: "#/components/responses/ApiError" }
         "409": { $ref: "#/components/responses/ApiError" }
+  /v1/taco-proposals:
+    post:
+      operationId: proposeTaco
+      summary: Propone un tipo de taco para un puesto aprobado
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TacoProposal" }
+      responses:
+        "201":
+          description: Propuesta pendiente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TacoProposalResult" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
+  /v1/me/proposals:
+    get:
+      operationId: listMyProposals
+      summary: Lista las propuestas propias de puestos y tacos
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Propuestas del usuario autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [spotProposals, tacoProposals]
+                properties:
+                  spotProposals:
+                    { type: array, items: { $ref: "#/components/schemas/SpotProposalStatus" } }
+                  tacoProposals:
+                    { type: array, items: { $ref: "#/components/schemas/TacoProposalStatus" } }
+        "401": { $ref: "#/components/responses/ApiError" }
+  /v1/reports:
+    post:
+      operationId: createReport
+      summary: Reporta un puesto o reseña
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportCreate" }
+      responses:
+        "201":
+          description: Reporte agregado a la cola privada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReportResult" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/queue:
+    get:
+      operationId: getModerationQueue
+      summary: Obtiene la cola privada de moderación
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - {
+            in: query,
+            name: kind,
+            required: true,
+            schema: { type: string, enum: [spots, tacos, reports] },
+          }
+      responses:
+        "200":
+          description: Elementos pendientes de moderación
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/audit:
+    get:
+      operationId: listModerationAudit
+      summary: Consulta el historial privado de acciones administrativas
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+        - {
+            in: query,
+            name: before,
+            description: Cursor opaco devuelto por la página anterior,
+            schema: { type: string, maxLength: 512 },
+          }
+      responses:
+        "200":
+          description: Acciones recientes y cursor anterior
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, nextBefore]
+                properties:
+                  items:
+                    { type: array, items: { $ref: "#/components/schemas/ModerationAuditEntry" } }
+                  nextBefore: { type: [string, "null"], maxLength: 512 }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/spot-proposals/{id}/approve:
+    post:
+      operationId: approveSpotProposal
+      summary: Aprueba un puesto propuesto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Puesto aprobado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/spot-proposals/{id}/reject:
+    post:
+      operationId: rejectSpotProposal
+      summary: Rechaza un puesto propuesto y conserva un motivo interno
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationReason" }
+      responses:
+        "200": { description: Puesto rechazado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/taco-proposals/{id}/approve:
+    post:
+      operationId: approveTacoProposal
+      summary: Aprueba un tipo de taco propuesto
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Tipo de taco aprobado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/taco-proposals/{id}/reject:
+    post:
+      operationId: rejectTacoProposal
+      summary: Rechaza un tipo de taco propuesto y conserva un motivo interno
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationReason" }
+      responses:
+        "200": { description: Tipo de taco rechazado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/reviews/{id}/hide:
+    post:
+      operationId: hideReview
+      summary: Oculta una reseña de las respuestas públicas
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationReasonOptional" }
+      responses:
+        "200": { description: Reseña oculta }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/reviews/{id}/unhide:
+    post:
+      operationId: unhideReview
+      summary: Vuelve a mostrar una reseña
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationReasonOptional" }
+      responses:
+        "200": { description: Reseña visible }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/reports/{id}/close:
+    post:
+      operationId: closeReport
+      summary: Cierra un reporte después de su revisión
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationReasonOptional" }
+      responses:
+        "200": { description: Reporte cerrado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
 components:
   securitySchemes:
     bearerAuth:
@@ -558,3 +796,113 @@ components:
         latitude: { type: number, minimum: 25, maximum: 27 }
         longitude: { type: number, minimum: -101.5, maximum: -99 }
         note: { type: string, maxLength: 500 }
+    SpotProposalResult:
+      type: object
+      required: [id, name, neighborhood, latitude, longitude, status, createdAt, nearbyCandidates]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        status: { const: pending }
+        createdAt: { type: string, format: date-time }
+        nearbyCandidates:
+          { type: array, items: { $ref: "#/components/schemas/NearbySpotCandidate" } }
+    SpotProposalStatus:
+      type: object
+      required: [id, name, neighborhood, latitude, longitude, status, createdAt, note]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        status: { type: string, enum: [pending, approved, rejected] }
+        createdAt: { type: string, format: date-time }
+        note: { type: [string, "null"], maxLength: 500 }
+    NearbySpotCandidate:
+      type: object
+      required: [id, name, neighborhood, distanceMeters]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        distanceMeters: { type: integer, minimum: 0, maximum: 100 }
+    TacoProposal:
+      type: object
+      required: [spotId, tacoTypeId]
+      additionalProperties: false
+      properties:
+        spotId: { type: string, format: uuid }
+        tacoTypeId: { type: string, format: uuid }
+        displayName: { type: string, minLength: 1, maxLength: 80 }
+    TacoProposalResult:
+      type: object
+      required: [id, spotId, tacoTypeId, displayName, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        spotId: { type: string, format: uuid }
+        tacoTypeId: { type: string, format: uuid }
+        displayName: { type: [string, "null"] }
+        status: { const: pending }
+        createdAt: { type: string, format: date-time }
+    TacoProposalStatus:
+      type: object
+      required: [id, spotId, spotName, tacoTypeId, name, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        spotId: { type: string, format: uuid }
+        spotName: { type: string }
+        tacoTypeId: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
+        createdAt: { type: string, format: date-time }
+    ReportCreate:
+      type: object
+      required: [targetType, targetId, reason]
+      additionalProperties: false
+      properties:
+        targetType: { type: string, enum: [spot, review] }
+        targetId: { type: string, format: uuid }
+        reason: { type: string, enum: [inaccurate, abusive, spam, closed, other] }
+        note: { type: string, maxLength: 500 }
+    ReportResult:
+      type: object
+      required: [id, targetType, targetId, reason, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { type: string, enum: [spot, review] }
+        targetId: { type: string, format: uuid }
+        reason: { type: string, enum: [inaccurate, abusive, spam, closed, other] }
+        status: { const: open }
+        createdAt: { type: string, format: date-time }
+    ModerationReason:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
+    ModerationReasonOptional:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 500,
+            pattern: '\S',
+            default: "Acción de moderación",
+          }
+    ModerationAuditEntry:
+      type: object
+      required: [id, moderatorId, targetType, targetId, action, createdAt, reason]
+      properties:
+        id: { type: string, format: uuid }
+        moderatorId: { type: [string, "null"], format: uuid }
+        targetType: { type: string }
+        targetId: { type: string, format: uuid }
+        action: { type: string }
+        createdAt: { type: string, format: date-time }
+        reason: { type: [string, "null"], maxLength: 500 }
