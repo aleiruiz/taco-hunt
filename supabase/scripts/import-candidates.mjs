@@ -18,7 +18,7 @@ const REQUIRED_COLUMNS = [
   "last_verified_at",
   "notes",
 ];
-const ALLOWED_SOURCE_TYPES = new Set(["owner", "licensed", "user", "fictional", "osm"]);
+const ALLOWED_SOURCE_TYPES = new Set(["owner", "licensed", "user", "fictional"]);
 const MONTERREY_BOUNDS = { minLat: 24.0, maxLat: 26.2, minLng: -101.5, maxLng: -99.5 };
 
 function usage() {
@@ -137,11 +137,11 @@ with incoming(id, original_payload, normalized_name, latitude, longitude, source
     coalesce(array_agg(spots.id) filter (where spots.id is not null), '{}') as matched_spot_ids
   from incoming
   left join app_private.spots spots on spots.status = 'approved'
-    and (2 * 6371000 * asin(sqrt(
+    and (2 * 6371000 * asin(sqrt(least(1, greatest(0,
       sin(radians(spots.latitude - incoming.latitude) / 2) ^ 2
       + cos(radians(incoming.latitude)) * cos(radians(spots.latitude))
       * sin(radians(spots.longitude - incoming.longitude) / 2) ^ 2
-    ))) < 100)
+    ))))) < 100)
   group by incoming.id, incoming.original_payload, incoming.normalized_name, incoming.latitude,
     incoming.longitude, incoming.source, incoming.license_ref, incoming.last_verified_at, incoming.source_ref
 )
