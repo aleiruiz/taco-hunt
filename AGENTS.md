@@ -5,6 +5,7 @@ Lee `docs/build-spec.md`, `docs/plan-delegacion.md` y `docs/orchestration.md` an
 ## Agentes de implementación
 
 - Trabaja solo en el ID de tarea asignado y en tu propio worktree/rama `codex/<id>-<descripcion>`.
+- Cada trabajador debe ser una tarea/sesión independiente de Codex con historial, `threadId` y worktree propios. No delegues implementación mediante subagentes dentro del hilo del orquestador.
 - Respeta el área principal de la tarea. Antes de tocar un archivo compartido (`package.json` raíz, `pnpm-lock.yaml`, configuración raíz, contratos compartidos o migraciones de otra tarea), comunica el cambio al orquestador y espera su decisión.
 - No modifiques `main` ni incorpores cambios de otra rama por tu cuenta. Si dependes de otra tarea, explica el bloqueo al orquestador.
 - Envía un check-in al comenzar, al encontrar un bloqueo, al tener una decisión de contrato y al quedar listo para revisión. Indica estado, avance concreto, siguiente paso y bloqueo.
@@ -23,7 +24,7 @@ Lee `docs/build-spec.md`, `docs/plan-delegacion.md` y `docs/orchestration.md` an
 
 ## Orquestador
 
-- Mantén como máximo tres agentes trabajadores activos. Consulta `docs/orchestration-state.json` y el estado real de las tareas/PR antes de asignar trabajo.
+- Mantén como máximo tres tareas de trabajador independientes activas. Créelas como tareas/sesiones de Codex separadas con worktrees propios; no uses subagentes dentro de la sesión del orquestador. Consulta `docs/orchestration-state.json` y el estado real de las tareas/PR antes de asignar trabajo.
 - Aplica las dependencias del plan. T14 espera a T01–T13; T15 espera a T14; T16 espera a T15 y a los requisitos externos.
 - No marques una tarea como terminada por el resumen del agente: exige PR integrado en `main`, o un cambio local integrado cuando GitHub no esté disponible. La finalización de revisión requiere una revisión de CodeRabbit del SHA actual del PR y que el orquestador haya verificado los hallazgos y CI; no requiere un revisor par.
 - Tras cada integración, actualiza el estado y asigna la siguiente tarea libre por prioridad. No reserves un puesto de trabajo para revisar PRs; úsalo para la siguiente tarea elegible.
