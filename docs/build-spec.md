@@ -15,18 +15,18 @@ The delivery is complete when another developer can clone the repository, run th
 
 ## 2. Binding implementation decisions
 
-| Concern | Decision |
-| --- | --- |
-| Mobile | Expo-managed React Native, TypeScript, Expo Router; support Android and iOS. |
-| API | Separate Node.js TypeScript service, NestJS with Fastify adapter, REST JSON under `/v1`. |
-| Database | PostgreSQL hosted by Supabase in deployment; run the Supabase CLI local stack in Docker for Postgres, Auth and Storage development. Use migrations tracked in git. |
-| Authentication | Supabase Auth email/password for v1. Mobile talks to Supabase only for registration, sign-in, reset and token refresh; all product data goes through the API. |
-| Images | Supabase Storage for deployed media; API receives, validates, strips metadata, resizes, and stores one image per review. Local filesystem or a mock storage adapter in development. |
-| Hosting | Containerized API on Google Cloud Run with request-based billing and minimum instances zero; Supabase free tier for DB/Auth/Storage while viable. |
-| Mapping | `react-native-maps` with Apple Maps on iOS and Google Maps SDK on Android. Do not invoke Google Places, geocoding, route, tile, or web map APIs. |
-| Location | Foreground only, on explicit user action; no stored location history or background permission. |
-| Data rights | Original, permissioned, or properly licensed location data only. No imported reviews or photos from Google Maps or other apps. |
-| Main architecture goal | Readable, tested product logic across mobile, API, persistence, moderation, and deployment. Avoid artificial microservices. |
+| Concern                | Decision                                                                                                                                                                            |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile                 | Expo-managed React Native, TypeScript, Expo Router; support Android and iOS.                                                                                                        |
+| API                    | Separate Node.js TypeScript service, NestJS with Fastify adapter, REST JSON under `/v1`.                                                                                            |
+| Database               | PostgreSQL hosted by Supabase in deployment; run the Supabase CLI local stack in Docker for Postgres, Auth and Storage development. Use migrations tracked in git.                  |
+| Authentication         | Supabase Auth email/password for v1. Mobile talks to Supabase only for registration, sign-in, reset and token refresh; all product data goes through the API.                       |
+| Images                 | Supabase Storage for deployed media; API receives, validates, strips metadata, resizes, and stores one image per review. Local filesystem or a mock storage adapter in development. |
+| Hosting                | Containerized API on Google Cloud Run with request-based billing and minimum instances zero; Supabase free tier for DB/Auth/Storage while viable.                                   |
+| Mapping                | `react-native-maps` with Apple Maps on iOS and Google Maps SDK on Android. Do not invoke Google Places, geocoding, route, tile, or web map APIs.                                    |
+| Location               | Foreground only, on explicit user action; no stored location history or background permission.                                                                                      |
+| Data rights            | Original, permissioned, or properly licensed location data only. No imported reviews or photos from Google Maps or other apps.                                                      |
+| Main architecture goal | Readable, tested product logic across mobile, API, persistence, moderation, and deployment. Avoid artificial microservices.                                                         |
 
 Do not replace the API with direct Supabase table access or Edge Functions. Keep server-only database and Storage credentials off the mobile app. The app may include Supabase's publishable client key exclusively for Auth.
 
@@ -110,18 +110,18 @@ The README must give runnable commands (adjust exact script names to the scaffol
 
 Use UUID primary keys, `timestamptz` in UTC, foreign keys, check constraints, and indexed query paths. Name columns consistently in snake case. A migration must create the following logical entities; the agent can adjust minor SQL syntax, but not their invariants.
 
-| Table | Essential columns and constraints |
-| --- | --- |
-| `profiles` | `id uuid` referencing Supabase Auth user; `display_name text null`; `role text` restricted to `user` or `admin`, default `user`; `status text` restricted to `active` or `blocked`; timestamps. API cannot accept role/status changes from a normal user. |
-| `spots` | `id uuid`; `name`; `normalized_name`; `neighborhood`; `latitude numeric`; `longitude numeric`; optional `hours_json`; `status` pending/approved/rejected; `created_by uuid null`; `source_type`; `source_ref null`; `last_verified_at null`; timestamps. Approved rows require non-empty name and valid coordinates. |
-| `taco_types` | `id uuid`; unique `slug`; `name_es`; `active boolean`. Seed common types while preserving regional distinctions, e.g. pastor and trompo as separate labels. |
-| `spot_tacos` | `id uuid`; `spot_id`; `taco_type_id`; `display_name null`; `price_hint_mxn null`; `status` pending/approved/rejected; unique `(spot_id,taco_type_id)` in v1. Only approved rows are public. |
-| `reviews` | `id uuid`; `user_id`; `spot_taco_id`; integer `tortilla`, `filling`, `salsa`, `value` each 1–5; `price_paid_mxn null`; `body varchar(500) null`; `photo_key null`; `status` visible/hidden; timestamps; unique `(user_id,spot_taco_id)`. |
-| `favorites` | `(user_id,spot_id)` primary key; `created_at`. |
-| `reports` | `id uuid`; `reporter_id`; `target_type` spot/review; `target_id`; `reason` inaccurate/abusive/spam/closed/other; optional bounded note; status open/closed; timestamps. Resolve target existence in application code. |
-| `media_uploads` | `id uuid`; `owner_id`; `object_key`; `state` pending/claimed/deleted; `created_at`; `claimed_review_id null`. One-use binding between processed uploads and a later review. |
-| `moderation_audit` | `id uuid`; `moderator_id`; `target_type`; `target_id`; `action`; `created_at`; optional internal reason. Only admin can read. |
-| `import_candidates` | `id uuid`; original row payload; normalized name; pin; source and license reference; matched spot IDs; state pending/approved/rejected; review notes; import batch ID. Never exposed as a public endpoint. |
+| Table               | Essential columns and constraints                                                                                                                                                                                                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`          | `id uuid` referencing Supabase Auth user; `display_name text null`; `role text` restricted to `user` or `admin`, default `user`; `status text` restricted to `active` or `blocked`; timestamps. API cannot accept role/status changes from a normal user.                                                            |
+| `spots`             | `id uuid`; `name`; `normalized_name`; `neighborhood`; `latitude numeric`; `longitude numeric`; optional `hours_json`; `status` pending/approved/rejected; `created_by uuid null`; `source_type`; `source_ref null`; `last_verified_at null`; timestamps. Approved rows require non-empty name and valid coordinates. |
+| `taco_types`        | `id uuid`; unique `slug`; `name_es`; `active boolean`. Seed common types while preserving regional distinctions, e.g. pastor and trompo as separate labels.                                                                                                                                                          |
+| `spot_tacos`        | `id uuid`; `spot_id`; `taco_type_id`; `display_name null`; `price_hint_mxn null`; `status` pending/approved/rejected; unique `(spot_id,taco_type_id)` in v1. Only approved rows are public.                                                                                                                          |
+| `reviews`           | `id uuid`; `user_id`; `spot_taco_id`; integer `tortilla`, `filling`, `salsa`, `value` each 1–5; `price_paid_mxn null`; `body varchar(500) null`; `photo_key null`; `status` visible/hidden; timestamps; unique `(user_id,spot_taco_id)`.                                                                             |
+| `favorites`         | `(user_id,spot_id)` primary key; `created_at`.                                                                                                                                                                                                                                                                       |
+| `reports`           | `id uuid`; `reporter_id`; `target_type` spot/review; `target_id`; `reason` inaccurate/abusive/spam/closed/other; optional bounded note; status open/closed; timestamps. Resolve target existence in application code.                                                                                                |
+| `media_uploads`     | `id uuid`; `owner_id`; `object_key`; `state` pending/claimed/deleted; `created_at`; `claimed_review_id null`. One-use binding between processed uploads and a later review.                                                                                                                                          |
+| `moderation_audit`  | `id uuid`; `moderator_id`; `target_type`; `target_id`; `action`; `created_at`; optional internal reason. Only admin can read.                                                                                                                                                                                        |
+| `import_candidates` | `id uuid`; original row payload; normalized name; pin; source and license reference; matched spot IDs; state pending/approved/rejected; review notes; import batch ID. Never exposed as a public endpoint.                                                                                                           |
 
 Indexes: `spots(status, normalized_name)`, `spots(status, neighborhood)`, `spot_tacos(spot_id,status)`, `reviews(spot_taco_id,status,created_at DESC)`, `reviews(user_id)`, `reports(status,created_at)`. For a few hundred spots, bounding-box filtering using indexed coordinates and a Haversine calculation is acceptable. If PostGIS is available, use `geography(Point,4326)` and a GIST index; choose one implementation during phase 1 and document it. Validate latitude/longitude within Mexico, with a tighter Monterrey-area contribution boundary; store no user's GPS position.
 
@@ -143,31 +143,31 @@ Base URL `/v1`. JSON uses camelCase at the API boundary; storage uses snake_case
 
 ### 8.1 Public reads
 
-| Route | Query or response behavior |
-| --- | --- |
-| `GET /v1/spots` | Query `north,south,east,west` optionally, `q`, `tacoType`, `cursor`, `limit` default 20 max 50. Return approved spots only. Limit bounding-box area to avoid full-table scraping; default Monterrey area. Return `{items:[SpotSummary],nextCursor:string|null}`. |
-| `GET /v1/spots/:id` | Return approved stand, approved taco types, aggregate counts, limited visible reviews, source verification date. 404 for pending/rejected. |
-| `GET /v1/spots/:id/reviews` | `tacoType`, `cursor`, `limit` max 30; return visible reviews only. |
-| `GET /v1/taco-types` | Return active types and localized display names. |
-| `GET /s/:spotId` | Safe HTML preview for an approved stand; 404 otherwise. This path is outside `/v1`. |
-| `GET /healthz` | 200 when the process can serve requests; do not expose secrets or user information. |
+| Route                       | Query or response behavior                                                                                                                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/spots`             | Query `north,south,east,west` optionally, `q`, `tacoType`, `cursor`, `limit` default 20 max 50. Return approved spots only. Limit bounding-box area to avoid full-table scraping; default Monterrey area. Return `{items:[SpotSummary],nextCursor:string | null}`. |
+| `GET /v1/spots/:id`         | Return approved stand, approved taco types, aggregate counts, limited visible reviews, source verification date. 404 for pending/rejected.                                                                                                               |
+| `GET /v1/spots/:id/reviews` | `tacoType`, `cursor`, `limit` max 30; return visible reviews only.                                                                                                                                                                                       |
+| `GET /v1/taco-types`        | Return active types and localized display names.                                                                                                                                                                                                         |
+| `GET /s/:spotId`            | Safe HTML preview for an approved stand; 404 otherwise. This path is outside `/v1`.                                                                                                                                                                      |
+| `GET /healthz`              | 200 when the process can serve requests; do not expose secrets or user information.                                                                                                                                                                      |
 
 `SpotSummary` includes `id,name,neighborhood,latitude,longitude,photoUrl|null,bestTaco|null,reviewCount,lastVerifiedAt|null`. A taco summary includes `id,tacoTypeId,score|null,reviewCount`. Price and hours are optional; never infer an open state from missing hours.
 
 ### 8.2 Authenticated routes
 
-| Route | Request and behavior |
-| --- | --- |
-| `POST /v1/spot-proposals` | `{name,neighborhood,latitude,longitude,note?}`. Check duplicates within 100 m, return 409 with candidate IDs when strong match; otherwise return 201 with pending ID. |
-| `POST /v1/taco-proposals` | `{spotId,tacoTypeId,displayName?}`; return pending record for moderator. |
-| `POST /v1/reviews` | `{spotTacoId,tortilla,filling,salsa,value,pricePaidMxn?,body?,photoUploadId?}`. Return 201 on create or 409 with existing review ID; never silently replace an earlier review. Unique DB constraint handles races. |
-| `PATCH /v1/reviews/:id` | Partial edits to author-owned scores/body/price/photo only. Reject `userId`, `status`, `role` and foreign identifiers. |
-| `DELETE /v1/reviews/:id` | Author deletes; return 204. Deleting twice returns 204 without leaking previous content. |
-| `POST /v1/review-photos` | Multipart image max 2 MB input; API decodes, strips EXIF, resizes to <=1200 px and targets <=300 KB, stores temporary private object; returns a one-use upload ID bound to current user. Clean unclaimed uploads. |
-| `GET /v1/me/favorites` | Paginated favorites. `PUT /v1/me/favorites/:spotId` is idempotent and returns 204; `DELETE` returns 204. |
-| `GET /v1/me/reviews` | Current user's review history, including own hidden reviews with status clearly marked. |
-| `POST /v1/reports` | `{targetType,targetId,reason,note?}`. One open report per user/target; return 201 or 409. |
-| `DELETE /v1/me` | Delete user's reviews, favorites, profile, and owned photos; anonymize retained moderation audit/report references; delete Auth account through a privileged server action. Return 204 when complete. Make retries safe after partial failure. |
+| Route                     | Request and behavior                                                                                                                                                                                                                           |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/spot-proposals` | `{name,neighborhood,latitude,longitude,note?}`. Check duplicates within 100 m, return 409 with candidate IDs when strong match; otherwise return 201 with pending ID.                                                                          |
+| `POST /v1/taco-proposals` | `{spotId,tacoTypeId,displayName?}`; return pending record for moderator.                                                                                                                                                                       |
+| `POST /v1/reviews`        | `{spotTacoId,tortilla,filling,salsa,value,pricePaidMxn?,body?,photoUploadId?}`. Return 201 on create or 409 with existing review ID; never silently replace an earlier review. Unique DB constraint handles races.                             |
+| `PATCH /v1/reviews/:id`   | Partial edits to author-owned scores/body/price/photo only. Reject `userId`, `status`, `role` and foreign identifiers.                                                                                                                         |
+| `DELETE /v1/reviews/:id`  | Author deletes; return 204. Deleting twice returns 204 without leaking previous content.                                                                                                                                                       |
+| `POST /v1/review-photos`  | Multipart image max 2 MB input; API decodes, strips EXIF, resizes to <=1200 px and targets <=300 KB, stores temporary private object; returns a one-use upload ID bound to current user. Clean unclaimed uploads.                              |
+| `GET /v1/me/favorites`    | Paginated favorites. `PUT /v1/me/favorites/:spotId` is idempotent and returns 204; `DELETE` returns 204.                                                                                                                                       |
+| `GET /v1/me/reviews`      | Current user's review history, including own hidden reviews with status clearly marked.                                                                                                                                                        |
+| `POST /v1/reports`        | `{targetType,targetId,reason,note?}`. One open report per user/target; return 201 or 409.                                                                                                                                                      |
+| `DELETE /v1/me`           | Delete user's reviews, favorites, profile, and owned photos; anonymize retained moderation audit/report references; delete Auth account through a privileged server action. Return 204 when complete. Make retries safe after partial failure. |
 
 Moderation routes under `/v1/admin`: `GET /queue?kind=spots|tacos|reports`, `POST /spot-proposals/:id/approve`, `POST /spot-proposals/:id/reject`, `POST /taco-proposals/:id/approve`, `POST /reviews/:id/hide`, `POST /reviews/:id/unhide`, `POST /reports/:id/close`. All require server-verified admin role; record moderator ID and action timestamp in an audit table. A pending stand becomes a public spot on approval without losing its stable ID. Rejections preserve an internal reason.
 
@@ -208,15 +208,15 @@ Android Google Maps SDK needs a Cloud billing account and a key restricted to th
 
 ## 13. Testing and quality gates
 
-| Level | Required checks |
-| --- | --- |
-| Domain unit | Average and rounding, score bounds, empty aggregates, hiding/editing review effects, normalized names, duplicates near 100 m, pagination token validation. |
-| API integration | Public reads expose only approved/visible data; unauthenticated writes 401; foreign edit/delete denied; blocked user denied; admin endpoints 403 for normal user; duplicate review and report conflicts; file validation; account deletion. |
-| Database | Migrations apply to clean and existing test DB; unique and check constraints fail correctly; missing foreign keys fail; staging import is repeatable without duplicate approved records. |
-| Mobile component | Sign-in at write time, form errors, permission denied, loading/offline, no reviews, unknown hours, image failure, hidden review state. |
-| Device | Android and iOS real-device pass for location, maps, camera/library, share, app return, large text, screen reader, low connectivity. |
-| Security | Direct database table endpoints inaccessible to mobile key; no privileged key in mobile bundle or logs; admin role cannot be chosen from user input; image EXIF removed; user A cannot edit user B. |
-| Release | CI lint, TypeScript typecheck, unit and integration tests, build container, run migrations, smoke-test `/healthz` and public browse. |
+| Level            | Required checks                                                                                                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain unit      | Average and rounding, score bounds, empty aggregates, hiding/editing review effects, normalized names, duplicates near 100 m, pagination token validation.                                                                                  |
+| API integration  | Public reads expose only approved/visible data; unauthenticated writes 401; foreign edit/delete denied; blocked user denied; admin endpoints 403 for normal user; duplicate review and report conflicts; file validation; account deletion. |
+| Database         | Migrations apply to clean and existing test DB; unique and check constraints fail correctly; missing foreign keys fail; staging import is repeatable without duplicate approved records.                                                    |
+| Mobile component | Sign-in at write time, form errors, permission denied, loading/offline, no reviews, unknown hours, image failure, hidden review state.                                                                                                      |
+| Device           | Android and iOS real-device pass for location, maps, camera/library, share, app return, large text, screen reader, low connectivity.                                                                                                        |
+| Security         | Direct database table endpoints inaccessible to mobile key; no privileged key in mobile bundle or logs; admin role cannot be chosen from user input; image EXIF removed; user A cannot edit user B.                                         |
+| Release          | CI lint, TypeScript typecheck, unit and integration tests, build container, run migrations, smoke-test `/healthz` and public browse.                                                                                                        |
 
 Use test factories and realistic synthetic data only in tests. CI must run without live Supabase or cloud credentials. Tests that genuinely require a deployed service are a separate manual smoke checklist. An agent must report which checks actually ran and why any check was skipped.
 
@@ -246,15 +246,15 @@ The implementation can start with Taco Hunt as the working name and the supplied
 
 **Provided assets:** [Editable SVG logo](Taco_Hunt_Logo.svg) and [responsive HTML landing page](Taco_Hunt_Landing.html). Keep both beside this Markdown file while reading it. When implementing, copy the landing HTML to `apps/landing/index.html`, the SVG to `apps/landing/taco-hunt-logo.svg`, and use the same emblem and colors in the mobile app. The HTML refers to `Taco_Hunt_Logo.svg`, so update its two image paths after copying. The SVG contains a location marker framing a taco, plus a text wordmark. Export the emblem alone as the mobile app icon, using the same colors and sufficient interior padding; do not use the full wordmark as a small icon. If a final logo is commissioned, replace the SVG in one place and re-export the mobile assets.
 
-| Token | Value | Role |
-| --- | --- | --- |
-| Tortilla cream | `#FBF3E6` | Main background. |
-| Paper | `#FFFAF1` | Elevated surfaces. |
-| Salsa red | `#E95032` | Brand accent and selected states. |
-| Cilantro green | `#276C4F` | Secondary accent and status. |
-| Tortilla gold | `#F4BE65` | Illustration and emphasis. |
-| Charcoal | `#302723` | Primary text and high-contrast controls. |
-| Muted text | `#6C5D53` | Supporting copy on light backgrounds; validate contrast in implementation. |
+| Token          | Value     | Role                                                                       |
+| -------------- | --------- | -------------------------------------------------------------------------- |
+| Tortilla cream | `#FBF3E6` | Main background.                                                           |
+| Paper          | `#FFFAF1` | Elevated surfaces.                                                         |
+| Salsa red      | `#E95032` | Brand accent and selected states.                                          |
+| Cilantro green | `#276C4F` | Secondary accent and status.                                               |
+| Tortilla gold  | `#F4BE65` | Illustration and emphasis.                                                 |
+| Charcoal       | `#302723` | Primary text and high-contrast controls.                                   |
+| Muted text     | `#6C5D53` | Supporting copy on light backgrounds; validate contrast in implementation. |
 
 Primary tagline: **Encuentra tu próximo taco favorito.** Landing headline: **Hay tacos buenos. Y tacos que hay que encontrar.** The in-app UI is Spanish for Mexico and uses natural labels such as **Explorar**, **Guardados**, **Mis tacos**, and **Califica este taco**. Use the English name as a brand, not as permission to mix English interface labels into Spanish flows. Voice: curious and playful, specific about what is known; do not make unverifiable claims about being the best or most complete guide.
 
@@ -268,11 +268,11 @@ Acceptance: the page loads when `index.html` and the SVG are in the same directo
 
 ### 16.3 Brand handoff and file mapping
 
-| Supplied file | Place in repository | Use |
-| --- | --- | --- |
-| `Taco_Hunt_Logo.svg` | `apps/landing/taco-hunt-logo.svg` and mobile asset source | Wordmark on web; emblem-only derivative for app icon. |
-| `Taco_Hunt_Landing.html` | `apps/landing/index.html` | Static page design and initial implementation; fix logo path after copying. |
-| This specification | `docs/build-spec.md` | Binding product and engineering scope for the implementation agent. |
+| Supplied file            | Place in repository                                       | Use                                                                         |
+| ------------------------ | --------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `Taco_Hunt_Logo.svg`     | `apps/landing/taco-hunt-logo.svg` and mobile asset source | Wordmark on web; emblem-only derivative for app icon.                       |
+| `Taco_Hunt_Landing.html` | `apps/landing/index.html`                                 | Static page design and initial implementation; fix logo path after copying. |
+| This specification       | `docs/build-spec.md`                                      | Binding product and engineering scope for the implementation agent.         |
 
 The trademark search is a pre-release owner action through Mexico's IMPI MARCia tool; this document does not assert that Taco Hunt is registrable or exclusive. If the public name changes, update the logo wordmark, HTML title/meta/copy, app display name, share previews, documentation, and store listing together.
 

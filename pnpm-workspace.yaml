@@ -1,5 +1,6 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/api"
+  - "apps/landing"
+  - "packages/*"
 allowBuilds:
   esbuild: set this to true or false
