@@ -133,7 +133,11 @@ export class AdminService {
     longitude: number,
   ): Promise<DuplicateCandidate[]> {
     try {
-      const { rows } = await this.pool.query(duplicateCandidateSql(), [latitude, longitude]);
+      const { rows } = await this.pool.query(duplicateCandidateSql(), [
+        normalizeName(name),
+        latitude,
+        longitude,
+      ]);
       return rows.map((candidate) => ({
         ...candidate,
         match: classifyDuplicate(name, candidate.name),

@@ -27,19 +27,19 @@ export function duplicateCandidateSql(): string {
   return `
     select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,
       (6371000 * 2 * asin(sqrt(least(1,
-        power(sin(radians(latitude::float8-$1::float8)/2),2) +
-        cos(radians($1::float8))*cos(radians(latitude::float8))*
-        power(sin(radians(longitude::float8-$2::float8)/2),2)
+        power(sin(radians(latitude::float8-$2::float8)/2),2) +
+        cos(radians($2::float8))*cos(radians(latitude::float8))*
+        power(sin(radians(longitude::float8-$3::float8)/2),2)
       ))))::int as "distanceMeters"
     from app_private.spots
     where status='approved'
-      and latitude between $1::numeric-0.001 and $1::numeric+0.001
-      and longitude between $2::numeric-0.001 and $2::numeric+0.001
+      and latitude between $2::numeric-0.001 and $2::numeric+0.001
+      and longitude between $3::numeric-0.002 and $3::numeric+0.002
       and 6371000 * 2 * asin(sqrt(least(1,
-        power(sin(radians(latitude::float8-$1::float8)/2),2) +
-        cos(radians($1::float8))*cos(radians(latitude::float8))*
-        power(sin(radians(longitude::float8-$2::float8)/2),2)
+        power(sin(radians(latitude::float8-$2::float8)/2),2) +
+        cos(radians($2::float8))*cos(radians(latitude::float8))*
+        power(sin(radians(longitude::float8-$3::float8)/2),2)
       ))) <= 100
-    order by "distanceMeters",name
+    order by (normalized_name = $1) desc,"distanceMeters",name
     limit 10`;
 }

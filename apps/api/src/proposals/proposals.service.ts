@@ -26,6 +26,7 @@ export class ProposalsService {
     try {
       const normalizedName = normalizeName(input.name);
       const candidates = await this.pool.query(duplicateCandidateSql(), [
+        normalizedName,
         input.latitude,
         input.longitude,
       ]);
