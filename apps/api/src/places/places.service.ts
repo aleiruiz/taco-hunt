@@ -12,14 +12,14 @@ import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
 
 const monterreyBounds = z.object({
-  latitude: z.number().min(24).max(27),
-  longitude: z.number().min(-102).max(-99),
+  latitude: z.number().min(25.3).max(26.1),
+  longitude: z.number().min(-101).max(-99.7),
 });
 
 export const placesDiscoverySchema = z.object({
   query: z.string().trim().min(2).max(100),
-  latitude: z.coerce.number().min(24).max(27).default(25.6866),
-  longitude: z.coerce.number().min(-102).max(-99).default(-100.3161),
+  latitude: z.coerce.number().min(25.3).max(26.1).default(25.6866),
+  longitude: z.coerce.number().min(-101).max(-99.7).default(-100.3161),
   radiusMeters: z.coerce.number().int().min(100).max(50_000).default(25_000),
 });
 
