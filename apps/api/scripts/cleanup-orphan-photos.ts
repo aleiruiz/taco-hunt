@@ -15,8 +15,17 @@ if (!Number.isFinite(olderThanHours) || olderThanHours < 1 || olderThanHours > 8
 
 async function main(): Promise<void> {
   const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
-  const pending = await pool.query<{ object_key: string }>(
-    "select object_key from app_private.media_uploads where state in ('pending','deleted') and created_at < $1",
+  const stalePending = dryRun
+    ? await pool.query<{ object_key: string }>(
+        "select object_key from app_private.media_uploads where state='pending' and created_at < $1",
+        [cutoff],
+      )
+    : await pool.query<{ object_key: string }>(
+        "update app_private.media_uploads set state='deleted' where state='pending' and created_at < $1 returning object_key",
+        [cutoff],
+      );
+  const alreadyDeleted = await pool.query<{ object_key: string }>(
+    "select object_key from app_private.media_uploads where state='deleted' and created_at < $1",
     [cutoff],
   );
   const known = new Set(
@@ -26,7 +35,10 @@ async function main(): Promise<void> {
       )
     ).rows.map((row) => row.object_key),
   );
-  const staleKeys = pending.rows.map((row) => row.object_key);
+  const staleKeys = [
+    ...stalePending.rows.map((row) => row.object_key),
+    ...alreadyDeleted.rows.map((row) => row.object_key),
+  ];
   const staleSet = new Set(staleKeys);
   const orphanKeys = await listObjects().then((objects) =>
     objects
@@ -55,10 +67,6 @@ async function main(): Promise<void> {
     const chunk = removeKeys.slice(offset, offset + 100);
     const { error } = await storage.remove(chunk);
     if (error) throw new Error(`Storage deletion failed: ${error.message}`);
-    await pool.query(
-      "update app_private.media_uploads set state='deleted',claimed_review_id=null,created_at=now() where object_key=any($1::text[]) and state in ('pending','deleted')",
-      [chunk],
-    );
   }
 }
 
