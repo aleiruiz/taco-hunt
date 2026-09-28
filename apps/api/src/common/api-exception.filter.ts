@@ -1,11 +1,12 @@
 import {
   ArgumentsHost,
   Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
   Logger,
 } from "@nestjs/common";
-import { BaseExceptionFilter, HttpAdapterHost } from "@nestjs/core";
+import { HttpAdapterHost } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
 
 const codeByStatus: Partial<Record<number, string>> = {
@@ -19,14 +20,12 @@ const codeByStatus: Partial<Record<number, string>> = {
 };
 
 @Catch()
-export class ApiExceptionFilter extends BaseExceptionFilter {
+export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiExceptionFilter.name);
 
-  constructor(adapterHost: HttpAdapterHost) {
-    super(adapterHost.httpAdapter);
-  }
+  constructor(private readonly adapterHost: HttpAdapterHost) {}
 
-  override catch(exception: unknown, host: ArgumentsHost): void {
+  catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const request = context.getRequest<{ id?: string; headers?: Record<string, string | string[] | undefined> }>();
     const response = context.getResponse();
@@ -57,7 +56,7 @@ export class ApiExceptionFilter extends BaseExceptionFilter {
       ? (payload as { details?: unknown }).details
       : undefined;
 
-    this.httpAdapter.reply(response, {
+    this.adapterHost.httpAdapter.reply(response, {
       error: {
         code: codeByStatus[status] ?? "INTERNAL_ERROR",
         message: safeMessage,

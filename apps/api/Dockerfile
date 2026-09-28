@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -11,7 +11,7 @@ COPY packages/contracts packages/contracts
 RUN pnpm --filter @taco-hunt/api build
 RUN pnpm --filter @taco-hunt/api --prod deploy --legacy /app/deploy
 
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/deploy ./
