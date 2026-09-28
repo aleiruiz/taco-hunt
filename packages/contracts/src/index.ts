@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const uuidSchema = z.string().uuid();
 export const isoTimestampSchema = z.string().datetime({ offset: true });
+export const cursorTokenSchema = z.string().min(1).max(512);
 
 export const apiErrorCodeSchema = z.enum([
   "VALIDATION_ERROR",
@@ -33,12 +34,35 @@ export const tacoSummarySchema = z.object({
 });
 export type TacoSummary = z.infer<typeof tacoSummarySchema>;
 
+export const publicReviewSchema = z.object({
+  id: uuidSchema,
+  tacoTypeId: uuidSchema,
+  tacoName: z.string(),
+  displayName: z.string().nullable(),
+  tortilla: z.number().int().min(1).max(5),
+  filling: z.number().int().min(1).max(5),
+  salsa: z.number().int().min(1).max(5),
+  value: z.number().int().min(1).max(5),
+  score: z.number().min(1).max(5),
+  pricePaidMxn: z.number().nonnegative().nullable(),
+  body: z.string().max(500).nullable(),
+  createdAt: isoTimestampSchema,
+});
+export type PublicReview = z.infer<typeof publicReviewSchema>;
+
+export const publicReviewPageSchema = z.object({
+  items: z.array(publicReviewSchema),
+  nextCursor: cursorTokenSchema.nullable(),
+});
+export type PublicReviewPage = z.infer<typeof publicReviewPageSchema>;
+
 export const spotSummarySchema = z.object({
   id: uuidSchema,
   name: z.string(),
   neighborhood: z.string(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
+  photoUrl: z.string().url().nullable(),
   lastVerifiedAt: isoTimestampSchema.nullable(),
   reviewCount: z.number().int().nonnegative(),
   bestTaco: tacoSummarySchema.nullable(),
@@ -47,7 +71,7 @@ export type SpotSummary = z.infer<typeof spotSummarySchema>;
 
 export const spotListResponseSchema = z.object({
   items: z.array(spotSummarySchema),
-  nextCursor: uuidSchema.nullable(),
+  nextCursor: cursorTokenSchema.nullable(),
 });
 export type SpotListResponse = z.infer<typeof spotListResponseSchema>;
 
@@ -65,7 +89,10 @@ export const spotDetailSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   lastVerifiedAt: isoTimestampSchema.nullable(),
+  photoUrl: z.string().url().nullable(),
+  reviewCount: z.number().int().nonnegative(),
   tacos: z.array(tacoSummarySchema),
+  reviews: z.array(publicReviewSchema).max(5),
 });
 export type SpotDetail = z.infer<typeof spotDetailSchema>;
 
@@ -77,7 +104,7 @@ export const spotListQuerySchema = z
     west: z.coerce.number().min(-101.5).max(-99).optional(),
     q: z.string().trim().max(100).optional(),
     tacoType: z.string().trim().max(80).optional(),
-    cursor: uuidSchema.optional(),
+    cursor: cursorTokenSchema.optional(),
     limit: z.coerce.number().int().min(1).max(50).default(20),
   })
   .superRefine((query, context) => {
@@ -97,6 +124,13 @@ export const spotListQuerySchema = z
     }
   });
 export type SpotListQuery = z.infer<typeof spotListQuerySchema>;
+
+export const reviewListQuerySchema = z.object({
+  tacoType: z.string().trim().max(80).optional(),
+  cursor: cursorTokenSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(30).default(20),
+});
+export type ReviewListQuery = z.infer<typeof reviewListQuerySchema>;
 
 export const ratingSchema = z.number().int().min(1).max(5);
 export const reviewCreateSchema = z.object({
