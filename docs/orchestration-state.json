@@ -34,7 +34,7 @@
    "branch": "codex/T14-account-lifecycle",
    "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
    "sessionId": null,
-   "note": "Worktree prepared fresh off main 2026-09-28. Per AGENTS.md, use a stronger model than the Sonnet 5 default for this task (account-deletion correctness). No session started yet; owner must start it."
+   "note": "Implemented by the orchestrator on Sonnet 5 (owner declined the recommended model escalation). PR #25 opened 2026-09-29T00:45Z, CI running, auto_fix monitor on. Not merged yet."
   }
  ],
  "tasks": {
@@ -223,10 +223,10 @@
     "T03",
     "T17"
    ],
-   "note": "Old worktrees (t21-address-autocomplete, t21-autocomplete-recovery) held uncommitted WIP that was never turned into a PR; snapshotted to branches codex/T21-address-autocomplete-abandoned (f1f3256) and codex/T21-mobile-autocomplete-recovery (58e715f) for reference, then discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: GET /v1/places/autocomplete + GET /v1/places/:placeId/resolve, wired into propose.tsx's autocomplete mode. Typecheck/lint/format clean; not exercised against a live Google Places key or a device/Expo (unavailable in this environment) — flagged in the PR.",
-   "status": "in_review",
+   "note": "Old worktrees (t21-address-autocomplete, t21-autocomplete-recovery) held uncommitted WIP that was never turned into a PR; snapshotted to branches codex/T21-address-autocomplete-abandoned (f1f3256) and codex/T21-mobile-autocomplete-recovery (58e715f) for reference, then discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: GET /v1/places/autocomplete + GET /v1/places/:placeId/resolve, wired into propose.tsx's autocomplete mode. Typecheck/lint/format clean; not exercised against a live Google Places key or a device/Expo (unavailable in this environment) — flagged in the PR. CodeRabbit reviewed and left 4 findings; fixed 3 (ILIKE wildcard escaping, missing fetch timeouts, a redundant re-search after picking a suggestion). Left 1 thread open pending an owner decision: whether docs/build-spec.md's Google Places restriction applies to server-side calls (T17's merged admin discovery already makes the same call) or only to the mobile mapping stack.",
+   "status": "changes_requested",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/23",
-   "headSha": "c5a039d786fe421767fab140beea3609edcd4279",
+   "headSha": "bd4c670c87c9dbff314be7f0a054b0d1eec89cf7",
    "coderabbitReviewedSha": null
   },
   "T22": {
@@ -245,10 +245,10 @@
     "T17",
     "T20"
    ],
-   "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR.",
+   "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR. CodeRabbit reviewed and left 7 findings; fixed all 7 (HTTPS enforcement on GOOGLE_PLACES_DETAILS_URL, PLACES_REFRESH_DELAY_MS validation, a stale-read race on the last_verified_at update, spots with open findings monopolizing the refresh limit, a missing Place Details timeout, an incomplete Google response being treated as confirmed-fresh, and report-dedup only matching this job's own tagged reports) — none needed a product decision.",
    "status": "in_review",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
-   "headSha": "7a07921c01694cb2f73d1b886d3f5f309d81dd7a",
+   "headSha": "00f3f2a7df3f0ee8b5a1db3037a0500ad3641a36",
    "coderabbitReviewedSha": null
   },
   "T24": {
@@ -282,9 +282,10 @@
     "T19",
     "T20"
    ],
-   "note": "All dependencies merged (T01-T13, T18-T20). Per AGENTS.md, escalate to a stronger model for this task given account-deletion correctness. Lower priority than open P2.5 tasks (T21, T23) per plan tier order, but eligible now. Fresh worktree/branch prepared off main db08a13 (see workers[]); no worker session started yet.",
-   "pr": null,
-   "headSha": null,
+   "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
+   "status": "in_review",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
+   "headSha": "188e8b948d6c47d584e2af72c664ce87bdaba68a",
    "coderabbitReviewedSha": null
   },
   "T15": {
