@@ -1,8 +1,7 @@
 import js from "@eslint/js";
-import typescriptEslint from "@typescript-eslint/eslint-plugin";
-import expo from "eslint-config-expo/flat.js";
 import prettier from "eslint-config-prettier/flat";
 import globals from "globals";
+import tseslint from "typescript-eslint";
 
 export default [
   {
@@ -12,20 +11,23 @@ export default [
       "**/dist/**",
       "**/build/**",
       "**/coverage/**",
-      "eslint.config.js",
+      "apps/mobile/**",
       "pnpm-lock.yaml",
     ],
   },
   js.configs.recommended,
-  ...expo,
+  ...tseslint.configs.recommended,
   {
     files: ["apps/api/**/*.ts"],
     languageOptions: { globals: { ...globals.node } },
     rules: { "no-undef": "off" },
   },
   {
+    files: ["apps/landing/**/*.mjs"],
+    languageOptions: { globals: { ...globals.node } },
+  },
+  {
     files: ["**/*.{js,mjs,ts,tsx}"],
-    plugins: { "@typescript-eslint": typescriptEslint },
     rules: {
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [

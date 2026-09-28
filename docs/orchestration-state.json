@@ -4,52 +4,93 @@
   "baseBranch": "main",
   "workers": [
     {
-      "taskId": "T01",
-      "threadId": "01a0e53a-bd84-7aa0-98c7-2b3c0c477664",
-      "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/70a4/taco-hunt",
-      "status": "review"
-    },
-    {
       "taskId": "T02",
       "threadId": "01a0e53a-cbe7-7961-9641-b3af44e0074e",
       "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/3522/taco-hunt",
-      "status": "changes_requested"
+      "status": "active",
+      "reviewing": "T01"
     },
     {
       "taskId": "T03",
-      "threadId": "01a0e53a-d6d2-7a03-9027-0e201ef25998",
+      "threadId": "01a0e53a-d6d2-7a03-9659-9027-0e201ef25998",
       "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/cd89/taco-hunt",
-      "status": "review",
-      "reviewing": "T01"
+      "status": "external_blocked"
     }
   ],
   "tasks": {
-    "T00": { "status": "merged", "pr": null },
+    "T00": {
+      "status": "merged",
+      "pr": null
+    },
     "T01": {
-      "status": "review",
+      "status": "merged",
       "dependsOn": ["T00"],
-      "pr": "https://github.com/aleiruiz/taco-hunt/pull/3"
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/3",
+      "note": "PR #3 merged; PR #5 merged as follow-up. Worker released for a fresh eligible task."
     },
     "T02": {
-      "status": "changes_requested",
+      "status": "blocked",
       "dependsOn": ["T00"],
-      "pr": "https://github.com/aleiruiz/taco-hunt/pull/2"
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/2",
+      "note": "PR #2 has review fixes and E2E steps documented. After T01 integrates, rebase against main and run API E2E; elevated Docker access now works."
     },
     "T03": {
-      "status": "review",
+      "status": "external_blocked",
       "dependsOn": ["T00"],
-      "pr": "https://github.com/aleiruiz/taco-hunt/pull/1"
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/1",
+      "note": "Code review is clean, but mobile E2E needs Android SDK/emulator; no Android SDK is present."
     },
-    "T04": { "status": "ready", "dependsOn": ["T00"], "pr": null },
-    "T05": { "status": "blocked", "dependsOn": ["T01", "T02"], "pr": null },
-    "T06": { "status": "blocked", "dependsOn": ["T01", "T02"], "pr": null },
-    "T07": { "status": "blocked", "dependsOn": ["T03", "T06"], "pr": null },
-    "T08": { "status": "blocked", "dependsOn": ["T05", "T06"], "pr": null },
-    "T09": { "status": "blocked", "dependsOn": ["T05", "T06"], "pr": null },
-    "T10": { "status": "blocked", "dependsOn": ["T02", "T03", "T07"], "pr": null },
-    "T11": { "status": "blocked", "dependsOn": ["T06", "T08"], "pr": null },
-    "T12": { "status": "blocked", "dependsOn": ["T03", "T05"], "pr": null },
-    "T13": { "status": "blocked", "dependsOn": ["T01", "T09"], "pr": null },
+    "T04": {
+      "status": "merged",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/5",
+      "note": "PR #4 and follow-up PR #5 merged; no remaining T04 implementation work."
+    },
+    "T05": {
+      "status": "blocked",
+      "dependsOn": ["T01", "T02"],
+      "pr": null
+    },
+    "T06": {
+      "status": "blocked",
+      "dependsOn": ["T01", "T02"],
+      "pr": null
+    },
+    "T07": {
+      "status": "blocked",
+      "dependsOn": ["T03", "T06"],
+      "pr": null
+    },
+    "T08": {
+      "status": "blocked",
+      "dependsOn": ["T05", "T06"],
+      "pr": null
+    },
+    "T09": {
+      "status": "blocked",
+      "dependsOn": ["T05", "T06"],
+      "pr": null
+    },
+    "T10": {
+      "status": "blocked",
+      "dependsOn": ["T02", "T03", "T07"],
+      "pr": null
+    },
+    "T11": {
+      "status": "blocked",
+      "dependsOn": ["T06", "T08"],
+      "pr": null
+    },
+    "T12": {
+      "status": "blocked",
+      "dependsOn": ["T03", "T05"],
+      "pr": null
+    },
+    "T13": {
+      "status": "blocked",
+      "dependsOn": ["T01", "T09"],
+      "pr": null
+    },
     "T14": {
       "status": "blocked",
       "dependsOn": [
@@ -69,7 +110,57 @@
       ],
       "pr": null
     },
-    "T15": { "status": "blocked", "dependsOn": ["T14"], "external": ["E01", "E02"], "pr": null },
-    "T16": { "status": "blocked", "dependsOn": ["T15"], "external": ["E03", "E04"], "pr": null }
+    "T15": {
+      "status": "blocked",
+      "dependsOn": ["T14"],
+      "external": ["E01", "E02"],
+      "pr": null
+    },
+    "T16": {
+      "status": "blocked",
+      "dependsOn": ["T15"],
+      "external": ["E03", "E04"],
+      "pr": null
+    },
+    "T22": {
+      "dependsOn": ["T03", "T20"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T21": {
+      "dependsOn": ["T03", "T17"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T17": {
+      "dependsOn": ["T02", "T06"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T20": {
+      "dependsOn": ["T18", "T19"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T19": {
+      "dependsOn": ["T06", "T09"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T18": {
+      "dependsOn": ["T02", "T03", "T06"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T23": {
+      "dependsOn": ["T17", "T20"],
+      "status": "blocked",
+      "pr": null
+    },
+    "T24": {
+      "dependsOn": ["T17", "T21"],
+      "status": "blocked",
+      "pr": null
+    }
   }
 }
