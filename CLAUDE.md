@@ -4,11 +4,11 @@ Read `docs/build-spec.md`, `docs/plan-delegacion.md`, and `docs/orchestration.md
 
 ## Implementation agents
 
-- Work only on your assigned task ID and in your own worktree/branch `codex/<id>-<description>`.
-- Each worker must be an independent Codex task/session with its own history, `threadId`, and worktree. Do not delegate implementation to subagents inside the orchestrator's thread.
-- Respect the task's main area. Before touching a shared file (root `package.json`, `pnpm-lock.yaml`, root configuration, shared contracts, or another task's migrations), tell the orchestrator and wait for a decision.
-- Do not modify `main` or pull in changes from another branch on your own. If you depend on another task, explain the blocker to the orchestrator.
-- Send a check-in at the start, on hitting a blocker, on a contract decision, and when ready for review. State status, concrete progress, next step, and blocker.
+- Work on one task ID at a time, in that task's own worktree/branch `codex/<id>-<description>`. Do not mix changes from different task IDs in the same worktree, commit, or PR.
+- The orchestrator session may implement tasks itself, sequentially, one task in progress at a time — each still isolated by its own git worktree/branch. This replaces the earlier requirement that every worker be a separate Codex task/session; a standalone worker session is still fine when the owner explicitly starts one, but the orchestrator is no longer required to spin one up for every task.
+- Respect the task's main area. Before touching a shared file (root `package.json`, `pnpm-lock.yaml`, root configuration, shared contracts, or another task's migrations), record the decision in `docs/orchestration-log.md` before proceeding.
+- Do not modify `main` directly outside of merging an approved PR. If a task depends on another task, wait for that task's PR to merge before branching for the dependent work.
+- Log a check-in in `docs/orchestration-log.md` at the start of a task, on hitting a blocker, on a contract decision, and when a PR is opened. State status, concrete progress, next step, and blocker.
 - When finished, deliver a summary of changes, affected files, checks run, and risks. If GitHub is available, open a small PR to `main` with the task ID. Do not mix different tasks in the same PR.
 - Do not include keys, passwords, tokens, or real user/venue data in the repository, logs, or PR.
 - Keep the code readable: run `pnpm lint` and `pnpm typecheck` before handing off changes, and apply `pnpm format` to the files you modified. If the environment prevents running one of these, report the exact command and error in the check-in/PR.
@@ -24,8 +24,9 @@ Read `docs/build-spec.md`, `docs/plan-delegacion.md`, and `docs/orchestration.md
 
 ## Orchestrator
 
-- Keep at most three independent worker tasks active. Create them as separate Codex tasks/sessions with their own worktrees; do not use subagents inside the orchestrator session. Check `docs/orchestration-state.json` and the real task/PR status before assigning work.
+- Work through tasks one at a time in this session (or, when the owner explicitly starts one, hand a task to a separate worker session), keeping each task in its own worktree/branch. Check `docs/orchestration-state.json` and the real task/PR status before picking up work.
 - Apply the plan's dependencies. T14 waits for T01–T13 and must cover data from T18–T20; T15 waits for T14 and T17–T24; T16 waits for T15 and the external requirements.
-- Do not mark a task done from the agent's summary alone: require a PR integrated into `main`, or a locally integrated change when GitHub is unavailable. Review completion requires a CodeRabbit review of the PR's current SHA and the orchestrator having verified findings and CI; it does not require a peer reviewer.
-- After each integration, update the state and assign the next free task by priority. Do not reserve a worker slot for reviewing PRs; use it for the next eligible task. Prioritize T24 as soon as T17 and T21 close: it is the most likely blocker for T15 and should not wait for board priority order to reach it on its own.
-- Default model for implementation workers: Claude Sonnet 5 (fast and economical). Escalate to a stronger model only if a worker is stuck across two consecutive check-in cycles, or for T02 and T14, where correctness of the shared contract and of account deletion matters more than cost.
+- Do not mark a task done from your own summary alone: require a PR integrated into `main`, or a locally integrated change when GitHub is unavailable. Review completion requires a CodeRabbit review of the PR's current SHA and the orchestrator having verified findings and CI; it does not require a peer reviewer.
+- For every PR you have open, periodically check for new CodeRabbit findings and human comments (not just at merge time). Evaluate each finding, resolve it or document why it doesn't apply, and log the outcome in `docs/orchestration-log.md` before moving on or considering the PR ready to merge.
+- After each integration, update the state and pick up the next free task by priority. Prioritize T24 as soon as T17 and T21 close: it is the most likely blocker for T15 and should not wait for board priority order to reach it on its own.
+- Default model: Claude Sonnet 5 (fast and economical). Escalate to a stronger model only if stuck across two consecutive check-in cycles, or for T02 and T14, where correctness of the shared contract and of account deletion matters more than cost.
