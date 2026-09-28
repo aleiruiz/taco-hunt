@@ -2,6 +2,9 @@
   "name": "@taco-hunt/landing",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "dev": "node server.mjs", "lint": "eslint server.mjs" },
-  "devDependencies": {  }
+  "scripts": {
+    "dev": "node server.mjs",
+    "lint": "eslint server.mjs"
+  },
+  "devDependencies": {}
 }

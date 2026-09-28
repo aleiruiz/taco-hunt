@@ -21,6 +21,8 @@ pnpm db:reset
 .\supabase\dev-role.ps1 provision
 ```
 
+The workspace explicitly allows the `esbuild` install build required by the toolchain, so a clean frozen install does not need `--ignore-scripts` or an interactive build approval.
+
 Provisioning writes a randomly generated, server-only database URL to `.env`. Do not print it, copy it into a command transcript, or use it in an `EXPO_PUBLIC_*` variable. See [the Supabase guide](../supabase/README.md) for the role and ACL details.
 
 ## Smoke-test the API
