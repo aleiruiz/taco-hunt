@@ -4,9 +4,10 @@ import { ApiExceptionFilter } from "./common/api-exception.filter.js";
 import { HealthController } from "./health/health.controller.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { SpotsController } from "./spots/spots.controller.js";
+import { AuthModule } from "./auth/auth.module.js";
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, AuthModule],
   controllers: [HealthController, SpotsController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
 })
