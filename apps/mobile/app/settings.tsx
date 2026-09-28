@@ -48,6 +48,9 @@ export default function SettingsScreen() {
           >
             <Text style={styles.buttonText}>Cerrar sesión</Text>
           </Pressable>
+          <Link href="/admin" style={styles.moderationLink}>
+            Abrir panel de moderación
+          </Link>
         </View>
       ) : (
         <View style={styles.card}>
@@ -146,5 +149,6 @@ const styles = StyleSheet.create({
   retry: { marginTop: 10, paddingVertical: 8 },
   retryText: { color: "#276C4F", fontWeight: "900" },
   footer: { marginTop: 34 },
+  moderationLink: { color: "#276C4F", fontWeight: "900", textAlign: "center", marginTop: 16 },
   footerTitle: { color: "#302723", fontSize: 17, fontWeight: "900" },
 });

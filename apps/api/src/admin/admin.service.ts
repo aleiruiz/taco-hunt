@@ -12,8 +12,8 @@ import { uuidSchema } from "@taco-hunt/contracts";
 import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
 
-export type QueueKind = "spots" | "tacos" | "reports";
-type ModerationAction = "approve" | "reject" | "hide" | "unhide" | "close";
+export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
+type ModerationAction = "approve" | "reject" | "request_changes" | "hide" | "unhide" | "hide_photo" | "close" | "merge";
 
 @Injectable()
 export class AdminService {
@@ -40,6 +40,44 @@ export class AdminService {
            from app_private.spot_tacos st join app_private.spots s on s.id=st.spot_id
            join app_private.taco_types tt on tt.id=st.taco_type_id
            where st.status='pending' order by st.created_at asc limit 100`,
+        );
+        return { items: rows };
+      }
+      if (kind === "photos") {
+        const { rows } = await this.pool.query(
+          `select r.id,r.photo_key as "photoKey",r.body,r.created_at as "createdAt",
+             r.user_id as "userId",s.id as "spotId",s.name as "spotName",
+             coalesce(st.display_name,tt.name_es) as "tacoName"
+           from app_private.reviews r
+           join app_private.spot_tacos st on st.id=r.spot_taco_id
+           join app_private.spots s on s.id=st.spot_id
+           join app_private.taco_types tt on tt.id=st.taco_type_id
+           where r.photo_key is not null and r.status='visible'
+           order by r.created_at asc limit 100`,
+        );
+        return { items: rows };
+      }
+      if (kind === "duplicates") {
+        const { rows } = await this.pool.query(
+          `select pending.id,pending.name,pending.neighborhood,
+             pending.latitude::float8 as latitude,pending.longitude::float8 as longitude,
+             pending.created_by as "createdBy",pending.created_at as "createdAt",
+             approved.id as "candidateId",approved.name as "candidateName",
+             (6371000 * 2 * asin(sqrt(least(1,
+               power(sin(radians(pending.latitude::float8-approved.latitude::float8)/2),2) +
+               cos(radians(pending.latitude::float8))*cos(radians(approved.latitude::float8))*
+               power(sin(radians(pending.longitude::float8-approved.longitude::float8)/2),2)
+             ))))::int as "distanceMeters"
+           from app_private.spots pending join app_private.spots approved on approved.status='approved'
+           where pending.status='pending' and pending.id <> approved.id
+             and pending.latitude between approved.latitude - 0.002 and approved.latitude + 0.002
+             and pending.longitude between approved.longitude - 0.002 and approved.longitude + 0.002
+             and 6371000 * 2 * asin(sqrt(least(1,
+               power(sin(radians(pending.latitude::float8-approved.latitude::float8)/2),2) +
+               cos(radians(pending.latitude::float8))*cos(radians(approved.latitude::float8))*
+               power(sin(radians(pending.longitude::float8-approved.longitude::float8)/2),2)
+             ))) <= 100
+           order by pending.created_at asc,"distanceMeters" asc limit 100`,
         );
         return { items: rows };
       }
@@ -101,6 +139,10 @@ export class AdminService {
     return this.mutate("spot", id, moderator, "reject", reason);
   }
 
+  requestSpotChanges(id: string, moderator: string, reason: string) {
+    return this.mutate("spot", id, moderator, "request_changes", reason);
+  }
+
   approveTaco(id: string, moderator: string) {
     return this.mutate("taco", id, moderator, "approve", null);
   }
@@ -121,18 +163,27 @@ export class AdminService {
     return this.mutate("report", id, moderator, "close", reason);
   }
 
+  hidePhoto(id: string, moderator: string, reason: string) {
+    return this.mutate("review", id, moderator, "hide_photo", reason);
+  }
+
+  mergeDuplicate(id: string, canonicalId: string, moderator: string, reason: string) {
+    return this.mutate("spot", id, moderator, "merge", reason, canonicalId);
+  }
+
   private async mutate(
     targetType: "spot" | "taco" | "review" | "report",
     id: string,
     moderator: string,
     action: ModerationAction,
     reason: string | null,
+    canonicalId?: string,
   ) {
     let client: PoolClient | undefined;
     try {
       client = await this.pool.connect();
       await client.query("begin");
-      const updated = await this.applyAction(client, targetType, id, action);
+      const updated = await this.applyAction(client, targetType, id, action, canonicalId);
       if (!updated.rowCount) throw new NotFoundException("Elemento pendiente no encontrado");
       await client.query(
         `insert into app_private.moderation_audit(moderator_id,target_type,target_id,action,internal_reason)
@@ -150,7 +201,7 @@ export class AdminService {
     }
   }
 
-  private applyAction(client: PoolClient, type: string, id: string, action: ModerationAction) {
+  private applyAction(client: PoolClient, type: string, id: string, action: ModerationAction, canonicalId?: string) {
     if (type === "spot" && action === "approve") {
       return client.query(
         "update app_private.spots set status='approved',updated_at=now() where id=$1 and status='pending'",
@@ -161,6 +212,16 @@ export class AdminService {
       return client.query(
         "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status='pending'",
         [id],
+      );
+    }
+    if (type === "spot" && action === "request_changes") {
+      return client.query("select id from app_private.spots where id=$1 and status='pending'", [id]);
+    }
+    if (type === "spot" && action === "merge") {
+      if (!canonicalId || canonicalId === id) throw new BadRequestException("Puesto canónico inválido");
+      return client.query(
+        "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status='pending' and exists (select 1 from app_private.spots where id=$2 and status='approved')",
+        [id, canonicalId],
       );
     }
     if (type === "taco" && action === "approve") {
@@ -187,6 +248,9 @@ export class AdminService {
         [id],
       );
     }
+    if (type === "review" && action === "hide_photo") {
+      return client.query("update app_private.reviews set photo_key=null,updated_at=now() where id=$1 and photo_key is not null", [id]);
+    }
     if (type === "report" && action === "close") {
       return client.query(
         "update app_private.reports set status='closed',updated_at=now() where id=$1 and status='open'",
@@ -197,7 +261,7 @@ export class AdminService {
   }
 
   private fail(message: string, error: unknown): never {
-    if (error instanceof NotFoundException || error instanceof ConflictException) throw error;
+    if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) throw error;
     this.logger.error(message, error instanceof Error ? error.stack : undefined);
     throw new ServiceUnavailableException("Servicio temporalmente no disponible");
   }
@@ -222,11 +286,17 @@ function statusFor(action: ModerationAction): string {
       return "approved";
     case "reject":
       return "rejected";
+    case "request_changes":
+      return "changes_requested";
     case "hide":
       return "hidden";
     case "unhide":
       return "visible";
     case "close":
       return "closed";
+    case "hide_photo":
+      return "photo_hidden";
+    case "merge":
+      return "merged";
   }
 }
