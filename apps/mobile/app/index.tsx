@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { Link, type Href, useRouter } from "expo-router";
+import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
 
@@ -77,6 +78,7 @@ export default function ExploreScreen() {
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { session } = useAuth();
 
   const loadTypes = useCallback(async () => {
     try {
@@ -229,7 +231,12 @@ export default function ExploreScreen() {
         }
         ListHeaderComponent={
           <>
-            <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
+            <View style={styles.headerRow}>
+              <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
+              <Link href="/settings" style={styles.accountLink}>
+                {session ? "Mi cuenta" : "Entrar"}
+              </Link>
+            </View>
             <Text style={styles.title}>¿Qué se te antoja hoy?</Text>
             <Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text>
             <TextInput
@@ -446,6 +453,13 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   listContent: { paddingHorizontal: 22, paddingTop: 60, paddingBottom: 36 },
+  headerRow: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  accountLink: { color: colors.green, fontSize: 13, fontWeight: "900", paddingVertical: 10 },
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
   title: {
     marginTop: 11,
