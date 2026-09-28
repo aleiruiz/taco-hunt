@@ -8,7 +8,9 @@ import {
   Text,
   View,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useAuth } from "@/auth/provider";
+import { listFavorites, setFavorite } from "@/features/contributions/api";
 
 type Taco = {
   id: string;
@@ -40,7 +42,10 @@ const colors = {
 export default function SpotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { session } = useAuth();
   const [spot, setSpot] = useState<Spot | null>(null);
+  const [favorite, setFavoriteState] = useState(false);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<"offline" | "missing" | null>(null);
   const load = useCallback(async () => {
@@ -64,6 +69,28 @@ export default function SpotScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!session || !id) return undefined;
+      void listFavorites(session)
+        .then(({ items }) => setFavoriteState(items.some((item) => item.id === id)))
+        .catch(() => undefined);
+      return undefined;
+    }, [id, session]),
+  );
+  async function toggleFavorite() {
+    if (!session) {
+      router.push("/sign-in");
+      return;
+    }
+    setFavoriteBusy(true);
+    try {
+      await setFavorite(session, id, !favorite);
+      setFavoriteState((current) => !current);
+    } finally {
+      setFavoriteBusy(false);
+    }
+  }
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
   const openDirections = () => {
     if (!hasPin || !spot) return;
@@ -104,6 +131,16 @@ export default function SpotScreen() {
             <Text style={styles.kicker}>PUESTO EN MONTERREY</Text>
             <Text style={styles.title}>{spot.name}</Text>
             <Text style={styles.neighborhood}>{spot.neighborhood}</Text>
+            <Pressable
+              accessibilityRole="button"
+              disabled={favoriteBusy}
+              onPress={() => void toggleFavorite()}
+              style={styles.favoriteButton}
+            >
+              <Text style={styles.favoriteText}>
+                {favorite ? "♥  Guardado en favoritos" : "♡  Guardar en favoritos"}
+              </Text>
+            </Pressable>
             <View style={styles.notice}>
               <Text style={styles.body}>
                 {spot.lastVerifiedAt
@@ -133,7 +170,20 @@ export default function SpotScreen() {
             )}
             <Text style={styles.section}>Tacos que puedes encontrar</Text>
             {spot.tacos.map((taco) => (
-              <View key={taco.id} style={styles.card}>
+              <Pressable
+                key={taco.id}
+                onPress={() =>
+                  router.push(
+                    session
+                      ? {
+                          pathname: "/review/new",
+                          params: { spotTacoId: taco.id, spotName: spot.name, tacoName: taco.name },
+                        }
+                      : "/sign-in",
+                  )
+                }
+                style={styles.card}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.tacoName}>{taco.name}</Text>
                   <Text style={styles.body}>
@@ -143,7 +193,8 @@ export default function SpotScreen() {
                 <Text style={styles.score}>
                   {taco.score === null ? "—" : `${taco.score.toFixed(1)} ★`}
                 </Text>
-              </View>
+                <Text style={styles.reviewAction}>{session ? "Calificar" : "Inicia sesión"}</Text>
+              </Pressable>
             ))}
             {spot.tacos.length === 0 && (
               <View style={styles.empty}>
@@ -167,6 +218,16 @@ const styles = StyleSheet.create({
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   title: { color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", marginTop: 10 },
   neighborhood: { color: colors.muted, fontSize: 16, marginTop: 5 },
+  favoriteButton: {
+    minHeight: 48,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  favoriteText: { color: colors.red, fontWeight: "900" },
   notice: { marginTop: 23, padding: 15, backgroundColor: colors.paper, borderRadius: 14 },
   body: { color: colors.muted, fontSize: 14, lineHeight: 21 },
   section: { color: colors.ink, fontSize: 18, fontWeight: "800", marginTop: 32, marginBottom: 12 },
@@ -182,6 +243,7 @@ const styles = StyleSheet.create({
   },
   tacoName: { color: colors.ink, fontWeight: "800", fontSize: 16 },
   score: { color: colors.red, fontWeight: "900", fontSize: 16 },
+  reviewAction: { color: colors.green, fontSize: 12, fontWeight: "900" },
   empty: { padding: 20, marginTop: 20, borderRadius: 16, backgroundColor: colors.paper },
   pinCard: {
     marginTop: 12,

@@ -30,6 +30,9 @@ export default function SettingsScreen() {
           >
             <Text style={styles.retryText}>Reintentar</Text>
           </Pressable>
+          <Link href="/my-tacos" style={styles.buttonSecondary}>
+            Mis tacos y favoritos
+          </Link>
         </View>
       ) : null}
       {loading ? (
@@ -62,6 +65,11 @@ export default function SettingsScreen() {
             Crear cuenta
           </Link>
         </View>
+      )}
+      {session ? null : (
+        <Link href="/my-tacos" style={styles.buttonSecondary}>
+          Mis tacos y favoritos
+        </Link>
       )}
       {!authConfigured ? (
         <Text style={styles.notice}>
