@@ -7,11 +7,11 @@ El orquestador vive en la tarea principal de Codex. `docs/plan-delegacion.md` fi
 1. Elegir la tarea libre de mayor prioridad cuyas dependencias estén integradas en `main`. Preferir tareas con áreas distintas y contratos estables.
 2. Crear una tarea de Codex en worktree desde `main` actualizado, con ID, alcance, archivos propios, criterios de aceptación y formato de check-in. Registrar su `threadId` y rama.
 3. Consultar el progreso al menos cada 30 minutos mientras la tarea esté activa. Ante silencio prolongado, pedir estado una vez y registrar el bloqueo si persiste; no crear una segunda tarea para el mismo ID.
-4. Cuando el autor entregue PR, cambiar su puesto a revisión. Asignar el PR a otro de los tres trabajadores que esté libre o que haya terminado su implementación. Nunca pedir una revisión al autor.
-5. El revisor comprueba el diff contra la especificación, contratos, seguridad, migraciones y compatibilidad con las otras ramas. Registra hallazgos accionables; el autor corrige en su rama. El orquestador comprueba CI y que los hallazgos estén resueltos.
-6. Integrar el PR solo después de la revisión y las comprobaciones. Actualizar `main`, el estado JSON y las dependencias. Reponer el puesto con la siguiente tarea libre. Si un merge modifica un contrato común, avisar a los trabajadores afectados antes de que sigan.
+4. Cuando el autor entregue PR, comprobar que CodeRabbit publicó una revisión completa. Si la app no está instalada o no respondió, resolver esa integración o reportar el bloqueo al usuario.
+5. El orquestador evalúa los hallazgos de CodeRabbit contra la especificación, contratos, seguridad, migraciones y compatibilidad con las otras ramas. El autor corrige los hallazgos importantes o documenta por qué no aplican. El orquestador comprueba CI y que los hallazgos estén resueltos.
+6. Integrar el PR solo después de la revisión de CodeRabbit, la comprobación de CI y la resolución de hallazgos importantes. Actualizar `main`, el estado JSON y las dependencias. Reponer el puesto con la siguiente tarea libre.
 
-La revisión tiene prioridad sobre arrancar una implementación nueva cuando hay un PR listo. Si los tres puestos están ocupados, el siguiente trabajador que termina su implementación se convierte en revisor; su propia entrega espera revisión de otro trabajador o del orquestador si no hay ningún trabajador independiente disponible. No abrir más de tres tareas de trabajo activas para forzar una revisión.
+CodeRabbit es el revisor independiente de código para todos los PRs. No se asignan revisores pares ni se reserva capacidad de los trabajadores para revisar el código de otro agente. El orquestador verifica los resultados de IA y CI como parte de la integración; esta verificación no constituye una segunda revisión por pares. CodeRabbit no aprueba ni integra cambios automáticamente. Si no hay una revisión de CodeRabbit, el PR queda sin revisar y se debe resolver el bloqueo antes de integrar.
 
 ## Estados y check-ins
 
@@ -23,7 +23,7 @@ La coordinación programada revisa mensajes y PR cada 30 minutos. Si nada cambi�
 
 - Rama originada en la base integrada más reciente, o sincronizada antes de merge si la base avanzó.
 - Alcance limitado a un ID; cambios a archivos compartidos coordinados.
-- Revisión independiente terminada, hallazgos importantes corregidos y comprobaciones de CI satisfactorias. Si CI aún no existe, revisión del diff y comprobaciones acordadas en el PR.
+- Revisión de CodeRabbit terminada, hallazgos importantes corregidos o justificados por el autor, y comprobaciones de CI satisfactorias. Si CI aún no existe, realizar las comprobaciones acordadas en el PR. No se exige revisión por pares.
 - Sin secretos ni datos privados publicados. Las migraciones conservan un camino reproducible.
 - El orquestador integra por orden de dependencias y actualiza el tablero después de cada merge.
 
