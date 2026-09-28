@@ -77,9 +77,20 @@ export class AdminController {
     @CurrentProfile() moderator: AuthenticatedProfile,
     @Body() body: unknown,
   ) {
-    const parsed = z.object({ canonicalId: uuidSchema, reason: z.string().trim().min(1).max(500) }).safeParse(body);
-    if (!parsed.success) throw new BadRequestException({ message: "Datos de fusión inválidos", details: { issues: parsed.error.issues } });
-    return this.admin.mergeDuplicate(this.parseId(id), parsed.data.canonicalId, moderator.id, parsed.data.reason);
+    const parsed = z
+      .object({ canonicalId: uuidSchema, reason: z.string().trim().min(1).max(500) })
+      .safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException({
+        message: "Datos de fusión inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    return this.admin.mergeDuplicate(
+      this.parseId(id),
+      parsed.data.canonicalId,
+      moderator.id,
+      parsed.data.reason,
+    );
   }
 
   @Post("/taco-proposals/:id/approve")

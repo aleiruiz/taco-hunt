@@ -13,7 +13,8 @@ import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
 
 export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
-type ModerationAction = "approve" | "reject" | "request_changes" | "hide" | "unhide" | "hide_photo" | "close" | "merge";
+type ModerationAction =
+  "approve" | "reject" | "request_changes" | "hide" | "unhide" | "hide_photo" | "close" | "merge";
 
 @Injectable()
 export class AdminService {
@@ -201,7 +202,13 @@ export class AdminService {
     }
   }
 
-  private applyAction(client: PoolClient, type: string, id: string, action: ModerationAction, canonicalId?: string) {
+  private applyAction(
+    client: PoolClient,
+    type: string,
+    id: string,
+    action: ModerationAction,
+    canonicalId?: string,
+  ) {
     if (type === "spot" && action === "approve") {
       return client.query(
         "update app_private.spots set status='approved',updated_at=now() where id=$1 and status='pending'",
@@ -215,10 +222,13 @@ export class AdminService {
       );
     }
     if (type === "spot" && action === "request_changes") {
-      return client.query("select id from app_private.spots where id=$1 and status='pending'", [id]);
+      return client.query("select id from app_private.spots where id=$1 and status='pending'", [
+        id,
+      ]);
     }
     if (type === "spot" && action === "merge") {
-      if (!canonicalId || canonicalId === id) throw new BadRequestException("Puesto canónico inválido");
+      if (!canonicalId || canonicalId === id)
+        throw new BadRequestException("Puesto canónico inválido");
       return client.query(
         "update app_private.spots set status='rejected',updated_at=now() where id=$1 and status='pending' and exists (select 1 from app_private.spots where id=$2 and status='approved')",
         [id, canonicalId],
@@ -249,7 +259,10 @@ export class AdminService {
       );
     }
     if (type === "review" && action === "hide_photo") {
-      return client.query("update app_private.reviews set photo_key=null,updated_at=now() where id=$1 and photo_key is not null", [id]);
+      return client.query(
+        "update app_private.reviews set photo_key=null,updated_at=now() where id=$1 and photo_key is not null",
+        [id],
+      );
     }
     if (type === "report" && action === "close") {
       return client.query(
@@ -261,7 +274,12 @@ export class AdminService {
   }
 
   private fail(message: string, error: unknown): never {
-    if (error instanceof NotFoundException || error instanceof ConflictException || error instanceof BadRequestException) throw error;
+    if (
+      error instanceof NotFoundException ||
+      error instanceof ConflictException ||
+      error instanceof BadRequestException
+    )
+      throw error;
     this.logger.error(message, error instanceof Error ? error.stack : undefined);
     throw new ServiceUnavailableException("Servicio temporalmente no disponible");
   }
