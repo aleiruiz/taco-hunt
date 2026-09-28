@@ -285,7 +285,7 @@
    "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
    "status": "in_review",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
-   "headSha": "188e8b948d6c47d584e2af72c664ce87bdaba68a",
+   "headSha": "c8c42a61443e17659dbfe327db7e0e8e684e5ae6",
    "coderabbitReviewedSha": null
   },
   "T15": {
