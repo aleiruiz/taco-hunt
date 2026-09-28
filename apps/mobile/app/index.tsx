@@ -239,6 +239,9 @@ export default function ExploreScreen() {
             </View>
             <Text style={styles.title}>¿Qué se te antoja hoy?</Text>
             <Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text>
+            <Link href="/propose" style={styles.proposeLink}>
+              ¿No encuentras tu taquería? Propónla
+            </Link>
             <TextInput
               value={query}
               onChangeText={setQuery}
@@ -470,6 +473,7 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 },
+  proposeLink: { color: colors.green, fontSize: 13, fontWeight: "900", marginTop: 12, marginBottom: 4 },
   search: {
     marginTop: 20,
     borderWidth: 1,
