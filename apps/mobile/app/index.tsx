@@ -473,7 +473,13 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
   },
   subtitle: { color: colors.muted, marginTop: 6, fontSize: 15 },
-  proposeLink: { color: colors.green, fontSize: 13, fontWeight: "900", marginTop: 12, marginBottom: 4 },
+  proposeLink: {
+    color: colors.green,
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 12,
+    marginBottom: 4,
+  },
   search: {
     marginTop: 20,
     borderWidth: 1,
