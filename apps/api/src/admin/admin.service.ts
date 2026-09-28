@@ -11,6 +11,11 @@ import type { Pool, PoolClient } from "pg";
 import { uuidSchema } from "@taco-hunt/contracts";
 import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
+import {
+  classifyDuplicate,
+  duplicateCandidateSql,
+  type DuplicateCandidate,
+} from "../proposals/duplicate-detector.js";
 
 export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
 type ModerationAction =
@@ -106,7 +111,7 @@ export class AdminService {
       }
       const { rows } = await this.pool.query(
         `select r.id,r.target_type as "targetType",r.target_id as "targetId",r.reason,r.note,
-           r.reporter_id as "reporterId",r.created_at as "createdAt",
+           r.created_at as "createdAt",
            case when r.target_type='spot' then s.name else st.name end as "targetName"
          from app_private.reports r
          left join app_private.spots s on r.target_type='spot' and s.id=r.target_id
@@ -119,6 +124,22 @@ export class AdminService {
       return { items: rows };
     } catch (error) {
       this.fail("Moderation queue query failed", error);
+    }
+  }
+
+  async findDuplicates(
+    name: string,
+    latitude: number,
+    longitude: number,
+  ): Promise<DuplicateCandidate[]> {
+    try {
+      const { rows } = await this.pool.query(duplicateCandidateSql(), [latitude, longitude]);
+      return rows.map((candidate) => ({
+        ...candidate,
+        match: classifyDuplicate(name, candidate.name),
+      }));
+    } catch (error) {
+      this.fail("Duplicate candidate query failed", error);
     }
   }
 

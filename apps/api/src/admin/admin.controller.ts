@@ -66,6 +66,11 @@ const approvalSchema = z
       });
     }
   });
+const duplicateQuerySchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  latitude: z.coerce.number().min(25).max(27),
+  longitude: z.coerce.number().min(-101.5).max(-99),
+});
 
 @Controller("/admin")
 @UseGuards(AdminGuard)
@@ -92,6 +97,22 @@ export class AdminController {
         details: { issues: parsed.error.issues },
       });
     return this.admin.auditHistory(parsed.data.limit, parsed.data.before);
+  }
+
+  @Get("/duplicate-candidates")
+  duplicates(@Query() query: Record<string, unknown>) {
+    const parsed = duplicateQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros de duplicados inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    return this.admin.findDuplicates(
+      parsed.data.name,
+      parsed.data.latitude,
+      parsed.data.longitude,
+    );
   }
 
   @Post("/spot-proposals/:id/approve")

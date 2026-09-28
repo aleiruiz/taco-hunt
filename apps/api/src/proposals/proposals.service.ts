@@ -11,6 +11,11 @@ import { DATABASE_POOL } from "../database/database.module.js";
 import type { AuthenticatedProfile } from "../auth/auth.types.js";
 import type { z } from "zod";
 import { spotProposalSchema, tacoProposalSchema } from "@taco-hunt/contracts";
+import {
+  classifyDuplicate,
+  duplicateCandidateSql,
+  normalizeName,
+} from "./duplicate-detector.js";
 
 type SpotProposal = z.infer<typeof spotProposalSchema>;
 type TacoProposal = z.infer<typeof tacoProposalSchema>;
@@ -25,31 +30,19 @@ export class ProposalsService {
     try {
       const normalizedName = normalizeName(input.name);
       const candidates = await this.pool.query(
-        `select id,name,neighborhood,
-          (6371000 * 2 * asin(sqrt(least(1,
-            power(sin(radians(latitude::float8-$1::float8)/2),2) +
-            cos(radians($1::float8))*cos(radians(latitude::float8))*
-            power(sin(radians(longitude::float8-$2::float8)/2),2)
-          ))))::int as "distanceMeters"
-         from app_private.spots
-         where status='approved' and latitude between $1::numeric-0.001 and $1::numeric+0.001
-           and longitude between $2::numeric-0.001 and $2::numeric+0.001
-           and 6371000 * 2 * asin(sqrt(least(1,
-             power(sin(radians(latitude::float8-$1::float8)/2),2) +
-             cos(radians($1::float8))*cos(radians(latitude::float8))*
-             power(sin(radians(longitude::float8-$2::float8)/2),2)
-           ))) <= 100
-         order by "distanceMeters",name limit 10`,
+        duplicateCandidateSql(),
         [input.latitude, input.longitude],
       );
+      const duplicateCandidates = candidates.rows.map((candidate) => ({
+        ...candidate,
+        match: classifyDuplicate(input.name, candidate.name),
+      }));
       if (candidates.rowCount) {
-        const exactMatch = candidates.rows.some(
-          (candidate) => normalizeName(candidate.name) === normalizedName,
-        );
+        const exactMatch = duplicateCandidates.some((candidate) => candidate.match === "strong");
         if (exactMatch) {
           throw new ConflictException({
             message: "Hay un puesto con el mismo nombre a menos de 100 metros",
-            details: { candidates: candidates.rows },
+            details: { candidates: duplicateCandidates },
           });
         }
       }
@@ -71,7 +64,7 @@ export class ProposalsService {
           input.note ?? null,
         ],
       );
-      return { ...rows[0], nearbyCandidates: candidates.rows };
+      return { ...rows[0], nearbyCandidates: duplicateCandidates };
     } catch (error) {
       this.rethrowExpected(error);
       this.logFailure("Spot proposal create failed", error);
@@ -140,15 +133,6 @@ export class ProposalsService {
   private logFailure(message: string, error: unknown): void {
     this.logger.error(message, error instanceof Error ? error.stack : undefined);
   }
-}
-
-function normalizeName(name: string): string {
-  return name
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es-MX")
-    .trim()
-    .replace(/\s+/g, " ");
 }
 
 function isUniqueViolation(error: unknown): boolean {

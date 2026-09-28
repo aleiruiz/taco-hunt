@@ -423,6 +423,26 @@ paths:
         "400": { $ref: "#/components/responses/ApiError" }
         "401": { $ref: "#/components/responses/ApiError" }
         "403": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/duplicate-candidates:
+    get:
+      operationId: findDuplicateCandidates
+      summary: Busca puestos aprobados cercanos para revisar un posible duplicado
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: name, required: true, schema: { type: string, minLength: 2, maxLength: 120 } }
+        - { in: query, name: latitude, required: true, schema: { type: number, minimum: 25, maximum: 27 } }
+        - { in: query, name: longitude, required: true, schema: { type: number, minimum: -101.5, maximum: -99 } }
+      responses:
+        "200":
+          description: Candidatos públicos cercanos, sin propuestas pendientes ni datos de autores
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DuplicateCandidate" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
   /v1/admin/audit:
     get:
       operationId: listModerationAudit
@@ -919,6 +939,17 @@ components:
         reason: { type: string, enum: [inaccurate, abusive, spam, closed, other] }
         status: { const: open }
         createdAt: { type: string, format: date-time }
+    DuplicateCandidate:
+      type: object
+      required: [id, name, neighborhood, latitude, longitude, distanceMeters, match]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        distanceMeters: { type: integer, minimum: 0 }
+        match: { type: string, enum: [strong, nearby] }
     ModerationReason:
       type: object
       required: [reason]
