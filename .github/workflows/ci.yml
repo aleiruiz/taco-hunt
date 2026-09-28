@@ -36,36 +36,23 @@ jobs:
           cache: pnpm
 
       - name: Install locked dependencies
+        id: install_root
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       # Expo and React Native currently require npm's legacy peer resolution.
       - name: Install standalone mobile dependencies
+        id: install_mobile
         working-directory: apps/mobile
         run: npm ci --ignore-scripts --legacy-peer-deps
 
       - name: Lint
-        id: lint
-        continue-on-error: true
+        if: ${{ always() && steps.install_root.outcome == 'success' && steps.install_mobile.outcome == 'success' }}
         run: pnpm lint
 
       - name: Typecheck
-        id: typecheck
-        continue-on-error: true
+        if: ${{ always() && steps.install_root.outcome == 'success' && steps.install_mobile.outcome == 'success' }}
         run: pnpm typecheck
 
       - name: Check formatting
-        id: format
-        continue-on-error: true
-        run: pnpm format:check
-
-      - name: Report quality gate
-        if: always()
-        env:
-          LINT_OUTCOME: ${{ steps.lint.outcome }}
-          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
-          FORMAT_OUTCOME: ${{ steps.format.outcome }}
-        run: |
-          if [[ "$LINT_OUTCOME" != "success" || "$TYPECHECK_OUTCOME" != "success" || "$FORMAT_OUTCOME" != "success" ]]; then
-            echo "Quality checks: lint=$LINT_OUTCOME, typecheck=$TYPECHECK_OUTCOME, format=$FORMAT_OUTCOME"
-            exit 1
-          fi
+        if: ${{ always() && steps.install_root.outcome == 'success' && steps.install_mobile.outcome == 'success' }}
+        run: pnpm exec prettier --check .github/workflows/ci.yml
