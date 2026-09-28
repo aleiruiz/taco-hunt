@@ -1,0 +1,30 @@
+language: en
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+  path_instructions:
+    - path: "apps/api/**"
+      instructions: |
+        Review authentication and authorization boundaries, input validation, error handling,
+        rate limits, privacy, and whether server-only credentials remain on the server.
+        Check that public endpoints expose only approved data and that database writes preserve
+        transaction and ownership rules from docs/build-spec.md.
+    - path: "apps/mobile/**"
+      instructions: |
+        Review privacy and permissions, especially foreground-only location access and avoiding
+        storage or transmission of user coordinates. Check accessible Spanish-first UX and ensure
+        private credentials are not bundled into the app.
+    - path: "supabase/**"
+      instructions: |
+        Review migrations for safe constraints, least-privilege access, reproducibility, and
+        consistency with docs/build-spec.md. Never allow secrets or real user or venue data.
+    - path: "docs/**"
+      instructions: |
+        Check documentation for accuracy against the implementation and build specification.
+        Flag unsupported claims, missing operational steps, or privacy and data-provenance gaps.

@@ -5,7 +5,7 @@ Este tablero sigue la especificación de docs/build-spec.md y el estado actual d
 ## Regla de bloqueo
 
 - Una tarea queda **libre** cuando todas sus dependencias están cerradas y su contrato de entrada está acordado.
-- Los agentes trabajan en ramas o worktrees separados. Cada uno modifica su área; la coordinación integra package.json compartidos, pnpm-lock.yaml, rutas raíz y migraciones que afectan a varios módulos.
+- Cada trabajador es una tarea/sesión independiente de Codex, con historial y worktree propios; no se delega como subagente del hilo del orquestador. Cada trabajador modifica su área; la coordinación integra package.json compartidos, pnpm-lock.yaml, rutas raíz y migraciones que afectan a varios módulos.
 - T00 fija una base versionada y el contrato actual de lectura. Después pueden trabajar tres agentes en paralelo: T01, T02 y T03. La coordinación puede avanzar T04.
 - **Cierre final:** T14 y T15 permanecen bloqueadas hasta que T01–T13 estén cerradas. T16 requiere además las entradas externas de lanzamiento. Que una tarea esté libre significa que puede comenzar; para abrir el cierre final debe estar terminada.
 
