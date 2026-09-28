@@ -16,6 +16,11 @@ export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
 type ModerationAction =
   "approve" | "reject" | "request_changes" | "hide" | "unhide" | "hide_photo" | "close" | "merge";
 type SpotApproval = {
+  confirmOwnFields?: boolean;
+  name?: string;
+  neighborhood?: string;
+  latitude?: number;
+  longitude?: number;
   sourceType?: "user" | "owner" | "licensed" | "fictional";
   sourceRef?: string;
   verifiedAt?: string;
@@ -238,22 +243,36 @@ export class AdminService {
     approval?: SpotApproval,
   ) {
     if (type === "spot" && action === "approve") {
+      const canonicalFields = approval?.name !== undefined;
+      const sourceTypeChanged = approval?.sourceType !== undefined;
       return client.query(
         `update app_private.spots
            set status='approved',
-               source_type=coalesce($2,source_type),
-               source_ref=coalesce($3,source_ref),
-               last_verified_at=coalesce($4::timestamptz,now()),
-               approved_by=$5,approved_at=now(),verified_by=$5,
-               verification_note=coalesce($6,verification_note),updated_at=now()
+               name=case when $2 then $3 else name end,
+               normalized_name=case when $2 then $4 else normalized_name end,
+               neighborhood=case when $2 then $5 else neighborhood end,
+               latitude=case when $2 then $6 else latitude end,
+               longitude=case when $2 then $7 else longitude end,
+               source_type=case when $8 then $9 else source_type end,
+               source_ref=case when $8 then $10 else source_ref end,
+               last_verified_at=coalesce($11::timestamptz,now()),
+               approved_by=$12,approved_at=now(),verified_by=$12,
+               verification_note=coalesce($13,verification_note),updated_at=now()
          where id=$1 and status in ('pending','changes_requested')
          returning id,status,source_type as "sourceType",source_ref as "sourceRef",
            last_verified_at as "lastVerifiedAt",approved_by as "approvedBy",approved_at as "approvedAt",
            verified_by as "verifiedBy",verification_note as "verificationNote"`,
         [
           id,
+          canonicalFields,
+          approval?.name ?? null,
+          canonicalFields ? normalizeName(approval?.name ?? "") : null,
+          approval?.neighborhood ?? null,
+          approval?.latitude ?? null,
+          approval?.longitude ?? null,
+          sourceTypeChanged,
           approval?.sourceType ?? null,
-          approval?.sourceRef ?? null,
+          sourceTypeChanged ? (approval?.sourceRef ?? null) : null,
           approval?.verifiedAt ?? null,
           moderator,
           approval?.verificationNote ?? null,
@@ -363,4 +382,13 @@ function statusFor(action: ModerationAction): string {
     case "merge":
       return "merged";
   }
+}
+
+function normalizeName(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-MX")
+    .trim()
+    .replace(/\s+/g, " ");
 }

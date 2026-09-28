@@ -941,6 +941,11 @@ components:
       type: object
       additionalProperties: false
       properties:
+        confirmOwnFields: { type: boolean }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        neighborhood: { type: string, minLength: 1, maxLength: 120 }
+        latitude: { type: number, minimum: 25, maximum: 27 }
+        longitude: { type: number, minimum: -101.5, maximum: -99 }
         sourceType: { type: string, enum: [user, owner, licensed, fictional] }
         sourceRef: { type: string, minLength: 1, maxLength: 200 }
         verifiedAt: { type: string, format: date-time }

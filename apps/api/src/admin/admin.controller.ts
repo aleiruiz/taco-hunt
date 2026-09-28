@@ -22,12 +22,50 @@ const auditQuerySchema = z.object({
 });
 const approvalSchema = z
   .object({
+    confirmOwnFields: z.boolean().optional(),
+    name: z.string().trim().min(1).max(120).optional(),
+    neighborhood: z.string().trim().min(1).max(120).optional(),
+    latitude: z.number().min(25).max(27).optional(),
+    longitude: z.number().min(-101.5).max(-99).optional(),
     sourceType: z.enum(["user", "owner", "licensed", "fictional"]).optional(),
     sourceRef: z.string().trim().min(1).max(200).optional(),
     verifiedAt: z.string().datetime({ offset: true }).optional(),
     verificationNote: z.string().trim().min(1).max(500).optional(),
   })
-  .default({});
+  .default({})
+  .superRefine((value, context) => {
+    const canonicalFields = [value.name, value.neighborhood, value.latitude, value.longitude];
+    const suppliedCanonicalFields = canonicalFields.every((field) => field !== undefined);
+    const partialCanonicalFields = canonicalFields.some((field) => field !== undefined);
+    if (partialCanonicalFields && !suppliedCanonicalFields) {
+      context.addIssue({
+        code: "custom",
+        path: ["name"],
+        message: "Los campos canónicos deben enviarse todos juntos",
+      });
+    }
+    if (!suppliedCanonicalFields && value.confirmOwnFields !== true) {
+      context.addIssue({
+        code: "custom",
+        path: ["confirmOwnFields"],
+        message: "Confirma los campos del proponente o proporciona los campos canónicos",
+      });
+    }
+    if (value.sourceType === "licensed" && !value.sourceRef) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceRef"],
+        message: "sourceRef es obligatorio para una fuente licenciada",
+      });
+    }
+    if (value.sourceRef !== undefined && value.sourceType === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceType"],
+        message: "sourceType es obligatorio cuando se actualiza sourceRef",
+      });
+    }
+  });
 
 @Controller("/admin")
 @UseGuards(AdminGuard)
@@ -68,9 +106,6 @@ export class AdminController {
         message: "Datos de procedencia inválidos",
         details: { issues: parsed.error.issues },
       });
-    }
-    if (parsed.data.sourceType === "licensed" && !parsed.data.sourceRef) {
-      throw new BadRequestException("sourceRef es obligatorio para una fuente licenciada");
     }
     return this.admin.approveSpot(this.parseId(id), moderator.id, parsed.data);
   }
