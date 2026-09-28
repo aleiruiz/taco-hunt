@@ -2,7 +2,9 @@
   "name": "@taco-hunt/mobile",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": ">=20.19.4" },
+  "engines": {
+    "node": ">=20.19.4"
+  },
   "main": "index.js",
   "scripts": {
     "start": "node start.mjs",
@@ -10,10 +12,12 @@
   },
   "dependencies": {
     "expo": "~57.0.25",
+    "expo-location": "~57.0.20",
     "expo-router": "~57.0.23",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-maps": "1.27.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2"
   },
