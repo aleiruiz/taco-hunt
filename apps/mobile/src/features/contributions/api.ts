@@ -31,7 +31,13 @@ export type Favorite = {
   photoUrl: string | null;
   lastVerifiedAt: string | null;
   reviewCount: number;
-  bestTaco: { id: string; tacoTypeId: string; name: string; score: number | null; reviewCount: number } | null;
+  bestTaco: {
+    id: string;
+    tacoTypeId: string;
+    name: string;
+    score: number | null;
+    reviewCount: number;
+  } | null;
   favoritedAt: string;
 };
 
@@ -45,7 +51,7 @@ export type ReviewInput = {
   body?: string;
 };
 
-export type ReviewPatch = Partial<Omit<ReviewInput, "spotTacoId">> & {
+export type ReviewPatch = Partial<Omit<ReviewInput, "spotTacoId" | "pricePaidMxn" | "body">> & {
   pricePaidMxn?: number | null;
   body?: string | null;
 };
@@ -53,7 +59,12 @@ export type ReviewPatch = Partial<Omit<ReviewInput, "spotTacoId">> & {
 function messageFromResponse(value: unknown) {
   if (typeof value === "object" && value !== null && "error" in value) {
     const error = value.error;
-    if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof error.message === "string"
+    ) {
       return error.message;
     }
   }
@@ -84,7 +95,10 @@ async function request<T>(path: string, session: Session, init?: RequestInit): P
 }
 
 export async function listOwnReviews(session: Session) {
-  return request<{ items: OwnReview[]; nextCursor: string | null }>("/me/reviews?limit=50", session);
+  return request<{ items: OwnReview[]; nextCursor: string | null }>(
+    "/me/reviews?limit=50",
+    session,
+  );
 }
 
 export async function createReview(session: Session, input: ReviewInput) {
@@ -103,7 +117,10 @@ export async function deleteReview(session: Session, id: string) {
 }
 
 export async function listFavorites(session: Session) {
-  return request<{ items: Favorite[]; nextCursor: string | null }>("/me/favorites?limit=50", session);
+  return request<{ items: Favorite[]; nextCursor: string | null }>(
+    "/me/favorites?limit=50",
+    session,
+  );
 }
 
 export async function setFavorite(session: Session, spotId: string, favorite: boolean) {

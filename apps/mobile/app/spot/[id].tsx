@@ -71,7 +71,9 @@ export default function SpotScreen() {
   }, [load]);
   useEffect(() => {
     if (!session || !id) return;
-    void listFavorites(session).then(({ items }) => setFavoriteState(items.some((item) => item.id === id))).catch(() => undefined);
+    void listFavorites(session)
+      .then(({ items }) => setFavoriteState(items.some((item) => item.id === id)))
+      .catch(() => undefined);
   }, [id, session]);
   async function toggleFavorite() {
     if (!session) {
@@ -126,8 +128,15 @@ export default function SpotScreen() {
             <Text style={styles.kicker}>PUESTO EN MONTERREY</Text>
             <Text style={styles.title}>{spot.name}</Text>
             <Text style={styles.neighborhood}>{spot.neighborhood}</Text>
-            <Pressable accessibilityRole="button" disabled={favoriteBusy} onPress={() => void toggleFavorite()} style={styles.favoriteButton}>
-              <Text style={styles.favoriteText}>{favorite ? "♥  Guardado en favoritos" : "♡  Guardar en favoritos"}</Text>
+            <Pressable
+              accessibilityRole="button"
+              disabled={favoriteBusy}
+              onPress={() => void toggleFavorite()}
+              style={styles.favoriteButton}
+            >
+              <Text style={styles.favoriteText}>
+                {favorite ? "♥  Guardado en favoritos" : "♡  Guardar en favoritos"}
+              </Text>
             </Pressable>
             <View style={styles.notice}>
               <Text style={styles.body}>
@@ -158,7 +167,20 @@ export default function SpotScreen() {
             )}
             <Text style={styles.section}>Tacos que puedes encontrar</Text>
             {spot.tacos.map((taco) => (
-              <Pressable key={taco.id} onPress={() => router.push(session ? { pathname: "/review/new", params: { spotTacoId: taco.id, spotName: spot.name, tacoName: taco.name } } : "/sign-in")} style={styles.card}>
+              <Pressable
+                key={taco.id}
+                onPress={() =>
+                  router.push(
+                    session
+                      ? {
+                          pathname: "/review/new",
+                          params: { spotTacoId: taco.id, spotName: spot.name, tacoName: taco.name },
+                        }
+                      : "/sign-in",
+                  )
+                }
+                style={styles.card}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.tacoName}>{taco.name}</Text>
                   <Text style={styles.body}>
@@ -193,7 +215,15 @@ const styles = StyleSheet.create({
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   title: { color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", marginTop: 10 },
   neighborhood: { color: colors.muted, fontSize: 16, marginTop: 5 },
-  favoriteButton: { minHeight: 48, marginTop: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.red, alignItems: "center", justifyContent: "center" },
+  favoriteButton: {
+    minHeight: 48,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   favoriteText: { color: colors.red, fontWeight: "900" },
   notice: { marginTop: 23, padding: 15, backgroundColor: colors.paper, borderRadius: 14 },
   body: { color: colors.muted, fontSize: 14, lineHeight: 21 },

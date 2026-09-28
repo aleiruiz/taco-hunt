@@ -13,14 +13,30 @@ export default function EditReviewScreen() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!session || !id) return;
-    void listOwnReviews(session).then(({ items }) => setReview(items.find((item) => item.id === id) ?? null)).catch((cause) => setError(cause instanceof Error ? cause.message : "No pudimos cargar tu reseña."));
+    void listOwnReviews(session)
+      .then(({ items }) => setReview(items.find((item) => item.id === id) ?? null))
+      .catch((cause) =>
+        setError(cause instanceof Error ? cause.message : "No pudimos cargar tu reseña."),
+      );
   }, [id, session]);
-  if (!session) return <View><Text>Inicia sesión para editar tu reseña.</Text></View>;
-  if (error) return <View><Text>{error}</Text></View>;
+  if (!session)
+    return (
+      <View>
+        <Text>Inicia sesión para editar tu reseña.</Text>
+      </View>
+    );
+  if (error)
+    return (
+      <View>
+        <Text>{error}</Text>
+      </View>
+    );
   if (!review) return <ActivityIndicator />;
   return (
     <>
-      <Stack.Screen options={{ title: "Editar reseña", headerShown: true, headerBackTitle: "Volver" }} />
+      <Stack.Screen
+        options={{ title: "Editar reseña", headerShown: true, headerBackTitle: "Volver" }}
+      />
       <ReviewForm session={session} existing={review} onSaved={() => router.replace("/my-tacos")} />
     </>
   );
