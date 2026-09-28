@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm --filter @taco-hunt/contracts build && tsc --noEmit",
     "build": "pnpm --filter @taco-hunt/contracts build && tsc -p tsconfig.json",
     "start": "node dist/main.js"
   },

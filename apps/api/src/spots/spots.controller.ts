@@ -10,36 +10,8 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 import type { Pool } from "pg";
-import { z } from "zod";
+import { spotListQuerySchema, uuidSchema } from "@taco-hunt/contracts";
 import { DATABASE_POOL } from "../database/database.module.js";
-
-const spotQuerySchema = z
-  .object({
-    north: z.coerce.number().min(25).max(27).optional(),
-    south: z.coerce.number().min(25).max(27).optional(),
-    east: z.coerce.number().min(-101.5).max(-99).optional(),
-    west: z.coerce.number().min(-101.5).max(-99).optional(),
-    q: z.string().trim().max(100).optional(),
-    tacoType: z.string().trim().max(80).optional(),
-    limit: z.coerce.number().int().min(1).max(50).default(20),
-    cursor: z.string().uuid().optional(),
-  })
-  .superRefine((query, context) => {
-    if (query.north !== undefined && query.south !== undefined && query.south > query.north) {
-      context.addIssue({
-        code: "custom",
-        path: ["south"],
-        message: "south debe ser menor o igual a north",
-      });
-    }
-    if (query.east !== undefined && query.west !== undefined && query.west > query.east) {
-      context.addIssue({
-        code: "custom",
-        path: ["west"],
-        message: "west debe ser menor o igual a east",
-      });
-    }
-  });
 
 @Controller()
 export class SpotsController {
@@ -61,7 +33,7 @@ export class SpotsController {
 
   @Get("/spots")
   async listSpots(@Query() query: Record<string, unknown>) {
-    const parsed = spotQuerySchema.safeParse(query);
+    const parsed = spotListQuerySchema.safeParse(query);
     if (!parsed.success) {
       throw new BadRequestException({
         message: "Parámetros inválidos",
@@ -110,7 +82,7 @@ export class SpotsController {
 
   @Get("/spots/:id")
   async getSpot(@Param("id") rawId: string) {
-    const parsed = z.string().uuid().safeParse(rawId);
+    const parsed = uuidSchema.safeParse(rawId);
     if (!parsed.success) throw new BadRequestException({ message: "Identificador inválido" });
     try {
       const spot = await this.pool.query(
