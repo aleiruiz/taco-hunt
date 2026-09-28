@@ -13,6 +13,7 @@ import { ReportsModule } from "./reports/reports.module.js";
 import { AdminModule } from "./admin/admin.module.js";
 import { PlacesModule } from "./places/places.module.js";
 import { ShareModule } from "./share/share.module.js";
+import { AccountModule } from "./account/account.module.js";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ShareModule } from "./share/share.module.js";
     AdminModule,
     PlacesModule,
     ShareModule,
+    AccountModule,
   ],
   controllers: [HealthController, SpotsController, ReviewsController, FavoritesController],
   providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

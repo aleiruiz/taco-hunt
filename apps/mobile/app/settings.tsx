@@ -1,16 +1,60 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Link, useRouter } from "expo-router";
 import { authConfigured } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
+import { deleteAccount } from "@/features/contributions/api";
 
 export default function SettingsScreen() {
   const { session, loading, error, retrySession, signOut } = useAuth();
   const router = useRouter();
   const email = session?.user.email ?? "";
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   async function handleSignOut() {
     await signOut();
     router.replace("/");
+  }
+
+  function confirmDeleteAccount() {
+    Alert.alert(
+      "Eliminar cuenta",
+      "Se eliminarán tu perfil, reseñas, favoritos y fotos. Tus propuestas ya enviadas se conservan de forma anónima para el equipo de moderación. Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar cuenta",
+          style: "destructive",
+          onPress: () => void handleDeleteAccount(),
+        },
+      ],
+    );
+  }
+
+  async function handleDeleteAccount() {
+    if (!session) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteAccount(session);
+      await signOut();
+      router.replace("/");
+    } catch (cause) {
+      setDeleteError(
+        cause instanceof Error ? cause.message : "No pudimos eliminar tu cuenta. Intenta de nuevo.",
+      );
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -54,6 +98,19 @@ export default function SettingsScreen() {
           <Link href="/admin" style={styles.moderationLink}>
             Abrir panel de moderación
           </Link>
+          {deleteError ? <Text style={styles.deleteError}>{deleteError}</Text> : null}
+          <Pressable
+            accessibilityRole="button"
+            onPress={confirmDeleteAccount}
+            style={styles.deleteAccountButton}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator color="#A92E24" />
+            ) : (
+              <Text style={styles.deleteAccountText}>Eliminar cuenta</Text>
+            )}
+          </Pressable>
         </View>
       ) : (
         <View style={styles.card}>
@@ -158,5 +215,20 @@ const styles = StyleSheet.create({
   retryText: { color: "#276C4F", fontWeight: "900" },
   footer: { marginTop: 34 },
   moderationLink: { color: "#276C4F", fontWeight: "900", textAlign: "center", marginTop: 16 },
+  deleteAccountButton: {
+    minHeight: 44,
+    marginTop: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteAccountText: { color: "#A92E24", fontWeight: "900", fontSize: 13 },
+  deleteError: {
+    color: "#A92E24",
+    backgroundColor: "#FBE2DC",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 16,
+    lineHeight: 20,
+  },
   footerTitle: { color: "#302723", fontSize: 17, fontWeight: "900" },
 });
