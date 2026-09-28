@@ -28,8 +28,11 @@ export class AdminController {
 
   @Get("/queue")
   queue(@Query("kind") kindValue: string) {
+    if (["photos", "duplicates"].includes(kindValue)) {
+      return this.admin.queue(kindValue as QueueKind);
+    }
     if (!(["spots", "tacos", "reports"] as string[]).includes(kindValue)) {
-      throw new BadRequestException("kind debe ser spots, tacos o reports");
+      throw new BadRequestException("kind debe ser spots, tacos, reports, photos o duplicates");
     }
     return this.admin.queue(kindValue as QueueKind);
   }
@@ -57,6 +60,37 @@ export class AdminController {
     @Body() body: unknown,
   ) {
     return this.admin.rejectSpot(this.parseId(id), moderator.id, this.reason(body, true));
+  }
+
+  @Post("/spot-proposals/:id/request-changes")
+  requestSpotChanges(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    return this.admin.requestSpotChanges(this.parseId(id), moderator.id, this.reason(body, true));
+  }
+
+  @Post("/duplicates/:id/merge")
+  mergeDuplicate(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    const parsed = z
+      .object({ canonicalId: uuidSchema, reason: z.string().trim().min(1).max(500) })
+      .safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException({
+        message: "Datos de fusión inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    return this.admin.mergeDuplicate(
+      this.parseId(id),
+      parsed.data.canonicalId,
+      moderator.id,
+      parsed.data.reason,
+    );
   }
 
   @Post("/taco-proposals/:id/approve")
@@ -89,6 +123,15 @@ export class AdminController {
     @Body() body: unknown,
   ) {
     return this.admin.unhideReview(this.parseId(id), moderator.id, this.reason(body));
+  }
+
+  @Post("/reviews/:id/hide-photo")
+  async hidePhoto(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    return this.admin.hidePhoto(this.parseId(id), moderator.id, this.reason(body));
   }
 
   @Post("/reports/:id/close")
