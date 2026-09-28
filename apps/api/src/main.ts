@@ -2,6 +2,7 @@ import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 import "reflect-metadata";
 import { AppModule } from "./app.module.js";
+import multipart from "@fastify/multipart";
 
 function getTrustProxyHops(): number | false {
   const configured = process.env.TRUST_PROXY_HOPS?.trim();
@@ -23,6 +24,10 @@ async function bootstrap(): Promise<void> {
     AppModule,
     new FastifyAdapter({ logger: true, trustProxy: getTrustProxyHops() }),
   );
+
+  await app.register(multipart, {
+    limits: { files: 1, fields: 0, parts: 1, fileSize: 2 * 1024 * 1024 },
+  });
 
   app.enableCors({ origin: true });
   app.setGlobalPrefix("v1", { exclude: ["healthz"] });

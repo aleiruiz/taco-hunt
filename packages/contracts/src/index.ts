@@ -153,6 +153,7 @@ export const reviewPatchSchema = z
     value: ratingSchema.optional(),
     pricePaidMxn: z.number().nonnegative().max(10000).nullable().optional(),
     body: z.string().max(500).nullable().optional(),
+    photoUploadId: uuidSchema.nullable().optional(),
   })
   .strict()
   .refine((patch) => Object.keys(patch).length > 0, "Incluye al menos un campo para actualizar");
