@@ -1,6 +1,8 @@
 packages:
+  - "apps/mobile"
   - "apps/api"
   - "apps/landing"
   - "packages/*"
 allowBuilds:
   esbuild: true
+  unrs-resolver: false
