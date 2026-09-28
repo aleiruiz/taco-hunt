@@ -143,9 +143,9 @@ grant select, insert, update, delete on
   app_private.reviews,
   app_private.favorites,
   app_private.reports,
-  app_private.media_uploads,
-  app_private.moderation_audit
+  app_private.media_uploads
 to taco_hunt_api;
+grant select, insert on app_private.moderation_audit to taco_hunt_api;
 grant usage, select on all sequences in schema app_private to taco_hunt_api;
 
 -- The Data API roles cannot access product tables, even if the schema is exposed later.
