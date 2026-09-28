@@ -38,6 +38,11 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # Expo and React Native currently require npm's legacy peer resolution.
+      - name: Install standalone mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci --ignore-scripts --legacy-peer-deps
+
       - name: Lint
         id: lint
         continue-on-error: true
