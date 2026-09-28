@@ -64,11 +64,22 @@ export class MediaStorageService {
     return data.signedUrl;
   }
 
-  async list(prefix?: string): Promise<Array<{ name: string; id: string | null }>> {
+  async list(
+    prefix?: string,
+    offset = 0,
+  ): Promise<Array<{ name: string; id: string | null; created_at: string | null }>> {
     const { data, error } = await this.ensureEnabled()
       .storage.from(this.bucket)
-      .list(prefix, { limit: 100, sortBy: { column: "created_at", order: "asc" } });
+      .list(prefix, {
+        limit: 100,
+        offset,
+        sortBy: { column: "created_at", order: "asc" },
+      });
     if (error) throw new Error(`Storage object listing failed: ${error.message}`);
-    return (data ?? []).map((item) => ({ name: item.name, id: item.id ?? null }));
+    return (data ?? []).map((item) => ({
+      name: item.name,
+      id: item.id ?? null,
+      created_at: item.created_at ?? null,
+    }));
   }
 }

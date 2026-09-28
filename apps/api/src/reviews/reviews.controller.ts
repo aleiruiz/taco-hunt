@@ -228,16 +228,22 @@ export class ReviewsController {
     const client = await this.connect();
     try {
       await client.query("begin");
+      const current = await client.query<{ photo_key: string | null }>(
+        "select photo_key from app_private.reviews where id=$1 and user_id=$2 for update",
+        [id, profile.id],
+      );
+      if (current.rows[0]?.photo_key) {
+        await client.query(
+          "update app_private.media_uploads set state='deleted',claimed_review_id=null,created_at=now() where claimed_review_id=$1",
+          [id],
+        );
+      }
       const row = await client.query(
         "delete from app_private.reviews where id=$1 and user_id=$2 returning photo_key",
         [id, profile.id],
       );
       await client.query("commit");
       if (row.rows[0]?.photo_key) {
-        await this.pool.query(
-          "update app_private.media_uploads set state='deleted',claimed_review_id=null,created_at=now() where claimed_review_id=$1",
-          [id],
-        );
         await this.deletePhotoObject(row.rows[0].photo_key);
       }
     } catch (error) {

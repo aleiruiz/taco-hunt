@@ -28,8 +28,11 @@ async function main(): Promise<void> {
   );
   const staleKeys = pending.rows.map((row) => row.object_key);
   const staleSet = new Set(staleKeys);
-  const orphanKeys = await listObjects().then((keys) =>
-    keys.filter((key) => !known.has(key) && !staleSet.has(key)),
+  const orphanKeys = await listObjects().then((objects) =>
+    objects
+      .filter((object) => object.createdAt && new Date(object.createdAt) < cutoff)
+      .map((object) => object.key)
+      .filter((key) => !known.has(key) && !staleSet.has(key)),
   );
   const removeKeys = [...staleKeys, ...orphanKeys];
 
@@ -59,31 +62,30 @@ async function main(): Promise<void> {
   }
 }
 
-async function listObjects(): Promise<string[]> {
-  const keys: string[] = [];
-  const prefixes = await listDirectory("");
-  for (const prefix of prefixes) keys.push(...(await listDirectory(prefix)));
-  return keys;
+async function listObjects(): Promise<Array<{ key: string; createdAt: string | null }>> {
+  const objects: Array<{ key: string; createdAt: string | null }> = [];
+  const directories = [""];
+  while (directories.length > 0) {
+    const prefix = directories.pop()!;
+    for (let offset = 0; ; offset += 100) {
+      const page = await listStoragePage(prefix, offset);
+      for (const item of page) {
+        const key = prefix ? `${prefix}/${item.name}` : item.name;
+        if (item.id === null) directories.push(key);
+        else objects.push({ key, createdAt: item.created_at });
+      }
+      if (page.length < 100) break;
+    }
+  }
+  return objects;
 }
 
-async function listDirectory(prefix: string): Promise<string[]> {
-  const keys: string[] = [];
-  const directories: string[] = [];
-  for (let offset = 0; ; offset += 100) {
-    const { data, error } = await storage.list(prefix, {
-      limit: 100,
-      offset,
-      sortBy: { column: "created_at", order: "asc" },
-    });
-    if (error) throw new Error(`Storage listing failed: ${error.message}`);
-    for (const item of data ?? []) {
-      if (item.id === null) directories.push(prefix ? `${prefix}/${item.name}` : item.name);
-      else keys.push(prefix ? `${prefix}/${item.name}` : item.name);
-    }
-    if (!data || data.length < 100) break;
-  }
-  for (const directory of directories) keys.push(...(await listDirectory(directory)));
-  return keys;
+async function listStoragePage(
+  prefix: string,
+  offset: number,
+): Promise<Array<{ name: string; id: string | null; created_at: string | null }>> {
+  const result = await storage.list(prefix, offset);
+  return result;
 }
 
 function required(name: string): string {
