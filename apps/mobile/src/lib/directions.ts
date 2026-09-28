@@ -20,7 +20,7 @@ function encodedDestination({ latitude, longitude }: Coordinates) {
   return `${latitude},${longitude}`;
 }
 
-/** Opens turn-by-turn directions without sending or persisting a route. */
+/** Opens turn-by-turn directions without sending or persisting a route. Android native navigation uses Google Maps; the web fallback covers other cases. */
 export async function openDirections(coordinates: Coordinates): Promise<boolean> {
   if (!validCoordinates(coordinates)) return false;
 
@@ -31,7 +31,7 @@ export async function openDirections(coordinates: Coordinates): Promise<boolean>
       ? [`google.navigation:q=${destination}`]
       : [
           `comgooglemaps://?daddr=${destination}&directionsmode=driving`,
-          `maps://?daddr=${destination}&dirflg=d`,
+          `https://maps.apple.com/?daddr=${encodeURIComponent(destination)}&dirflg=d`,
         ];
 
   for (const url of candidates) {
