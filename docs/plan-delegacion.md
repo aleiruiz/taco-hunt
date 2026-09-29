@@ -59,6 +59,8 @@ T08, T09, and T10 can advance in parallel with frozen contracts. T11, T12, and T
 
 Not in the original build-spec phases; added after all P0–P2.5 tasks closed and the owner asked for a UX/product design review. These improve on an already-spec-compliant app rather than closing a build-spec gap (T28 is the exception: it closes a real spec gap, §3.4's report flow). None of these block T14–T16.
 
+T25–T27 implement the design decided in `docs/design-map-first.md` — read it before starting any of those three; it has the full spec (layout, marker/card behavior, data source, explicit non-goals), not just the one-line summary in the table below.
+
 | ID  | Task and expected outcome                                                                                                           | Blocked by | Main area                          | Status  |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------- | ------- |
 | T25 | Map-first home layout: full-bleed map as the default view; search/filter bar floats on top instead of a scrolling header pushing it down. | —          | apps/mobile/app/index.tsx           | Ready   |
