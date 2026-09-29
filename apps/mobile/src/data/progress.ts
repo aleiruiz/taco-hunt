@@ -24,6 +24,47 @@ export interface Progress {
 
 export function getFixtureProgress(): Progress {
   return {
-    badges: [],
+    nextChallenge: {
+      label: "Primera mordida: califica tu primer taco",
+      progress: 0,
+    },
+    badges: [
+      { id: "recien-llegado", label: "Recién llegado", icon: "sparkles", earned: true },
+      {
+        id: "primera-mordida",
+        label: "Primera mordida",
+        icon: "star",
+        earned: false,
+        progress: "0 de 1",
+      },
+      {
+        id: "pionero",
+        label: "Pionero",
+        icon: "flag",
+        earned: false,
+        progress: "0 de 1",
+      },
+      {
+        id: "explorador",
+        label: "Explorador",
+        icon: "compass",
+        earned: false,
+        progress: "0 de 3",
+      },
+      {
+        id: "cazador",
+        label: "Cazador",
+        icon: "add-circle",
+        earned: false,
+        progress: "0 de 1",
+      },
+      {
+        id: "fotografo",
+        label: "Fotógrafo",
+        icon: "camera",
+        earned: false,
+        progress: "0 de 3",
+      },
+    ],
   };
 }

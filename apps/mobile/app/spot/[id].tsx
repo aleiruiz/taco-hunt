@@ -18,6 +18,8 @@ import { createReport, ReportConflictError, type ReportReason } from "@/features
 import { openDirections as openMapDirections } from "@/lib/directions";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
+import { IconButton } from "@/components/IconButton";
+import { PhotoTile } from "@/components/PhotoTile";
 import { colors, radii, spacing, typography } from "@/theme";
 
 const REPORT_REASONS: { value: ReportReason; label: string }[] = [
@@ -145,6 +147,7 @@ export default function SpotScreen() {
     }
   }
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
+  const hasAnyReviews = spot?.tacos.some((taco) => taco.reviewCount > 0) ?? false;
   const openDirections = () => {
     if (!hasPin || !spot) return;
     void openMapDirections({ latitude: spot.latitude!, longitude: spot.longitude! }).then(
@@ -193,48 +196,38 @@ export default function SpotScreen() {
       ) : (
         spot && (
           <>
-            <Text style={styles.kicker}>PUESTO EN MONTERREY</Text>
-            <Text style={styles.title}>{spot.name}</Text>
-            <Text style={styles.neighborhood}>{spot.neighborhood}</Text>
-            <Pressable
-              accessibilityRole="button"
-              disabled={favoriteBusy}
-              onPress={() => void toggleFavorite()}
-              style={styles.favoriteButton}
-            >
-              <Ionicons
-                name={favorite ? "heart" : "heart-outline"}
-                size={16}
-                color={colors.red}
-                style={styles.icon}
-              />
-              <Text style={styles.favoriteText}>
-                {favorite ? "Guardado en favoritos" : "Guardar en favoritos"}
-              </Text>
-            </Pressable>
-            <Button
-              label="Reportar este puesto"
-              variant="ghost"
-              onPress={openReport}
-              style={styles.reportButton}
-            />
-            <View style={styles.notice}>
-              <Text style={styles.body}>
-                {spot.lastVerifiedAt
-                  ? `Dato verificado el ${new Date(spot.lastVerifiedAt).toLocaleDateString("es-MX")}.`
-                  : "Fecha de verificación no confirmada."}
-              </Text>
+            <View style={styles.headerRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.kicker}>PUESTO EN MONTERREY</Text>
+                <Text style={styles.title}>{spot.name}</Text>
+                <Text style={styles.neighborhood}>{spot.neighborhood}</Text>
+              </View>
+              <View style={styles.headerActions}>
+                <IconButton
+                  icon={favorite ? "heart" : "heart-outline"}
+                  label={favorite ? "Guardado en favoritos" : "Guardar en favoritos"}
+                  color={colors.red}
+                  disabled={favoriteBusy}
+                  onPress={() => void toggleFavorite()}
+                />
+                <IconButton icon="flag-outline" label="Reportar este puesto" onPress={openReport} />
+              </View>
             </View>
+            {spot.lastVerifiedAt ? (
+              <View style={styles.notice}>
+                <Text style={styles.body}>
+                  Dato verificado el {new Date(spot.lastVerifiedAt).toLocaleDateString("es-MX")}.
+                </Text>
+              </View>
+            ) : null}
             {hasPin && (
               <View style={styles.pinCard}>
                 <View style={styles.pinIcon}>
                   <Ionicons name="location" size={23} color={colors.ink} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.pinTitle}>Ubicación del puesto</Text>
-                  <Text style={styles.body}>
-                    {spot.latitude!.toFixed(4)}, {spot.longitude!.toFixed(4)}
-                  </Text>
+                  <Text style={styles.pinTitle}>{spot.neighborhood}</Text>
+                  <Text style={styles.body}>Monterrey y área metropolitana</Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"
@@ -247,33 +240,82 @@ export default function SpotScreen() {
                 </Pressable>
               </View>
             )}
+
+            <Text style={styles.section}>Fotos</Text>
+            <PhotoTile
+              dashed
+              size={96}
+              accessibilityLabel="Subir la primera foto. Próximamente."
+              onPress={() =>
+                Alert.alert(
+                  "Próximamente",
+                  "La galería de fotos de este puesto llega en una próxima actualización.",
+                )
+              }
+            />
+            <Text style={styles.body}>Subir la primera foto. Próximamente.</Text>
+
+            {spot.tacos.length > 0 && !hasAnyReviews && (
+              <View style={styles.pioneerCard}>
+                <Text style={styles.pioneerTitle}>
+                  Nadie lo ha calificado todavía… te da la insignia Pionero
+                </Text>
+                <Button
+                  label="Calificar el primer taco"
+                  variant="accent"
+                  onPress={() =>
+                    router.push(
+                      session
+                        ? {
+                            pathname: "/review/new",
+                            params: {
+                              spotTacoId: spot.tacos[0].id,
+                              spotName: spot.name,
+                              tacoName: spot.tacos[0].name,
+                            },
+                          }
+                        : "/sign-in",
+                    )
+                  }
+                  style={{ marginTop: spacing.sm }}
+                />
+              </View>
+            )}
+
             <Text style={styles.section}>Tacos que puedes encontrar</Text>
             {spot.tacos.map((taco) => (
-              <Pressable
-                key={taco.id}
-                onPress={() =>
-                  router.push(
-                    session
-                      ? {
-                          pathname: "/review/new",
-                          params: { spotTacoId: taco.id, spotName: spot.name, tacoName: taco.name },
-                        }
-                      : "/sign-in",
-                  )
-                }
-                style={styles.card}
-              >
+              <View key={taco.id} style={styles.card}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.tacoName}>{taco.name}</Text>
                   <Text style={styles.body}>
-                    {taco.reviewCount ? `${taco.reviewCount} reseñas` : "Sin reseñas todavía"}
+                    {taco.reviewCount
+                      ? `${taco.reviewCount} reseñas`
+                      : "Sin calificaciones todavía"}
                   </Text>
                 </View>
                 <Text style={styles.score}>
                   {taco.score === null ? "—" : `${taco.score.toFixed(1)} ★`}
                 </Text>
-                <Text style={styles.reviewAction}>{session ? "Calificar" : "Inicia sesión"}</Text>
-              </Pressable>
+                <Button
+                  label={session ? "Calificar" : "Inicia sesión"}
+                  variant="secondary"
+                  icon="star-outline"
+                  onPress={() =>
+                    router.push(
+                      session
+                        ? {
+                            pathname: "/review/new",
+                            params: {
+                              spotTacoId: taco.id,
+                              spotName: spot.name,
+                              tacoName: taco.name,
+                            },
+                          }
+                        : "/sign-in",
+                    )
+                  }
+                />
+              </View>
             ))}
             {spot.tacos.length === 0 && (
               <View style={styles.empty}>
@@ -352,19 +394,15 @@ const styles = StyleSheet.create({
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   title: { color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", marginTop: 10 },
   neighborhood: { color: colors.muted, fontSize: 16, marginTop: 5 },
-  favoriteButton: {
-    flexDirection: "row",
-    minHeight: 48,
-    marginTop: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.red,
-    alignItems: "center",
-    justifyContent: "center",
+  headerRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  headerActions: { flexDirection: "row", gap: spacing.xs },
+  pioneerCard: {
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.goldSoft,
   },
-  favoriteText: { color: colors.red, fontWeight: "900" },
-  icon: { marginRight: 6 },
-  reportButton: { marginTop: spacing.md },
+  pioneerTitle: { ...typography.sectionTitle, fontSize: 15, color: colors.ink },
   modalBackdrop: {
     flex: 1,
     justifyContent: "flex-end",
@@ -409,7 +447,6 @@ const styles = StyleSheet.create({
   },
   tacoName: { color: colors.ink, fontWeight: "800", fontSize: 16 },
   score: { color: colors.red, fontWeight: "900", fontSize: 16 },
-  reviewAction: { color: colors.green, fontSize: 12, fontWeight: "900" },
   empty: { padding: 20, marginTop: 20, borderRadius: 16, backgroundColor: colors.paper },
   pinCard: {
     marginTop: 12,
