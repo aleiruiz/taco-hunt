@@ -413,6 +413,7 @@ export default function ExploreScreen() {
     <View style={styles.summaryRow}>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`Abrir filtros. Zona: ${area.label}`}
         hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         style={styles.summaryChip}
         onPress={() => setPanelOpen(true)}
@@ -433,6 +434,7 @@ export default function ExploreScreen() {
     <>
       <Pressable
         style={StyleSheet.absoluteFill}
+        accessibilityRole="button"
         accessibilityLabel="Cerrar filtros"
         onPress={() => setPanelOpen(false)}
       />
