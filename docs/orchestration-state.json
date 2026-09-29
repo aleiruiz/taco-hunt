@@ -267,12 +267,12 @@
       "coderabbitReviewedSha": "83b598a"
     },
     "T45": {
-      "pr": null,
-      "headSha": null,
+      "pr": 34,
+      "headSha": "7b53472",
       "coderabbitReviewedSha": null,
-      "status": "ready",
+      "status": "ready_for_review",
       "dependsOn": [],
-      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens, Button/Chip/Card extensions, new shared components, avatar SVGs, src/data fixture-adapter pattern."
+      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts."
     },
     "T32": {
       "status": "blocked",
