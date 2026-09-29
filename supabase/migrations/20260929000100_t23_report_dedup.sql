@@ -6,12 +6,14 @@ alter table app_private.reports
   add column is_system boolean not null default false;
 
 -- Backfill: the only system reports that could already exist were filed by
--- this same refresh job, always tagged with the [places-refresh] note prefix.
--- This is the one place matching on that tag is appropriate — a one-time,
--- historical backfill, not the ongoing discriminator.
+-- this same refresh job, always in the exact format
+-- "[places-refresh] place_id <id>: <issues>" (see refresh-place-candidates.ts).
+-- Match that full structured shape, not just the tag prefix, so a user note
+-- that happens to start with the same tag text is not misclassified as a
+-- system report by this one-time historical backfill.
 update app_private.reports
 set is_system = true
-where reporter_id is null and note like '[places-refresh]%';
+where reporter_id is null and note like '[places-refresh] place_id %:%';
 
 -- Deterministically close any pre-existing duplicate open system reports for the
 -- same target before the unique index below can be created. Nothing enforced
