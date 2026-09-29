@@ -13,14 +13,6 @@
  },
  "workers": [
   {
-   "taskId": "T24",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T24-places-cost-controls",
-   "branch": "codex/T24-places-cost-controls",
-   "baseCommit": "2f672ba",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. PR #26 opened at a1bc0df, CI running, auto_fix monitor on. Not merged yet."
-  },
-  {
    "taskId": "T25",
    "worktree": "C:/Repos/taco-hunt-worktrees/T25-map-first-home",
    "branch": "codex/T25-map-first-home",
@@ -244,15 +236,15 @@
    "coderabbitReviewedSha": null
   },
   "T24": {
-   "status": "in_review",
+   "status": "merged",
    "dependsOn": [
     "T17",
     "T21"
    ],
-   "note": "Implemented fresh by the orchestrator: a global daily Google Places call budget and an emergency kill switch (GOOGLE_PLACES_KILL_SWITCH, GOOGLE_PLACES_DAILY_CALL_LIMIT) enforced in PlacesService before every outbound call (discovery/autocomplete/resolve) and in T23's refresh-place-candidates.ts script. Restricted-key setup, Cloud Console quotas, billing alerts and existing dedup (T17's place_id unique index, T23's report-tag dedup) documented in docs/google-places-controls.md rather than implemented, since that part of the task's scope is infrastructure configuration outside this repo. Could not run pnpm typecheck/lint/format in this environment (pnpm not installed, no node_modules) — flagged in the PR.",
+   "note": "Implemented fresh by the orchestrator: a global daily Google Places call budget and an emergency kill switch (GOOGLE_PLACES_KILL_SWITCH, GOOGLE_PLACES_DAILY_CALL_LIMIT) enforced in PlacesService before every outbound call (discovery/autocomplete/resolve) and in T23's refresh-place-candidates.ts script. Restricted-key setup, Cloud Console quotas, billing alerts and existing dedup (T17's place_id unique index, T23's report-tag dedup) documented in docs/google-places-controls.md rather than implemented, since that part of the task's scope is infrastructure configuration outside this repo. CodeRabbit found and this fixed 4 real issues across three rounds, all the same class of bug: assertGoogleCallAllowed() consuming the shared daily budget before checking GOOGLE_PLACES_API_KEY in googleAutocomplete, searchGooglePlaces and resolvePlace (a no-key request drained the budget with zero outbound calls), plus an expected kill-switch/budget rejection being logged as an unexpected failure in autocomplete()'s catch handler. Merged 2026-09-29 as 757a26c. Could not run pnpm typecheck/lint/format in this environment (pnpm not installed, no node_modules) — flagged in the PR; CI covered it.",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/26",
-   "headSha": "a1bc0df4043fac9feaa2e10d58ceacd9f004096b",
-   "coderabbitReviewedSha": null
+   "headSha": "757a26c",
+   "coderabbitReviewedSha": "14d69d9de256847fd73a9134d71afbcca6644763"
   },
   "T14": {
    "dependsOn": [
@@ -296,6 +288,7 @@
     "E01",
     "E02"
    ],
+   "note": "All internal task dependencies (T14, T17-T24) are now merged as of T24/PR #26 on 2026-09-29. Only blocked on external inputs E01/E02.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
