@@ -387,12 +387,12 @@
       "note": "Phase B gate. Consolidate Phase A Data needs into packages/contracts in one PR; waits for all Phase A."
     },
     "T31": {
-      "status": "ready_for_review",
+      "status": "merged",
       "dependsOn": [],
-      "note": "Owner-approved exception to UI-first. Fix POST /v1/reviews 503: drop tt from FOR SHARE OF (taco_hunt_api has SELECT only on taco_types).",
+      "note": "Owner-approved exception to UI-first. Fix POST /v1/reviews 503: drop tt from FOR SHARE OF (taco_hunt_api has SELECT only on taco_types). CI green, CodeRabbit reviewed head 1d9f174 with no actionable findings (one documented low/inferred security note accepted). Merged 2026-09-29T19:33:20Z as f8b095e.",
       "pr": 33,
       "headSha": "1d9f174",
-      "coderabbitReviewedSha": null
+      "coderabbitReviewedSha": "1d9f174"
     },
     "T33": {
       "status": "blocked",
