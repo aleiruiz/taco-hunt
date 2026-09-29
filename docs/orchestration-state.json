@@ -309,11 +309,11 @@
     },
     "T48": {
       "pr": 37,
-      "headSha": "d30e9e3",
+      "headSha": "dbb25ef",
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. CodeRabbit found 2 accessibility findings on f536170 (report IconButton labeled 'Más opciones' when it opens the report form directly; PhotoTile's placeholder tile had no accessibilityLabel/role of its own) - fixed as d30e9e3, adding an accessibilityLabel prop to the shared PhotoTile component. CI green, awaiting re-review."
+      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. CodeRabbit round 1 (f536170) found 2 accessibility issues (report IconButton labeled 'Más opciones'; PhotoTile had no accessibilityLabel/role) - fixed as d30e9e3. Round 2 found the visible caption still didn't say the tile was a stand-in ('Subir la primera foto' vs the accessibilityLabel's '...Próximamente.') - fixed as dbb25ef; CI green, awaiting re-review."
     },
     "T36": {
       "status": "blocked",
