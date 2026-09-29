@@ -271,12 +271,13 @@ async function fileReport(finding: Finding): Promise<boolean> {
     500,
   );
   // The check above is a cheap early exit; reports_one_open_system_target_idx (a partial
-  // unique index on open, system-filed reports) is what actually keeps two concurrent
-  // --apply runs from both inserting a report for the same spot under READ COMMITTED.
+  // unique index on open, system-filed reports — is_system, not reporter_id is null, since
+  // an anonymized former user's report is never a system report) is what actually keeps two
+  // concurrent --apply runs from both inserting a report for the same spot under READ COMMITTED.
   const result = await pool.query(
-    `insert into app_private.reports (reporter_id, target_type, target_id, reason, note)
-     values (null, 'spot', $1, $2, $3)
-     on conflict (target_type, target_id) where status='open' and reporter_id is null
+    `insert into app_private.reports (reporter_id, target_type, target_id, reason, note, is_system)
+     values (null, 'spot', $1, $2, $3, true)
+     on conflict (target_type, target_id) where status='open' and is_system
      do nothing`,
     [finding.spot.id, isClosed ? "closed" : "inaccurate", note],
   );
