@@ -2,17 +2,30 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
+import { createReport, ReportConflictError, type ReportReason } from "@/features/reports/api";
 import { openDirections as openMapDirections } from "@/lib/directions";
-import { colors } from "@/theme";
+import { Button } from "@/components/Button";
+import { Chip } from "@/components/Chip";
+import { colors, radii, spacing, typography } from "@/theme";
+
+const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+  { value: "inaccurate", label: "Datos incorrectos" },
+  { value: "closed", label: "Ya cerró" },
+  { value: "spam", label: "Spam o falso" },
+  { value: "abusive", label: "Contenido abusivo" },
+  { value: "other", label: "Otro" },
+];
 
 type Taco = {
   id: string;
@@ -40,6 +53,11 @@ export default function SpotScreen() {
   const [favoriteBusy, setFavoriteBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<"offline" | "missing" | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason | null>(null);
+  const [reportNote, setReportNote] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState("");
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -81,6 +99,39 @@ export default function SpotScreen() {
       setFavoriteState((current) => !current);
     } finally {
       setFavoriteBusy(false);
+    }
+  }
+  function openReport() {
+    if (!session) {
+      router.push("/sign-in");
+      return;
+    }
+    setReportReason(null);
+    setReportNote("");
+    setReportError("");
+    setReportOpen(true);
+  }
+  async function submitReport() {
+    if (!session || !reportReason) return;
+    setReportSubmitting(true);
+    setReportError("");
+    try {
+      await createReport(session, {
+        targetType: "spot",
+        targetId: id,
+        reason: reportReason,
+        note: reportNote.trim() || undefined,
+      });
+      setReportOpen(false);
+      Alert.alert("Gracias", "Tu reporte fue enviado. Nuestro equipo lo revisará.");
+    } catch (submitError) {
+      setReportError(
+        submitError instanceof ReportConflictError
+          ? "Ya tienes un reporte abierto para este puesto."
+          : "No pudimos enviar el reporte. Inténtalo de nuevo.",
+      );
+    } finally {
+      setReportSubmitting(false);
     }
   }
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
@@ -139,6 +190,12 @@ export default function SpotScreen() {
                 {favorite ? "♥  Guardado en favoritos" : "♡  Guardar en favoritos"}
               </Text>
             </Pressable>
+            <Button
+              label="⚑ Reportar este puesto"
+              variant="ghost"
+              onPress={openReport}
+              style={styles.reportButton}
+            />
             <View style={styles.notice}>
               <Text style={styles.body}>
                 {spot.lastVerifiedAt
@@ -206,6 +263,59 @@ export default function SpotScreen() {
           </>
         )
       )}
+      <Modal
+        visible={reportOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setReportOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Reportar este puesto</Text>
+            <Text style={styles.body}>
+              Cuéntanos qué está mal. Un reporte no oculta el puesto de inmediato; nuestro equipo lo
+              revisa.
+            </Text>
+            <View style={styles.reasonRow}>
+              {REPORT_REASONS.map((option) => (
+                <Chip
+                  key={option.value}
+                  label={option.label}
+                  selected={reportReason === option.value}
+                  onPress={() => setReportReason(option.value)}
+                />
+              ))}
+            </View>
+            <TextInput
+              value={reportNote}
+              onChangeText={setReportNote}
+              placeholder="Detalles opcionales (máx. 500 caracteres)"
+              placeholderTextColor="#8A7A6E"
+              multiline
+              maxLength={500}
+              style={styles.reportNoteInput}
+              accessibilityLabel="Detalles del reporte"
+            />
+            {reportError ? <Text style={styles.reportError}>{reportError}</Text> : null}
+            <View style={styles.modalActions}>
+              <Button
+                label="Cancelar"
+                variant="secondary"
+                onPress={() => setReportOpen(false)}
+                style={{ flex: 1 }}
+              />
+              <Button
+                label="Enviar reporte"
+                variant="danger"
+                disabled={!reportReason}
+                loading={reportSubmitting}
+                onPress={() => void submitReport()}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -228,6 +338,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   favoriteText: { color: colors.red, fontWeight: "900" },
+  reportButton: { marginTop: spacing.md },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(48,39,35,0.45)",
+  },
+  modalSheet: {
+    backgroundColor: colors.cream,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+    gap: spacing.sm,
+  },
+  modalTitle: { ...typography.sectionTitle, color: colors.ink },
+  reasonRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
+  reportNoteInput: {
+    marginTop: spacing.md,
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    borderRadius: radii.lg,
+    backgroundColor: colors.paper,
+    padding: spacing.md,
+    color: colors.ink,
+    fontSize: 14,
+    textAlignVertical: "top",
+  },
+  reportError: { color: colors.dangerText, fontSize: 13, fontWeight: "700", marginTop: spacing.sm },
+  modalActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
   notice: { marginTop: 23, padding: 15, backgroundColor: colors.paper, borderRadius: 14 },
   body: { color: colors.muted, fontSize: 14, lineHeight: 21 },
   section: { color: colors.ink, fontSize: 18, fontWeight: "800", marginTop: 32, marginBottom: 12 },
