@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { fetchAutocomplete, resolvePlace, type PlaceSuggestion } from "./autocomplete";
 
 const colors = {
@@ -33,11 +41,28 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<PlaceSuggestion[]>([]);
   const [attribution, setAttribution] = useState<string | null>(null);
+  const [selectedAttribution, setSelectedAttribution] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [resolvingPlaceId, setResolvingPlaceId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const requestId = useRef(0);
   const skipNextSearch = useRef(false);
+  // Bumped on every user keystroke and at the start of each selection, so a
+  // resolvePlace response that arrives after the user moved on can be told apart
+  // from the one that's still current and discarded instead of applied.
+  const selectionToken = useRef(0);
+
+  function announce(message: string) {
+    setError(message);
+    AccessibilityInfo.announceForAccessibility(message);
+  }
+
+  function handleQueryChange(value: string) {
+    selectionToken.current += 1;
+    setSelectedAttribution(null);
+    setResolvingPlaceId(null);
+    setQuery(value);
+  }
 
   useEffect(() => {
     if (skipNextSearch.current) {
@@ -46,6 +71,7 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
     }
     const trimmed = query.trim();
     if (trimmed.length < 2) {
+      requestId.current += 1;
       setItems([]);
       setAttribution(null);
       setSearching(false);
@@ -64,7 +90,7 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
         .catch((cause) => {
           if (requestId.current !== currentRequest) return;
           setItems([]);
-          setError(
+          announce(
             cause instanceof Error
               ? cause.message
               : "No pudimos buscar sugerencias. Puedes cambiar a captura manual.",
@@ -78,10 +104,12 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
   }, [query, session]);
 
   async function selectGoogleSuggestion(placeId: string) {
+    const myToken = ++selectionToken.current;
     setResolvingPlaceId(placeId);
     setError("");
     try {
       const resolved = await resolvePlace(session, placeId);
+      if (selectionToken.current !== myToken) return; // user moved on while this was pending
       requestId.current += 1;
       setSearching(false);
       onSelectPlace({
@@ -94,12 +122,14 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
       skipNextSearch.current = true;
       setQuery(resolved.name);
       setItems([]);
+      setSelectedAttribution(resolved.attribution);
     } catch (cause) {
-      setError(
+      if (selectionToken.current !== myToken) return;
+      announce(
         cause instanceof Error ? cause.message : "No pudimos obtener los datos de ese lugar.",
       );
     } finally {
-      setResolvingPlaceId(null);
+      if (selectionToken.current === myToken) setResolvingPlaceId(null);
     }
   }
 
@@ -107,7 +137,7 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
     <View>
       <TextInput
         value={query}
-        onChangeText={setQuery}
+        onChangeText={handleQueryChange}
         placeholder="Busca una taquería, colonia, municipio o dirección"
         placeholderTextColor="#9C8D80"
         style={styles.input}
@@ -115,7 +145,19 @@ export function PlaceAutocomplete({ session, onSelectPlace, onSelectExistingSpot
         accessibilityLabel="Buscar taquería, colonia, municipio o dirección"
       />
       {searching ? <ActivityIndicator color={colors.green} style={styles.spinner} /> : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text
+          style={styles.error}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          importantForAccessibility="yes"
+        >
+          {error}
+        </Text>
+      ) : null}
+      {selectedAttribution ? (
+        <Text style={styles.selectedAttribution}>{selectedAttribution}</Text>
+      ) : null}
       {items.length > 0 ? (
         <View style={styles.list}>
           {items.map((item, index) => {
@@ -209,5 +251,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: "#E8DCCB",
+  },
+  selectedAttribution: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    marginTop: 6,
   },
 });
