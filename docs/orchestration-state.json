@@ -288,7 +288,7 @@
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. Stacked on T45 (base branch codex/T45-design-system, PR #35 targets PR #34) since T45 hasn't merged yet; needs re-basing onto main once T45 merges. Data needs: zone chips still use today's area bounding-box search pending T33/T34's camera-shortcut viewport loading; sparkle badge uses existing reviewCount."
+      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. Stacked on T45 (base branch codex/T45-design-system, PR #35 targets PR #34) since T45 hasn't merged yet; needs re-basing onto main once T45 merges. Data needs: zone chips still use today's area bounding-box search pending T33/T34's camera-shortcut viewport loading; sparkle badge uses existing reviewCount. IMPORTANT: neither the CI workflow nor CodeRabbit runs against a non-main base branch (gh pr checks 35 shows CodeRabbit 'reviews are disabled for this base branch' and no Lint/types/format job at all) - only verified locally (typecheck/lint/format) so far; needs a real CI run + CodeRabbit review once retargeted to main after T45 merges."
     },
     "T35": {
       "status": "blocked",
@@ -300,12 +300,12 @@
       "coderabbitReviewedSha": null
     },
     "T47": {
-      "pr": null,
-      "headSha": null,
+      "pr": 36,
+      "headSha": "46927d1",
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed."
+      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. Stacked on T45 (base branch codex/T45-design-system, PR #36 targets PR #34), independent of T46. Data needs: opening-time chips have no backing field yet (local UI state only); duplicate-match card only surfaces after a failed submit (today's dedupe check is server-side on POST, not pre-submission); the dashed pending-pin-on-map behavior isn't wired into index.tsx. Same CI/CodeRabbit limitation as T46: no run against a non-main base branch yet; only verified locally."
     },
     "T48": {
       "pr": null,
