@@ -21,6 +21,7 @@ Read `docs/build-spec.md`, `docs/plan-delegacion.md`, and `docs/orchestration.md
 - If an existing UI genuinely needs a visual treatment the shared components don't support (see `admin.tsx`'s moderation actions, intentionally left out of `Button` in T29 because its approve/reject color semantics differ from the consumer app's primary/danger meaning), either extend the shared component's API or document in the PR why it was left local — don't silently reintroduce ad hoc styling.
 - A task that touches mobile screens is expected to leave the design system more consistent, not less. If you add a new screen, build it from `theme.ts` and the shared components from the start.
 - T25–T27 (the map-first redesign) implement a specific, owner-approved design captured in `docs/design-map-first.md`. Read that file before starting any of those tasks — it has the full layout/marker/card spec, not just the one-line summary in `docs/plan-delegacion.md`'s table.
+- P2.7 mobile tasks (T32, T35, T39, T41, and any header, add-a-taquería, empty-state, or profile work) implement the owner-reviewed design in `docs/design-owner-feedback.md` (public canvas: https://claude.ai/artifact/9AVKB3JQW7j3UGijkxiUEv). Read it first; it also defines the new `theme.ts` tokens and shared components those tasks should add.
 
 ## AI-assisted review
 
