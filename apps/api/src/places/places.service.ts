@@ -46,6 +46,9 @@ type GooglePlace = {
 
 type GooglePlacesResponse = { places?: GooglePlace[] };
 
+/** Expected kill-switch/budget rejection from assertGoogleCallAllowed(); never logged as a failure. */
+class GooglePlacesGuardRejectedException extends ServiceUnavailableException {}
+
 @Injectable()
 export class PlacesService {
   private readonly logger = new Logger(PlacesService.name);
@@ -143,9 +146,11 @@ export class PlacesService {
     const [localMatches, googleMatches] = await Promise.all([
       this.searchLocalSpots(query),
       this.googleAutocomplete(query).catch((error) => {
-        this.logger.warn(
-          `Google Places autocomplete unavailable: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        if (!(error instanceof GooglePlacesGuardRejectedException)) {
+          this.logger.warn(
+            `Google Places autocomplete unavailable: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
         return [];
       }),
     ]);
@@ -238,7 +243,9 @@ export class PlacesService {
    */
   private assertGoogleCallAllowed(): void {
     if (process.env.GOOGLE_PLACES_KILL_SWITCH?.trim().toLowerCase() === "true") {
-      throw new ServiceUnavailableException("Google Places está deshabilitado temporalmente");
+      throw new GooglePlacesGuardRejectedException(
+        "Google Places está deshabilitado temporalmente",
+      );
     }
 
     const configuredLimit = Number(process.env.GOOGLE_PLACES_DAILY_CALL_LIMIT);
@@ -250,7 +257,7 @@ export class PlacesService {
     try {
       this.limits.consume(GOOGLE_CALLS_SCOPE, "all", dailyLimit, GOOGLE_CALLS_WINDOW_MS);
     } catch {
-      throw new ServiceUnavailableException(
+      throw new GooglePlacesGuardRejectedException(
         "Se alcanzó el límite diario de solicitudes a Google Places",
       );
     }
@@ -325,10 +332,10 @@ export class PlacesService {
   }
 
   private async searchGooglePlaces(input: PlacesSearchInput): Promise<GooglePlace[]> {
-    this.assertGoogleCallAllowed();
-
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+
+    this.assertGoogleCallAllowed();
 
     try {
       const endpoint =
