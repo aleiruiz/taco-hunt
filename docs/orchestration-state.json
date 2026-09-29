@@ -285,7 +285,7 @@
     "T33": {
       "status": "ready",
       "dependsOn": [],
-      "note": "GET /v1/spots/map compact metro-wide pins, approved only, capped, cacheable.",
+      "note": "GET /v1/spots/map viewport pins (bbox), no geographic cap, per-request limit with server clusters, cacheable.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -293,7 +293,7 @@
     "T34": {
       "status": "blocked",
       "dependsOn": ["T33"],
-      "note": "Map never hides by area; chips become camera shortcuts; taco type is the only hiding filter.",
+      "note": "Map loads pins by viewport as you move (debounced, id-keyed cache), never all at once; chips are camera shortcuts; taco type is the only hiding filter.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -302,7 +302,7 @@
       "status": "blocked",
       "dependsOn": ["T34"],
       "waitingOnDesign": "minimized header search",
-      "note": "Client-side autocomplete over Taco Hunt stands/neighborhoods (no Google).",
+      "note": "Autocomplete via GET /v1/search/suggest over all Taco Hunt stands/neighborhoods, no area cap, proximity-ranked (no Google).",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -326,7 +326,7 @@
     "T38": {
       "status": "blocked",
       "dependsOn": ["T37"],
-      "note": "Admin panel photo moderation (profile photos join after T40).",
+      "note": "Admin panel photo moderation for stand photos (profile photos use T40's automated review).",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -343,7 +343,7 @@
     "T40": {
       "status": "ready",
       "dependsOn": [],
-      "note": "Profile API GET/PATCH /v1/me, persist sign-up display name, avatar preset + pre-moderated photo; extend account deletion.",
+      "note": "Profile API GET/PATCH /v1/me, persist sign-up display name, avatar preset + photo shown immediately with automated review (revert on reject); extend account deletion.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
