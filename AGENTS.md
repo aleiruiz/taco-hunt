@@ -14,6 +14,13 @@ Read `docs/build-spec.md`, `docs/plan-delegacion.md`, and `docs/orchestration.md
 - Keep the code readable: run `pnpm lint` and `pnpm typecheck` before handing off changes, and apply `pnpm format` to the files you modified. If the environment prevents running one of these, report the exact command and error in the check-in/PR.
 - Do not add or run tests unless the user explicitly requests it. If a task includes tests as future work, note that in the handoff without running them.
 
+## Mobile design system
+
+- `apps/mobile/src/theme.ts` is the single source of truth for colors, spacing, radii, and typography in the mobile app. Never declare a local `colors`/`spacing` const in a screen or component, and never hardcode a hex color, even one already used elsewhere — import from `@/theme` instead. If a screen needs a shade the theme doesn't have, add it to `theme.ts` as a named token in the same PR rather than inlining it.
+- Use the shared components in `apps/mobile/src/components/` (`Button`, `Card`, `Chip`) for anything that matches their pattern: a tappable action, a bordered content container, or a filter/selector pill. Don't hand-roll a new `Pressable`+`StyleSheet` pair that duplicates one of these.
+- If an existing UI genuinely needs a visual treatment the shared components don't support (see `admin.tsx`'s moderation actions, intentionally left out of `Button` in T29 because its approve/reject color semantics differ from the consumer app's primary/danger meaning), either extend the shared component's API or document in the PR why it was left local — don't silently reintroduce ad hoc styling.
+- A task that touches mobile screens is expected to leave the design system more consistent, not less. If you add a new screen, build it from `theme.ts` and the shared components from the start.
+
 ## AI-assisted review
 
 - CodeRabbit is the independent code reviewer for every pull request. Configure the CodeRabbit GitHub App for this repository and keep the configuration in `.coderabbit.yaml`.
