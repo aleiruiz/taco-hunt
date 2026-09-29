@@ -67,7 +67,7 @@ T25–T27 implement the design decided in `docs/design-map-first.md` — read it
 | T26 | Custom branded pin markers and a tap-to-preview bottom card (name, best taco, recent review snippet) replacing default OS callouts.    | T25        | apps/mobile/app/index.tsx           | Blocked |
 | T27 | Marker clustering so dense areas don't turn into overlapping pins once real stand data loads.                                         | T26        | apps/mobile/app/index.tsx           | Blocked |
 | T28 | Report-a-stand/review mobile flow: build-spec.md §3.4 feature with no UI yet, backed by the existing `POST /v1/reports` and admin queue. | —          | apps/mobile/app/spot/[id].tsx       | Ready   |
-| T29 | Design system extraction: one `theme.ts` for colors/spacing/type tokens (build-spec.md §16.1) plus shared Button/Card/Chip components. | —          | apps/mobile/src/                    | Active  |
+| T29 | Design system extraction: one `theme.ts` for colors/spacing/type tokens (build-spec.md §16.1) plus shared Button/Card/Chip components. | —          | apps/mobile/src/                    | Merged (PR #27) |
 | T30 | Icon set swap: replace Unicode-glyph "icons" with a real icon library (Phosphor/Lucide).                                              | —          | apps/mobile/                        | Ready   |
 
 ## P3: deliberately blocked until the end

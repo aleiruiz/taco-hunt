@@ -19,14 +19,6 @@
    "baseCommit": "2f672ba",
    "sessionId": null,
    "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. PR #26 opened at a1bc0df, CI running, auto_fix monitor on. Not merged yet."
-  },
-  {
-   "taskId": "T29",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T29-design-system",
-   "branch": "codex/T29-design-system",
-   "baseCommit": "main",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:40Z. PR #27 opened at 0c0ae58, auto-fix monitor on. Not merged yet."
   }
  ],
  "tasks": {
@@ -350,12 +342,12 @@
    "coderabbitReviewedSha": null
   },
   "T29": {
-   "status": "in_review",
+   "status": "merged",
    "dependsOn": [],
-   "note": "Design system extraction: theme.ts + shared Button/Card/Chip. Owner chose this as the starting task among T25-T30 since the map/icon work builds on it. PR #27 opened at 0c0ae58, auto-fix monitor on. Admin.tsx's tab/action buttons intentionally left on local styles (different color semantics); a few pre-existing off-shade error reds left unmerged. pnpm/node_modules unavailable in this environment, could not run typecheck/lint/format.",
+   "note": "Design system extraction: theme.ts + shared Button/Card/Chip. Owner chose this as the starting task among T25-T30 since the map/icon work builds on it. Merged 2026-09-29T04:32Z as 27954af. CodeRabbit found 1 real issue (Button lost its accessible name while loading) - fixed, replied, thread resolved, re-reviewed clean. Admin.tsx's tab/action buttons intentionally left on local styles (different color semantics); a few pre-existing off-shade error reds left unmerged. pnpm/node_modules unavailable in this environment, could not run typecheck/lint/format.",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/27",
-   "headSha": "0c0ae5846ba5d58f28c781fe9b38760f05bffe42",
-   "coderabbitReviewedSha": null
+   "headSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8",
+   "coderabbitReviewedSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8"
   },
   "T30": {
    "status": "ready",
