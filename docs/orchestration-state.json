@@ -18,7 +18,15 @@
    "branch": "codex/T25-map-first-home",
    "baseCommit": "81d96ab",
    "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #28 opened at 611f45b, CI pending. auto_fix monitor could not be enabled (denied by auto-mode classifier) - needs manual/periodic check instead."
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #28 open, CI green (lint/types/format, GitGuardian), CodeRabbit review still pending. auto_fix monitor could not be enabled (denied by auto-mode classifier) - needs manual/periodic check instead."
+  },
+  {
+   "taskId": "T28",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T28-report-flow",
+   "branch": "codex/T28-report-flow",
+   "baseCommit": "d43efa3",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #29 opened at b5e74fd, CI pending."
   }
  ],
  "tasks": {
@@ -335,11 +343,11 @@
    "coderabbitReviewedSha": null
   },
   "T28": {
-   "status": "ready",
+   "status": "in_review",
    "dependsOn": [],
-   "note": "Closes a real build-spec gap (§3.4): report-a-stand/review mobile UI, backed by existing POST /v1/reports and admin queue.",
-   "pr": null,
-   "headSha": null,
+   "note": "Implemented by the orchestrator in worktree C:/Repos/taco-hunt-worktrees/T28-report-flow, branch codex/T28-report-flow. Adds a 'Reportar este puesto' modal on spot/[id].tsx (first modal pattern in the mobile app), new src/features/reports/api.ts calling POST /v1/reports. Scoped to targetType 'spot' only (review-reporting has no UI hook point on that screen). lint/typecheck clean, prettier applied. PR #29 opened at b5e74fd, CI pending, not yet reviewed by CodeRabbit or merged.",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/29",
+   "headSha": "b5e74fd",
    "coderabbitReviewedSha": null
   },
   "T29": {
