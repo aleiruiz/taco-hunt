@@ -253,7 +253,7 @@ export default function SpotScreen() {
                 )
               }
             />
-            <Text style={styles.body}>Subir la primera foto</Text>
+            <Text style={styles.body}>Subir la primera foto. Próximamente.</Text>
 
             {spot.tacos.length > 0 && !hasAnyReviews && (
               <View style={styles.pioneerCard}>
