@@ -292,30 +292,26 @@ export default function ExploreScreen() {
   if (mode === "mapa") {
     return (
       <View style={styles.screen}>
-        {!loading && !error && items.length > 0 ? (
-          <MapView
-            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-            style={StyleSheet.absoluteFill}
-            initialRegion={mapRegion}
-            region={mapRegion}
-            accessibilityLabel="Mapa de puestos en la zona seleccionada"
-            showsUserLocation={false}
-          >
-            {items.map((item) => (
-              <Marker
-                key={item.id}
-                coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-                title={item.name}
-                description={item.neighborhood}
-                onCalloutPress={() =>
-                  router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)
-                }
-              />
-            ))}
-          </MapView>
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.mapGroundFill]} />
-        )}
+        <MapView
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          style={StyleSheet.absoluteFill}
+          initialRegion={mapRegion}
+          region={mapRegion}
+          accessibilityLabel="Mapa de puestos en la zona seleccionada"
+          showsUserLocation={false}
+        >
+          {items.map((item) => (
+            <Marker
+              key={item.id}
+              coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+              title={item.name}
+              description={item.neighborhood}
+              onCalloutPress={() =>
+                router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)
+              }
+            />
+          ))}
+        </MapView>
         <View style={styles.mapOverlay} pointerEvents="box-none">
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -588,7 +584,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" },
-  mapGroundFill: { backgroundColor: colors.mapGround },
   mapOverlay: {
     position: "absolute",
     top: 0,
