@@ -6,8 +6,11 @@ export const colors = {
   ink: "#302723",
   muted: "#6C5D53",
   red: "#E95032",
+  redStrong: "#C23A1E",
   green: "#276C4F",
+  greenSoft: "#DCEBE2",
   gold: "#F4BE65",
+  goldSoft: "#FCEBC8",
   paper: "#FFFAF1",
   cream: "#FBF3E6",
   line: "#E8DCCB",
@@ -17,7 +20,18 @@ export const colors = {
   segmentTrack: "#EFE4D5",
   dangerText: "#A92E24",
   dangerBg: "#FBE2DC",
+  pendingText: "#7A5310",
+  placeholder: "#7D6E63",
+  scrim: "rgba(48, 39, 35, 0.45)",
   white: "#FFFFFF",
+  avatar: {
+    pastor: "#F6D3C4",
+    masa: "#FCEBC8",
+    cilantro: "#DCEBE2",
+    tortilla: "#F9DEAE",
+    salsa: "#FBE2DC",
+    comal: "#EFE4D5",
+  },
 } as const;
 
 export const spacing = {
@@ -29,12 +43,27 @@ export const spacing = {
   xxl: 28,
 } as const;
 
+export const sizes = {
+  touch: 44,
+  fab: 56,
+  pin: 44,
+  avatar24: 24,
+  avatar40: 40,
+  avatar72: 72,
+} as const;
+
 export const radii = {
   sm: 9,
   md: 13,
   lg: 15,
   xl: 18,
+  sheet: 24,
   pill: 999,
+} as const;
+
+export const elevation = {
+  float: { shadowColor: colors.ink, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 14, elevation: 4 },
+  sheet: { shadowColor: colors.ink, shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.16, shadowRadius: 18, elevation: 8 },
 } as const;
 
 export const typography = {
@@ -45,4 +74,12 @@ export const typography = {
   body: { fontSize: 14, fontWeight: "400" as const },
   label: { fontSize: 12, fontWeight: "700" as const },
   caption: { fontSize: 11, fontWeight: "700" as const },
+  display: { fontSize: 28, fontWeight: "900" as const },
+  button: { fontSize: 15, fontWeight: "800" as const },
+  badge: { fontSize: 11, fontWeight: "800" as const },
 };
+
+export const motion = {
+  fast: 150,
+  base: 250,
+} as const;

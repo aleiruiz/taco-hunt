@@ -7,20 +7,25 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { colors, radii } from "@/theme";
+import { colors, radii, typography, motion } from "@/theme";
+import { Ionicons } from "@expo/vector-icons";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "accent";
+type Size = "md" | "lg";
 
 const indicatorColor: Record<Variant, string> = {
   primary: colors.paper,
   secondary: colors.ink,
   danger: colors.dangerText,
   ghost: colors.green,
+  accent: colors.paper,
 };
 
 type Props = Omit<PressableProps, "style" | "children"> & {
   label: string;
   variant?: Variant;
+  size?: Size;
+  icon?: keyof typeof Ionicons.glyphMap;
   loading?: boolean;
   /** Layout-only overrides (margin, flex, etc.) applied on top of the variant's own look. */
   style?: StyleProp<ViewStyle>;
@@ -29,11 +34,29 @@ type Props = Omit<PressableProps, "style" | "children"> & {
 export function Button({
   label,
   variant = "primary",
+  size = "md",
+  icon,
   loading = false,
   disabled,
   style,
   ...rest
 }: Props) {
+  const iconSize = size === "lg" ? 20 : 16;
+  const variantColors: Record<Variant, string> = {
+    primary: colors.green,
+    secondary: colors.ink,
+    danger: colors.dangerText,
+    ghost: colors.green,
+    accent: colors.redStrong,
+  };
+  const textColors: Record<Variant, string> = {
+    primary: colors.paper,
+    secondary: colors.ink,
+    danger: colors.dangerText,
+    ghost: colors.green,
+    accent: colors.paper,
+  };
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -42,7 +65,10 @@ export function Button({
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.base,
-        styles[variant],
+        size === "lg" && styles.lg,
+        { backgroundColor: variant === "ghost" ? "transparent" : variantColors[variant] },
+        variant === "secondary" && { borderWidth: 1, borderColor: colors.line },
+        variant === "danger" && { borderWidth: 1, borderColor: colors.dangerText, backgroundColor: colors.dangerBg },
         (disabled || loading) && styles.disabled,
         pressed && !disabled && !loading && styles.pressed,
         style,
@@ -52,7 +78,10 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={indicatorColor[variant]} />
       ) : (
-        <Text style={[styles.text, styles[`${variant}Text`]]}>{label}</Text>
+        <>
+          {icon && <Ionicons name={icon} size={iconSize} color={textColors[variant]} style={{ marginRight: 8 }} />}
+          <Text style={[styles.text, size === "lg" && styles.lgText, { color: textColors[variant] }]}>{label}</Text>
+        </>
       )}
     </Pressable>
   );
@@ -60,22 +89,18 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 44,
+    minHeight: 48,
     borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
     flexDirection: "row",
   },
+  lg: {
+    minHeight: 52,
+  },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.5 },
-  text: { fontWeight: "800", fontSize: 13 },
-  primary: { backgroundColor: colors.red },
-  primaryText: { color: colors.paper },
-  secondary: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.line },
-  secondaryText: { color: colors.ink },
-  danger: { backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.dangerText },
-  dangerText: { color: colors.dangerText },
-  ghost: { backgroundColor: "transparent" },
-  ghostText: { color: colors.green },
+  text: { ...typography.button, fontSize: 15 },
+  lgText: { fontSize: 15 },
 });
