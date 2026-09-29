@@ -276,10 +276,10 @@ export class PlacesService {
   }
 
   private async googleAutocomplete(query: string) {
-    this.assertGoogleCallAllowed();
-
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) return [];
+
+    this.assertGoogleCallAllowed();
 
     const endpoint =
       process.env.GOOGLE_PLACES_AUTOCOMPLETE_URL?.trim() ||

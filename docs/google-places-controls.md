@@ -77,12 +77,16 @@ billing on their own) — the daily call budget and Cloud Console quota above ar
 actually stop calls; the billing alert is the early-warning signal that either of them
 needs adjusting.
 
-Application-level signal: every rejection from `assertGoogleCallAllowed()` (kill switch
-or daily budget) and every non-2xx Google Places response is logged via the API's
-standard structured logger (`PlacesService`'s `Logger`). Wire your log sink's alerting
-(Cloud Logging, or whatever the deployment uses) to page on a sustained rate of these,
-since a spike usually means either a real outage on Google's side or a bug generating
-duplicate calls.
+Application-level signal: `PlacesService` logs (via its `Logger`) an unexpected
+discovery or details failure (a network error, timeout, or anything other than a
+handled non-2xx/404 response) and a failed autocomplete attempt, including when it's
+Google that failed. It does **not** currently log budget/kill-switch rejections from
+`assertGoogleCallAllowed()`, nor the handled non-2xx cases in discovery and resolve
+(`BadGatewayException`, `NotFoundException`) — those surface only as the HTTP response
+to the caller. If you need those in your alerting pipeline too, add explicit logging
+at the rejection sites before wiring alerts to them; as shipped, wire your log sink's
+alerting (Cloud Logging, or whatever the deployment uses) to the failures above, which
+usually mean either a real outage on Google's side or a bug generating duplicate calls.
 
 ## 5. Emergency shutoff
 
