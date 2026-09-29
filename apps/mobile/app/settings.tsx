@@ -12,6 +12,9 @@ import { Link, useRouter } from "expo-router";
 import { authConfigured } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
 import { deleteAccount } from "@/features/contributions/api";
+import { colors } from "@/theme";
+import { Button } from "@/components/Button";
+import { Card } from "@/components/Card";
 
 export default function SettingsScreen() {
   const { session, loading, error, retrySession, signOut } = useAuth();
@@ -74,61 +77,54 @@ export default function SettingsScreen() {
           >
             <Text style={styles.retryText}>Reintentar</Text>
           </Pressable>
-          <Link href="/my-tacos" style={styles.buttonSecondary}>
-            Mis tacos y favoritos
+          <Link href="/my-tacos" asChild>
+            <Button label="Mis tacos y favoritos" variant="secondary" />
           </Link>
         </View>
       ) : null}
       {loading ? (
-        <ActivityIndicator color="#E95032" style={{ marginTop: 30 }} />
+        <ActivityIndicator color={colors.red} style={{ marginTop: 30 }} />
       ) : session ? (
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <Text style={styles.label}>Sesión iniciada como</Text>
           <Text style={styles.email}>{email}</Text>
           <Text style={styles.body}>
             Tu sesión se guarda de forma segura en este dispositivo y se renueva automáticamente.
           </Text>
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            label="Cerrar sesión"
             onPress={() => void handleSignOut()}
             style={styles.button}
-          >
-            <Text style={styles.buttonText}>Cerrar sesión</Text>
-          </Pressable>
+          />
           <Link href="/admin" style={styles.moderationLink}>
             Abrir panel de moderación
           </Link>
           {deleteError ? <Text style={styles.deleteError}>{deleteError}</Text> : null}
-          <Pressable
-            accessibilityRole="button"
+          <Button
+            label="Eliminar cuenta"
+            variant="danger"
             onPress={confirmDeleteAccount}
+            loading={deleting}
             style={styles.deleteAccountButton}
-            disabled={deleting}
-          >
-            {deleting ? (
-              <ActivityIndicator color="#A92E24" />
-            ) : (
-              <Text style={styles.deleteAccountText}>Eliminar cuenta</Text>
-            )}
-          </Pressable>
-        </View>
+          />
+        </Card>
       ) : (
-        <View style={styles.card}>
+        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Inicia sesión para guardar tus favoritos</Text>
           <Text style={styles.body}>
             Explora Taco Hunt sin cuenta. Para participar, entra o crea una cuenta.
           </Text>
-          <Link href="/sign-in" style={styles.buttonTextLink}>
-            Iniciar sesión
+          <Link href="/sign-in" asChild>
+            <Button label="Iniciar sesión" style={styles.buttonTextLink} />
           </Link>
-          <Link href="/sign-up" style={styles.buttonSecondary}>
-            Crear cuenta
+          <Link href="/sign-up" asChild>
+            <Button label="Crear cuenta" variant="secondary" style={styles.buttonSecondary} />
           </Link>
-        </View>
+        </Card>
       )}
       {session ? null : (
-        <Link href="/my-tacos" style={styles.buttonSecondary}>
-          Mis tacos y favoritos
+        <Link href="/my-tacos" asChild>
+          <Button label="Mis tacos y favoritos" variant="secondary" style={styles.buttonSecondary} />
         </Link>
       )}
       {!authConfigured ? (
@@ -149,86 +145,45 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBF3E6" },
+  screen: { flex: 1, backgroundColor: colors.cream },
   content: { paddingHorizontal: 22, paddingTop: 56, paddingBottom: 40 },
   back: {
-    color: "#276C4F",
+    color: colors.green,
     fontSize: 15,
     fontWeight: "800",
     minHeight: 44,
     textAlignVertical: "center",
     marginBottom: 24,
   },
-  kicker: { color: "#276C4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  title: { color: "#302723", fontSize: 32, fontWeight: "900", marginTop: 10, marginBottom: 22 },
-  card: {
-    padding: 19,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E8DCCB",
-    backgroundColor: "#FFFAF1",
-  },
-  label: { color: "#6C5D53", fontSize: 13, fontWeight: "700" },
-  email: { color: "#302723", fontSize: 17, fontWeight: "900", marginTop: 5 },
-  cardTitle: { color: "#302723", fontSize: 17, lineHeight: 23, fontWeight: "900" },
-  body: { color: "#6C5D53", fontSize: 14, lineHeight: 21, marginTop: 10 },
-  button: {
-    minHeight: 48,
-    marginTop: 22,
-    borderRadius: 14,
-    backgroundColor: "#E95032",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: { color: "#FFFAF1", fontWeight: "900", textAlign: "center" },
-  buttonTextLink: {
-    minHeight: 48,
-    marginTop: 20,
-    paddingTop: 15,
-    borderRadius: 14,
-    overflow: "hidden",
-    backgroundColor: "#E95032",
-    color: "#FFFAF1",
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  buttonSecondary: {
-    minHeight: 48,
-    marginTop: 10,
-    paddingTop: 14,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#DFD0BA",
-    color: "#302723",
-    fontWeight: "900",
-    textAlign: "center",
-  },
+  kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
+  title: { color: colors.ink, fontSize: 32, fontWeight: "900", marginTop: 10, marginBottom: 22 },
+  card: { padding: 19 },
+  label: { color: colors.muted, fontSize: 13, fontWeight: "700" },
+  email: { color: colors.ink, fontSize: 17, fontWeight: "900", marginTop: 5 },
+  cardTitle: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: "900" },
+  body: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 10 },
+  button: { marginTop: 22 },
+  buttonTextLink: { marginTop: 20 },
+  buttonSecondary: { marginTop: 10 },
   notice: {
     lineHeight: 21,
     marginTop: 15,
     padding: 15,
     borderRadius: 14,
-    backgroundColor: "#F9DEAE",
+    backgroundColor: colors.tacoTile,
   },
   retry: { marginTop: 10, paddingVertical: 8 },
-  retryText: { color: "#276C4F", fontWeight: "900" },
+  retryText: { color: colors.green, fontWeight: "900" },
   footer: { marginTop: 34 },
-  moderationLink: { color: "#276C4F", fontWeight: "900", textAlign: "center", marginTop: 16 },
-  deleteAccountButton: {
-    minHeight: 44,
-    marginTop: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteAccountText: { color: "#A92E24", fontWeight: "900", fontSize: 13 },
+  moderationLink: { color: colors.green, fontWeight: "900", textAlign: "center", marginTop: 16 },
+  deleteAccountButton: { marginTop: 22 },
   deleteError: {
-    color: "#A92E24",
-    backgroundColor: "#FBE2DC",
+    color: colors.dangerText,
+    backgroundColor: colors.dangerBg,
     padding: 12,
     borderRadius: 10,
     marginTop: 16,
     lineHeight: 20,
   },
-  footerTitle: { color: "#302723", fontSize: 17, fontWeight: "900" },
+  footerTitle: { color: colors.ink, fontSize: 17, fontWeight: "900" },
 });

@@ -12,6 +12,7 @@ import {
 import { Link, useRouter } from "expo-router";
 import { authConfigured, supabase } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
+import { colors } from "@/theme";
 
 export default function UpdatePasswordScreen() {
   const { session, loading, error: sessionError, retrySession } = useAuth();
@@ -55,7 +56,7 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.kicker}>RECUPERAR ACCESO</Text>
         <Text style={styles.title}>Elige una contraseña nueva</Text>
         {loading ? (
-          <ActivityIndicator color="#E95032" style={{ marginTop: 26 }} />
+          <ActivityIndicator color={colors.red} style={{ marginTop: 26 }} />
         ) : session ? (
           <>
             <Text style={styles.body}>
@@ -87,7 +88,7 @@ export default function UpdatePasswordScreen() {
               style={[styles.button, busy && styles.disabled]}
             >
               {busy ? (
-                <ActivityIndicator color="#FFFAF1" />
+                <ActivityIndicator color={colors.paper} />
               ) : (
                 <Text style={styles.buttonText}>Guardar contraseña</Text>
               )}
@@ -136,28 +137,28 @@ function Field({ label, ...props }: React.ComponentProps<typeof TextInput> & { l
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBF3E6", paddingHorizontal: 24, paddingTop: 56 },
+  screen: { flex: 1, backgroundColor: colors.cream, paddingHorizontal: 24, paddingTop: 56 },
   back: {
-    color: "#276C4F",
+    color: colors.green,
     fontWeight: "800",
     fontSize: 15,
     minHeight: 44,
     textAlignVertical: "center",
   },
   content: { marginTop: 48 },
-  kicker: { color: "#276C4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
-  title: { marginTop: 12, color: "#302723", fontSize: 30, lineHeight: 37, fontWeight: "900" },
-  body: { marginTop: 12, color: "#6C5D53", fontSize: 15, lineHeight: 22 },
+  kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
+  title: { marginTop: 12, color: colors.ink, fontSize: 30, lineHeight: 37, fontWeight: "900" },
+  body: { marginTop: 12, color: colors.muted, fontSize: 15, lineHeight: 22 },
   field: { marginTop: 20 },
-  label: { color: "#302723", fontSize: 13, fontWeight: "800", marginBottom: 7 },
+  label: { color: colors.ink, fontSize: 13, fontWeight: "800", marginBottom: 7 },
   input: {
     height: 52,
     borderWidth: 1,
-    borderColor: "#DFD0BA",
+    borderColor: colors.lineSoft,
     borderRadius: 14,
-    backgroundColor: "#FFFAF1",
+    backgroundColor: colors.paper,
     paddingHorizontal: 15,
-    color: "#302723",
+    color: colors.ink,
     fontSize: 15,
   },
   error: { color: "#B3261E", marginTop: 14, lineHeight: 20 },
@@ -165,13 +166,13 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: 20,
     borderRadius: 15,
-    backgroundColor: "#E95032",
+    backgroundColor: colors.red,
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonText: { color: "#FFFAF1", fontSize: 15, fontWeight: "900" },
+  buttonText: { color: colors.paper, fontSize: 15, fontWeight: "900" },
   disabled: { opacity: 0.65 },
   retry: { marginTop: 18, minHeight: 44, justifyContent: "center" },
-  retryText: { color: "#276C4F", fontWeight: "900" },
-  link: { color: "#276C4F", fontWeight: "900", marginTop: 18 },
+  retryText: { color: colors.green, fontWeight: "900" },
+  link: { color: colors.green, fontWeight: "900", marginTop: 18 },
 });

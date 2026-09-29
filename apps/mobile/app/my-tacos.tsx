@@ -17,16 +17,7 @@ import {
   type Favorite,
   type OwnReview,
 } from "@/features/contributions/api";
-
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  cream: "#FBF3E6",
-  line: "#E8DCCB",
-};
+import { colors } from "@/theme";
 
 export default function MyTacosScreen() {
   const { session } = useAuth();
@@ -171,7 +162,7 @@ const styles = StyleSheet.create({
   score: { color: colors.red, fontSize: 21 },
   comment: { color: colors.ink, marginTop: 7, lineHeight: 20 },
   empty: { color: colors.muted, padding: 16, backgroundColor: colors.paper, borderRadius: 14 },
-  notice: { padding: 14, backgroundColor: "#F9DEAE", borderRadius: 14, marginTop: 18 },
+  notice: { padding: 14, backgroundColor: colors.tacoTile, borderRadius: 14, marginTop: 18 },
   link: { color: colors.green, fontWeight: "900", marginTop: 8 },
   primaryText: {
     color: "white",

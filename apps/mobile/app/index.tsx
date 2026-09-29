@@ -15,6 +15,8 @@ import { Link, type Href, useRouter } from "expo-router";
 import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
+import { colors } from "@/theme";
+import { Chip } from "@/components/Chip";
 
 type TacoType = { id: string; slug: string; nameEs: string };
 type Taco = {
@@ -45,16 +47,6 @@ const AREAS: Area[] = [
   { label: "Guadalupe", north: 25.72, south: 25.62, east: -100.15, west: -100.27 },
   { label: "Apodaca", north: 25.82, south: 25.72, east: -100.08, west: -100.23 },
 ];
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  line: "#DFD0BA",
-  cream: "#FBF3E6",
-};
-
 function clipAreaToApiCoverage(area: Area): Area | null {
   const north = Math.min(API_COVERAGE.north, area.north);
   const south = Math.max(API_COVERAGE.south, area.south);
@@ -278,20 +270,13 @@ export default function ExploreScreen() {
                 style={styles.areaOptions}
               >
                 {AREAS.map((option) => (
-                  <Pressable
-                    key={option.label}
-                    onPress={() => chooseArea(option)}
-                    style={[styles.areaChip, area.label === option.label && styles.selectedChip]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        area.label === option.label && styles.selectedChipText,
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </Pressable>
+                  <View key={option.label} style={styles.areaChipSpacing}>
+                    <Chip
+                      label={option.label}
+                      selected={area.label === option.label}
+                      onPress={() => chooseArea(option)}
+                    />
+                  </View>
                 ))}
               </ScrollView>
             )}
@@ -302,28 +287,14 @@ export default function ExploreScreen() {
               style={styles.typeRow}
               contentContainerStyle={{ gap: 8 }}
             >
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: !activeType }}
-                onPress={() => chooseType(null)}
-                style={[styles.typeChip, !activeType && styles.selectedChip]}
-              >
-                <Text style={[styles.chipText, !activeType && styles.selectedChipText]}>Todos</Text>
-              </Pressable>
+              <Chip label="Todos" selected={!activeType} onPress={() => chooseType(null)} />
               {types.map((type) => (
-                <Pressable
+                <Chip
                   key={type.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: activeType?.id === type.id }}
+                  label={type.nameEs}
+                  selected={activeType?.id === type.id}
                   onPress={() => chooseType(activeType?.id === type.id ? null : type)}
-                  style={[styles.typeChip, activeType?.id === type.id && styles.selectedChip]}
-                >
-                  <Text
-                    style={[styles.chipText, activeType?.id === type.id && styles.selectedChipText]}
-                  >
-                    {type.nameEs}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </ScrollView>
             <View style={styles.sectionRow}>
@@ -483,7 +454,7 @@ const styles = StyleSheet.create({
   search: {
     marginTop: 20,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     borderRadius: 15,
     backgroundColor: colors.paper,
     paddingHorizontal: 16,
@@ -500,11 +471,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 13,
   },
-  locationText: { color: "white", fontWeight: "800", fontSize: 12 },
+  locationText: { color: colors.white, fontWeight: "800", fontSize: 12 },
   areaButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     borderRadius: 13,
     minHeight: 44,
     alignItems: "center",
@@ -513,16 +484,7 @@ const styles = StyleSheet.create({
   },
   areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 },
   areaOptions: { marginTop: 9, maxHeight: 50 },
-  areaChip: {
-    marginRight: 8,
-    paddingHorizontal: 13,
-    height: 44,
-    justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: colors.paper,
-    borderColor: colors.line,
-    borderWidth: 1,
-  },
+  areaChipSpacing: { marginRight: 8 },
   filterLabel: {
     marginTop: 20,
     marginBottom: 9,
@@ -532,18 +494,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   typeRow: { maxHeight: 50 },
-  typeChip: {
-    paddingHorizontal: 14,
-    height: 44,
-    justifyContent: "center",
-    borderRadius: 18,
-    backgroundColor: colors.paper,
-    borderColor: colors.line,
-    borderWidth: 1,
-  },
-  chipText: { color: colors.ink, fontWeight: "700", fontSize: 12 },
-  selectedChip: { backgroundColor: colors.ink, borderColor: colors.ink },
-  selectedChipText: { color: "white" },
   sectionRow: {
     marginTop: 23,
     marginBottom: 10,
@@ -556,7 +506,7 @@ const styles = StyleSheet.create({
   modeRow: {
     flexDirection: "row",
     padding: 3,
-    backgroundColor: "#EFE4D5",
+    backgroundColor: colors.segmentTrack,
     borderRadius: 12,
     marginBottom: 12,
   },
@@ -575,7 +525,7 @@ const styles = StyleSheet.create({
     padding: 13,
     marginBottom: 10,
     borderRadius: 18,
-    borderColor: "#E8DCCB",
+    borderColor: colors.line,
     borderWidth: 1,
     backgroundColor: colors.paper,
     flexDirection: "row",
@@ -586,7 +536,7 @@ const styles = StyleSheet.create({
     width: 57,
     height: 57,
     borderRadius: 15,
-    backgroundColor: "#F9DEAE",
+    backgroundColor: colors.tacoTile,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -605,7 +555,7 @@ const styles = StyleSheet.create({
   map: {
     height: 245,
     borderRadius: 18,
-    backgroundColor: "#E8E6D7",
+    backgroundColor: colors.mapGround,
     overflow: "hidden",
     marginBottom: 11,
   },
@@ -615,7 +565,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 18,
     backgroundColor: colors.paper,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -650,5 +600,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  loadMoreText: { color: "white", fontWeight: "800", fontSize: 13 },
+  loadMoreText: { color: colors.white, fontWeight: "800", fontSize: 13 },
 });
