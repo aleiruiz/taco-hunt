@@ -268,11 +268,11 @@
     },
     "T45": {
       "pr": 34,
-      "headSha": "7b53472",
+      "headSha": "af2f308",
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": [],
-      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts."
+      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. First push (7b53472) failed CI typecheck: theme.ts avatar map was missing aguacate/horchata, BottomSheet.tsx used the removed StyleSheet.absoluteFillObject. Fixed and pushed as af2f308; awaiting CI + CodeRabbit review of the new head."
     },
     "T32": {
       "status": "blocked",
