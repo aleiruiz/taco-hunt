@@ -284,11 +284,11 @@
     },
     "T46": {
       "pr": 35,
-      "headSha": "1af84a1",
-      "coderabbitReviewedSha": null,
-      "status": "ready_for_review",
+      "headSha": "5b61874",
+      "coderabbitReviewedSha": "5b61874",
+      "status": "merged",
       "dependsOn": ["T45"],
-      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. T45 merged (5b68e74); rebased --onto origin/main and retargeted PR #35 to base=main. CI (Lint/types/format, GitGuardian) green on 1af84a1; CodeRabbit review in progress. Data needs: zone chips still use today's area bounding-box search pending T33/T34's camera-shortcut viewport loading; sparkle badge uses existing reviewCount."
+      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. CodeRabbit found 2 minor accessibility findings (summary chip needed an action+zone accessibilityLabel; the filter-panel dismiss overlay needed accessibilityRole=\"button\") - fixed as 5b61874, which came back with no actionable findings. Merged as 39cca9a1."
     },
     "T35": {
       "status": "blocked",
@@ -308,12 +308,12 @@
       "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. T45 merged (5b68e74); rebased --onto origin/main and retargeted PR #36 to base=main. CI (Lint/types/format, GitGuardian) green on 7027b50; CodeRabbit review in progress. Data needs: opening-time chips have no backing field yet (local UI state only); duplicate-match card only surfaces after a failed submit (today's dedupe check is server-side on POST, not pre-submission); the dashed pending-pin-on-map behavior isn't wired into index.tsx."
     },
     "T48": {
-      "pr": null,
-      "headSha": null,
+      "pr": 37,
+      "headSha": "f536170",
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49."
+      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. Branched directly off main after T45 merged. CI green; awaiting CodeRabbit."
     },
     "T36": {
       "status": "blocked",
