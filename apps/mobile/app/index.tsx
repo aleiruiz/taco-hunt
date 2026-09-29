@@ -93,6 +93,12 @@ export default function ExploreScreen() {
   const { session } = useAuth();
   const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
   const sheetAnimRef = useRef(new Animated.Value(0)).current;
+  const selectedSpotIdRef = useRef<string | null>(null);
+
+  // Keep ref synchronized with current state to avoid closure issues in async callbacks
+  useEffect(() => {
+    selectedSpotIdRef.current = selectedSpotId;
+  }, [selectedSpotId]);
 
   const loadTypes = useCallback(async () => {
     try {
@@ -229,67 +235,66 @@ export default function ExploreScreen() {
     void load(query, activeType, next);
   };
 
-  const handleMarkerPress = useCallback(
-    async (spotId: string) => {
-      setSelectedSpotId(spotId);
-      setSelectedSpot(null);
-      setSpotError("");
-      setSpotLoading(true);
+  const handleMarkerPress = useCallback(async (spotId: string) => {
+    setSelectedSpotId(spotId);
+    selectedSpotIdRef.current = spotId;
+    setSelectedSpot(null);
+    setSpotError("");
+    setSpotLoading(true);
 
-      // Start opening animation immediately
-      Animated.timing(sheetAnimRef, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
+    // Start opening animation immediately
+    Animated.timing(sheetAnimRef, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
 
-      const cached = spotCacheRef.current.get(spotId);
-      if (cached) {
-        setSelectedSpot(cached);
+    const cached = spotCacheRef.current.get(spotId);
+    if (cached) {
+      setSelectedSpot(cached);
+      setSpotLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
+      if (!response.ok) throw new Error("Failed to fetch spot");
+      const spot = (await response.json()) as SpotDetail;
+
+      // Only update state if this spot is still the selected one (prevent stale responses)
+      if (selectedSpotIdRef.current === spotId) {
+        spotCacheRef.current.set(spotId, spot);
+        setSelectedSpot(spot);
+      }
+    } catch {
+      // Only show error if this spot is still the selected one
+      if (selectedSpotIdRef.current === spotId) {
+        setSpotError("No se pudo cargar la información del puesto. Intenta de nuevo.");
+      }
+    } finally {
+      // Only clear loading if this spot is still the selected one
+      if (selectedSpotIdRef.current === spotId) {
         setSpotLoading(false);
-        return;
       }
-
-      try {
-        const response = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
-        if (!response.ok) throw new Error("Failed to fetch spot");
-        const spot = (await response.json()) as SpotDetail;
-
-        // Only update state if this spot is still the selected one (prevent stale responses)
-        if (selectedSpotId === spotId) {
-          spotCacheRef.current.set(spotId, spot);
-          setSelectedSpot(spot);
-        }
-      } catch {
-        // Only show error if this spot is still the selected one
-        if (selectedSpotId === spotId) {
-          setSpotError("No se pudo cargar la información del puesto. Intenta de nuevo.");
-        }
-      } finally {
-        // Only clear loading if this spot is still the selected one
-        if (selectedSpotId === spotId) {
-          setSpotLoading(false);
-        }
-      }
-    },
-    [selectedSpotId],
-  );
+    }
+  }, []);
 
   const closeSheet = useCallback(() => {
-    const closingSpotId = selectedSpotId;
+    const closingSpotId = selectedSpotIdRef.current;
     Animated.timing(sheetAnimRef, {
       toValue: 0,
       duration: 300,
       useNativeDriver: false,
     }).start(({ finished }) => {
       // Only clear state if animation finished and this spot is still being closed
-      if (finished && selectedSpotId === closingSpotId) {
+      // (i.e., the user hasn't selected a different marker during the animation)
+      if (finished && selectedSpotIdRef.current === closingSpotId) {
         setSelectedSpotId(null);
         setSelectedSpot(null);
         setSpotError("");
       }
     });
-  }, [selectedSpotId]);
+  }, []);
 
   const CustomMarkerContent = () => (
     <View
