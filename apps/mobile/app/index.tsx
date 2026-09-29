@@ -65,7 +65,7 @@ export default function ExploreScreen() {
   const [activeType, setActiveType] = useState<TacoType | null>(null);
   const [area, setArea] = useState(AREAS[0]);
   const [areaPicker, setAreaPicker] = useState(false);
-  const [mode, setMode] = useState<"lista" | "mapa">("lista");
+  const [mode, setMode] = useState<"lista" | "mapa">("mapa");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -208,10 +208,180 @@ export default function ExploreScreen() {
     void load(query, activeType, next);
   };
 
+  const modeToggle = (
+    <View style={styles.modeRow}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: mode === "lista" }}
+        onPress={() => setMode("lista")}
+        style={[styles.modeButton, mode === "lista" && styles.modeSelected]}
+      >
+        <Ionicons
+          name="list"
+          size={14}
+          color={mode === "lista" ? colors.ink : colors.muted}
+          style={styles.icon}
+        />
+        <Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>Lista</Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: mode === "mapa" }}
+        onPress={() => setMode("mapa")}
+        style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}
+      >
+        <Ionicons
+          name="map"
+          size={14}
+          color={mode === "mapa" ? colors.ink : colors.muted}
+          style={styles.icon}
+        />
+        <Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>Mapa</Text>
+      </Pressable>
+    </View>
+  );
+
+  const filterControls = (
+    <>
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        onSubmitEditing={() => void load()}
+        placeholder="Busca un puesto o una colonia"
+        placeholderTextColor="#8A7A6E"
+        returnKeyType="search"
+        style={styles.search}
+        accessibilityLabel="Buscar puesto o colonia"
+      />
+      <View style={styles.controls}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void locate()}
+          style={styles.locationButton}
+        >
+          {!locating && (
+            <Ionicons name="navigate" size={14} color={colors.white} style={styles.icon} />
+          )}
+          <Text style={styles.locationText}>{locating ? "Buscando…" : "Usar mi ubicación"}</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: areaPicker }}
+          onPress={() => setAreaPicker((open) => !open)}
+          style={styles.areaButton}
+        >
+          <Text style={styles.areaText}>{area.label}</Text>
+          <Ionicons name="chevron-down" size={14} color={colors.ink} />
+        </Pressable>
+      </View>
+      {areaPicker && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.areaOptions}>
+          {AREAS.map((option) => (
+            <View key={option.label} style={styles.areaChipSpacing}>
+              <Chip
+                label={option.label}
+                selected={area.label === option.label}
+                onPress={() => chooseArea(option)}
+              />
+            </View>
+          ))}
+        </ScrollView>
+      )}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.typeRow}
+        contentContainerStyle={{ gap: 8 }}
+      >
+        <Chip label="Todos" selected={!activeType} onPress={() => chooseType(null)} />
+        {types.map((type) => (
+          <Chip
+            key={type.id}
+            label={type.nameEs}
+            selected={activeType?.id === type.id}
+            onPress={() => chooseType(activeType?.id === type.id ? null : type)}
+          />
+        ))}
+      </ScrollView>
+    </>
+  );
+
+  if (mode === "mapa") {
+    return (
+      <View style={styles.screen}>
+        <MapView
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          style={StyleSheet.absoluteFill}
+          initialRegion={mapRegion}
+          region={mapRegion}
+          accessibilityLabel="Mapa de puestos en la zona seleccionada"
+          showsUserLocation={false}
+        >
+          {items.map((item) => (
+            <Marker
+              key={item.id}
+              coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+              title={item.name}
+              description={item.neighborhood}
+              onCalloutPress={() =>
+                router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)
+              }
+            />
+          ))}
+        </MapView>
+        <View style={styles.mapOverlay} pointerEvents="box-none">
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={styles.mapOverlayScroll}
+            contentContainerStyle={styles.mapOverlayContent}
+          >
+            <View style={styles.headerRowFloating}>
+              <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
+              <Link href="/settings" style={styles.accountLink}>
+                {session ? "Mi cuenta" : "Entrar"}
+              </Link>
+            </View>
+            {filterControls}
+            {modeToggle}
+          </ScrollView>
+        </View>
+        {loading && (
+          <View style={styles.mapCenterState} pointerEvents="none">
+            <ActivityIndicator color={colors.red} />
+          </View>
+        )}
+        {!loading && error ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void load()}
+            style={styles.mapErrorCard}
+          >
+            <Text style={styles.emptyTitle}>Sin conexión</Text>
+            <Text style={styles.muted}>{error} Toca para reintentar.</Text>
+          </Pressable>
+        ) : null}
+        {!loading && !error && items.length === 0 && (
+          <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}>
+            <Ionicons name="location-outline" size={42} color={colors.red} />
+            <Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text>
+            <Text style={styles.muted}>
+              Prueba otra zona o quita el filtro de taco para ver más lugares.
+            </Text>
+          </View>
+        )}
+        {!loading && !error && items.length > 0 && (
+          <Text style={styles.mapCaption}>
+            Toca un marcador para ver el puesto · {items.length} puestos
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       <FlatList
-        data={mode === "lista" ? items : []}
+        data={items}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContent}
@@ -235,150 +405,12 @@ export default function ExploreScreen() {
             <Link href="/propose" style={styles.proposeLink}>
               ¿No encuentras tu taquería? Propónla
             </Link>
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              onSubmitEditing={() => void load()}
-              placeholder="Busca un puesto o una colonia"
-              placeholderTextColor="#8A7A6E"
-              returnKeyType="search"
-              style={styles.search}
-              accessibilityLabel="Buscar puesto o colonia"
-            />
-            <View style={styles.controls}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => void locate()}
-                style={styles.locationButton}
-              >
-                {!locating && (
-                  <Ionicons name="navigate" size={14} color={colors.white} style={styles.icon} />
-                )}
-                <Text style={styles.locationText}>
-                  {locating ? "Buscando…" : "Usar mi ubicación"}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ expanded: areaPicker }}
-                onPress={() => setAreaPicker((open) => !open)}
-                style={styles.areaButton}
-              >
-                <Text style={styles.areaText}>{area.label}</Text>
-                <Ionicons name="chevron-down" size={14} color={colors.ink} />
-              </Pressable>
-            </View>
-            {areaPicker && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.areaOptions}
-              >
-                {AREAS.map((option) => (
-                  <View key={option.label} style={styles.areaChipSpacing}>
-                    <Chip
-                      label={option.label}
-                      selected={area.label === option.label}
-                      onPress={() => chooseArea(option)}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-            <Text style={styles.filterLabel}>SE TE ANTOJA</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.typeRow}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              <Chip label="Todos" selected={!activeType} onPress={() => chooseType(null)} />
-              {types.map((type) => (
-                <Chip
-                  key={type.id}
-                  label={type.nameEs}
-                  selected={activeType?.id === type.id}
-                  onPress={() => chooseType(activeType?.id === type.id ? null : type)}
-                />
-              ))}
-            </ScrollView>
+            {filterControls}
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Puestos para descubrir</Text>
               <Text style={styles.count}>{items.length} lugares</Text>
             </View>
-            <View style={styles.modeRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === "lista" }}
-                onPress={() => setMode("lista")}
-                style={[styles.modeButton, mode === "lista" && styles.modeSelected]}
-              >
-                <Ionicons
-                  name="list"
-                  size={14}
-                  color={mode === "lista" ? colors.ink : colors.muted}
-                  style={styles.icon}
-                />
-                <Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>
-                  Lista
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: mode === "mapa" }}
-                onPress={() => setMode("mapa")}
-                style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}
-              >
-                <Ionicons
-                  name="map"
-                  size={14}
-                  color={mode === "mapa" ? colors.ink : colors.muted}
-                  style={styles.icon}
-                />
-                <Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>
-                  Mapa
-                </Text>
-              </Pressable>
-            </View>
-            {mode === "mapa" && !error && !loading && items.length > 0 && (
-              <View accessibilityLabel="Mapa de puestos" style={styles.map}>
-                <MapView
-                  provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-                  style={StyleSheet.absoluteFill}
-                  initialRegion={mapRegion}
-                  region={mapRegion}
-                  accessibilityLabel="Mapa de puestos en la zona seleccionada"
-                  showsUserLocation={false}
-                >
-                  {items.map((item) => (
-                    <Marker
-                      key={item.id}
-                      coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-                      title={item.name}
-                      description={item.neighborhood}
-                      onCalloutPress={() =>
-                        router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)
-                      }
-                    />
-                  ))}
-                </MapView>
-                <Text style={styles.mapCaption}>
-                  Toca un marcador para ver el puesto · {items.length} puestos
-                </Text>
-              </View>
-            )}
-            {!loading && !error && mode === "mapa" && items.length === 0 && (
-              <View
-                accessibilityLabel="Sin puestos para mostrar en el mapa"
-                style={styles.mapEmpty}
-              >
-                <Ionicons name="location-outline" size={42} color={colors.red} />
-                <Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text>
-                <Text style={styles.muted}>
-                  Prueba otra zona o quita el filtro de taco para ver más lugares.
-                </Text>
-              </View>
-            )}
+            {modeToggle}
             {loading && <ActivityIndicator color={colors.red} style={{ marginTop: 28 }} />}
             {!loading && error ? (
               <Pressable
@@ -393,7 +425,7 @@ export default function ExploreScreen() {
           </>
         }
         ListEmptyComponent={
-          mode === "lista" && !loading && !error ? (
+          !loading && !error ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Aún no hay puestos en esta búsqueda</Text>
               <Text style={styles.muted}>Prueba con otra colonia o vuelve más tarde.</Text>
@@ -449,6 +481,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  headerRowFloating: {
+    minHeight: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   accountLink: { color: colors.green, fontSize: 13, fontWeight: "900", paddingVertical: 10 },
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
@@ -506,15 +545,7 @@ const styles = StyleSheet.create({
   areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 },
   areaOptions: { marginTop: 9, maxHeight: 50 },
   areaChipSpacing: { marginRight: 8 },
-  filterLabel: {
-    marginTop: 20,
-    marginBottom: 9,
-    color: colors.muted,
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1.2,
-  },
-  typeRow: { maxHeight: 50 },
+  typeRow: { maxHeight: 50, marginTop: 14 },
   sectionRow: {
     marginTop: 23,
     marginBottom: 10,
@@ -530,6 +561,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.segmentTrack,
     borderRadius: 12,
     marginBottom: 12,
+    marginTop: 12,
   },
   modeButton: {
     flex: 1,
@@ -573,16 +605,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyTitle: { color: colors.ink, fontWeight: "800", fontSize: 16, textAlign: "center" },
-  map: {
-    height: 245,
+  mapOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 56,
+    paddingHorizontal: 16,
+    maxHeight: "70%",
+  },
+  mapOverlayScroll: {
+    backgroundColor: colors.paper,
     borderRadius: 18,
-    backgroundColor: colors.mapGround,
-    overflow: "hidden",
-    marginBottom: 11,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    maxHeight: "100%",
+  },
+  mapOverlayContent: { padding: 14 },
+  mapCenterState: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mapErrorCard: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 24,
+    borderRadius: 18,
+    backgroundColor: colors.paper,
+    padding: 20,
+    alignItems: "center",
   },
   mapEmpty: {
-    height: 245,
-    marginBottom: 11,
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 24,
     padding: 24,
     borderRadius: 18,
     backgroundColor: colors.paper,
@@ -601,15 +664,15 @@ const styles = StyleSheet.create({
   },
   mapCaption: {
     position: "absolute",
-    bottom: 9,
-    left: 12,
+    bottom: 24,
+    alignSelf: "center",
     color: colors.muted,
     fontSize: 10,
     fontWeight: "700",
     backgroundColor: colors.paper,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   loadMore: {
     minHeight: 44,
