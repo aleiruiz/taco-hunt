@@ -18,7 +18,7 @@
    "branch": "codex/T24-places-cost-controls",
    "baseCommit": "2f672ba",
    "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. Scope: restricted keys, quotas, dedup, alerts, emergency shutoff for Google Places calls (T17/T21/T23's server-side integrations)."
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. PR #26 opened at a1bc0df, CI running, auto_fix monitor on. Not merged yet."
   }
  ],
  "tasks": {
@@ -236,14 +236,14 @@
    "coderabbitReviewedSha": null
   },
   "T24": {
-   "status": "in_progress",
+   "status": "in_review",
    "dependsOn": [
     "T17",
     "T21"
    ],
-   "note": "T17 and T21 both merged; picked up by the orchestrator 2026-09-29T03:05Z in worktree ../taco-hunt-worktrees/T24-places-cost-controls, branch codex/T24-places-cost-controls, base main@2f672ba.",
-   "pr": null,
-   "headSha": null,
+   "note": "Implemented fresh by the orchestrator: a global daily Google Places call budget and an emergency kill switch (GOOGLE_PLACES_KILL_SWITCH, GOOGLE_PLACES_DAILY_CALL_LIMIT) enforced in PlacesService before every outbound call (discovery/autocomplete/resolve) and in T23's refresh-place-candidates.ts script. Restricted-key setup, Cloud Console quotas, billing alerts and existing dedup (T17's place_id unique index, T23's report-tag dedup) documented in docs/google-places-controls.md rather than implemented, since that part of the task's scope is infrastructure configuration outside this repo. Could not run pnpm typecheck/lint/format in this environment (pnpm not installed, no node_modules) — flagged in the PR.",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/26",
+   "headSha": "a1bc0df4043fac9feaa2e10d58ceacd9f004096b",
    "coderabbitReviewedSha": null
   },
   "T14": {
