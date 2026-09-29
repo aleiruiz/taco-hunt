@@ -167,10 +167,10 @@ export class PlacesService {
     if (!trimmed) throw new BadRequestException("placeId requerido");
     this.limits.consume("places-resolve-user", profileId, 20, 60_000);
 
-    this.assertGoogleCallAllowed();
-
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+
+    this.assertGoogleCallAllowed();
 
     try {
       const endpoint =
