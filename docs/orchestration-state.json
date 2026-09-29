@@ -275,7 +275,7 @@
       "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. CodeRabbit found 7 actionable issues across two review passes (SVG avatars rendering blank, BottomSheet animation/measurement/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - all fixed; final head cc46dc4 was CI-green with no actionable findings left (the only change on that commit, pnpm-lock.yaml, is excluded from CodeRabbit review by its default path filters). Merged by the owner as 5b68e74."
     },
     "T32": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T45"],
       "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40.",
       "pr": null,
@@ -316,7 +316,7 @@
       "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. CodeRabbit round 1 (f536170) found 2 accessibility issues (report IconButton labeled 'Más opciones'; PhotoTile had no accessibilityLabel/role) - fixed as d30e9e3. Round 2 found the visible caption still didn't say the tile was a stand-in - fixed as dbb25ef, which came back clean (no new comments, CodeRabbit check passed). Merged as 55b1fa5."
     },
     "T36": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T45"],
       "note": "Phase A. Review photo upload UI on existing T11 API (expo-image-picker); end-to-end check after T31.",
       "pr": null,
@@ -350,7 +350,7 @@
       "coderabbitReviewedSha": null
     },
     "T38": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T45"],
       "note": "Phase A. Admin stand-photo moderation UI with fixtures; API in T37.",
       "pr": null,
