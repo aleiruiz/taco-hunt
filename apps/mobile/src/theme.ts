@@ -52,6 +52,8 @@ export const sizes = {
   avatar24: 24,
   avatar40: 40,
   avatar72: 72,
+  headerPill: 52,
+  locateButton: 48,
 } as const;
 
 export const radii = {

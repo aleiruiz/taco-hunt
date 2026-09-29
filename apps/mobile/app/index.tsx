@@ -18,9 +18,13 @@ import { useAuth } from "@/auth/provider";
 import ClusteredMapView from "react-native-map-clustering";
 import { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
-import { colors, spacing, radii } from "@/theme";
+import { colors, spacing, radii, sizes, elevation, typography } from "@/theme";
 import { Chip } from "@/components/Chip";
 import { Card } from "@/components/Card";
+import { Button } from "@/components/Button";
+import { IconButton } from "@/components/IconButton";
+import { Avatar } from "@/components/Avatar";
+import { getFixtureUser } from "@/data/auth";
 
 type TacoType = { id: string; slug: string; nameEs: string };
 type Taco = {
@@ -81,7 +85,7 @@ export default function ExploreScreen() {
   const [query, setQuery] = useState("");
   const [activeType, setActiveType] = useState<TacoType | null>(null);
   const [area, setArea] = useState(AREAS[0]);
-  const [areaPicker, setAreaPicker] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [mode, setMode] = useState<"lista" | "mapa">("mapa");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -234,8 +238,12 @@ export default function ExploreScreen() {
   };
   const chooseArea = (next: Area) => {
     setArea(next);
-    setAreaPicker(false);
     void load(query, activeType, next);
+  };
+  const clearFilters = () => {
+    setQuery("");
+    setActiveType(null);
+    void load("", null, area);
   };
 
   const handleMarkerPress = useCallback(async (spotId: string) => {
@@ -312,23 +320,16 @@ export default function ExploreScreen() {
     return true;
   }, []);
 
-  const CustomMarkerContent = () => (
-    <View
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: colors.red,
-        alignItems: "center",
-        justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-        elevation: 5,
-      }}
-    >
-      <Text style={{ fontSize: 24 }}>🌮</Text>
+  const CustomMarkerContent = ({ hasReviews }: { hasReviews: boolean }) => (
+    <View style={styles.markerWrap}>
+      <View style={styles.marker}>
+        <Text style={{ fontSize: 24 }}>🌮</Text>
+      </View>
+      {!hasReviews && (
+        <View style={styles.markerSparkle} accessibilityLabel="Sin reseñas todavía">
+          <Ionicons name="sparkles" size={12} color={colors.paper} />
+        </View>
+      )}
     </View>
   );
 
@@ -365,68 +366,145 @@ export default function ExploreScreen() {
     </View>
   );
 
-  const filterControls = (
-    <>
+  const filterCount = activeType ? 1 : 0;
+
+  const searchPill = (
+    <View style={styles.searchPill}>
+      <Ionicons name="search" size={18} color={colors.muted} />
       <TextInput
         value={query}
         onChangeText={setQuery}
         onSubmitEditing={() => void load()}
-        placeholder="Busca un puesto o una colonia"
-        placeholderTextColor="#8A7A6E"
+        placeholder="Busca un puesto o colonia"
+        placeholderTextColor={colors.placeholder}
         returnKeyType="search"
-        style={styles.search}
+        style={styles.searchPillInput}
         accessibilityLabel="Buscar puesto o colonia"
       />
-      <View style={styles.controls}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => void locate()}
-          style={styles.locationButton}
-        >
-          {!locating && (
-            <Ionicons name="navigate" size={14} color={colors.white} style={styles.icon} />
-          )}
-          <Text style={styles.locationText}>{locating ? "Buscando…" : "Usar mi ubicación"}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ expanded: areaPicker }}
-          onPress={() => setAreaPicker((open) => !open)}
-          style={styles.areaButton}
-        >
-          <Text style={styles.areaText}>{area.label}</Text>
-          <Ionicons name="chevron-down" size={14} color={colors.ink} />
-        </Pressable>
+      <View style={styles.pillDivider} />
+      <IconButton
+        icon="options-outline"
+        label="Filtros"
+        size={36}
+        color={colors.ink}
+        badge={filterCount}
+        accessibilityState={{ expanded: panelOpen }}
+        onPress={() => setPanelOpen((open) => !open)}
+      />
+    </View>
+  );
+
+  const profileButton = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={session ? "Mi cuenta" : "Entrar"}
+      style={styles.profileButton}
+      onPress={() => router.push("/settings")}
+    >
+      {session ? (
+        <Avatar size={40} preset={getFixtureUser().avatarPreset} />
+      ) : (
+        <Ionicons name="person" size={22} color={colors.ink} />
+      )}
+    </Pressable>
+  );
+
+  const summaryRow = (
+    <View style={styles.summaryRow}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Abrir filtros. Zona: ${area.label}`}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+        style={styles.summaryChip}
+        onPress={() => setPanelOpen(true)}
+      >
+        <Text style={styles.summaryChipText} numberOfLines={1}>
+          {area.label}
+          {activeType ? ` · ${activeType.nameEs}` : ""}
+        </Text>
+        <Ionicons name="chevron-down" size={12} color={colors.ink} />
+      </Pressable>
+      <View style={styles.countPill}>
+        <Text style={styles.countPillText}>{items.length} puestos</Text>
       </View>
-      {areaPicker && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.areaOptions}>
+    </View>
+  );
+
+  const filterPanel = panelOpen && (
+    <>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar filtros"
+        onPress={() => setPanelOpen(false)}
+      />
+      <View style={styles.panel}>
+        <View style={styles.panelHeader}>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={() => void load()}
+            placeholder="Busca un puesto o colonia"
+            placeholderTextColor={colors.placeholder}
+            returnKeyType="search"
+            style={styles.panelSearchInput}
+            accessibilityLabel="Buscar puesto o colonia"
+          />
+          <IconButton
+            icon="chevron-up"
+            label="Cerrar filtros"
+            onPress={() => setPanelOpen(false)}
+          />
+        </View>
+        <Text style={styles.panelSectionLabel}>Zona</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.panelChipRow}
+        >
+          <Chip
+            label={locating ? "Buscando…" : "Cerca de mí"}
+            icon="navigate"
+            selected={area.label === "Cerca de ti"}
+            onPress={() => void locate()}
+          />
           {AREAS.map((option) => (
-            <View key={option.label} style={styles.areaChipSpacing}>
-              <Chip
-                label={option.label}
-                selected={area.label === option.label}
-                onPress={() => chooseArea(option)}
-              />
-            </View>
+            <Chip
+              key={option.label}
+              label={option.label}
+              selected={area.label === option.label}
+              onPress={() => chooseArea(option)}
+            />
           ))}
         </ScrollView>
-      )}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.typeRow}
-        contentContainerStyle={{ gap: 8 }}
-      >
-        <Chip label="Todos" selected={!activeType} onPress={() => chooseType(null)} />
-        {types.map((type) => (
-          <Chip
-            key={type.id}
-            label={type.nameEs}
-            selected={activeType?.id === type.id}
-            onPress={() => chooseType(activeType?.id === type.id ? null : type)}
+        <Text style={styles.panelSectionLabel}>Tipo de taco</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.panelChipRow}
+        >
+          <Chip label="Todos" selected={!activeType} onPress={() => chooseType(null)} />
+          {types.map((type) => (
+            <Chip
+              key={type.id}
+              label={type.nameEs}
+              selected={activeType?.id === type.id}
+              onPress={() => chooseType(activeType?.id === type.id ? null : type)}
+            />
+          ))}
+        </ScrollView>
+        <Text style={styles.panelSectionLabel}>Ver como</Text>
+        {modeToggle}
+        <View style={styles.panelFooter}>
+          <Button label="Limpiar" variant="ghost" onPress={clearFilters} style={{ flex: 1 }} />
+          <Button
+            label={`Ver ${items.length} puestos`}
+            variant="primary"
+            onPress={() => setPanelOpen(false)}
+            style={{ flex: 2 }}
           />
-        ))}
-      </ScrollView>
+        </View>
+      </View>
     </>
   );
 
@@ -450,25 +528,44 @@ export default function ExploreScreen() {
               accessibilityLabel={`${item.name}, ${item.neighborhood}`}
               onPress={() => void handleMarkerPress(item.id)}
             >
-              <CustomMarkerContent />
+              <CustomMarkerContent hasReviews={item.reviewCount > 0} />
             </Marker>
           ))}
         </ClusteredMapView>
         <View style={styles.mapOverlay} pointerEvents="box-none">
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            style={styles.mapOverlayScroll}
-            contentContainerStyle={styles.mapOverlayContent}
+          <View style={styles.collapsedRow}>
+            {searchPill}
+            {profileButton}
+          </View>
+          {summaryRow}
+          {filterPanel}
+        </View>
+        <View style={styles.bottomControls} pointerEvents="box-none">
+          <Pressable
+            accessibilityRole="button"
+            style={styles.listPill}
+            onPress={() => setMode("lista")}
           >
-            <View style={styles.headerRowFloating}>
-              <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
-              <Link href="/settings" style={styles.accountLink}>
-                {session ? "Mi cuenta" : "Entrar"}
-              </Link>
-            </View>
-            {filterControls}
-            {modeToggle}
-          </ScrollView>
+            <Ionicons name="list" size={16} color={colors.ink} style={styles.icon} />
+            <Text style={styles.listPillText}>Lista</Text>
+          </Pressable>
+          <View style={styles.bottomRightControls}>
+            <IconButton
+              icon="navigate"
+              label={locating ? "Buscando ubicación…" : "Usar mi ubicación"}
+              size={sizes.locateButton}
+              elevated
+              onPress={() => void locate()}
+            />
+            <Pressable
+              accessibilityRole="button"
+              style={[styles.addButton, selectedSpotId && styles.addButtonCompact]}
+              onPress={() => router.push("/propose")}
+            >
+              <Ionicons name="add" size={22} color={colors.paper} />
+              {!selectedSpotId && <Text style={styles.addButtonText}>Agregar taquería</Text>}
+            </Pressable>
+          </View>
         </View>
         {loading && (
           <View style={styles.mapCenterState} pointerEvents="none">
@@ -493,11 +590,6 @@ export default function ExploreScreen() {
               Prueba otra zona o quita el filtro de taco para ver más lugares.
             </Text>
           </View>
-        )}
-        {!loading && !error && items.length > 0 && (
-          <Text style={styles.mapCaption}>
-            Toca un marcador para ver el puesto · {items.length} puestos
-          </Text>
         )}
         {selectedSpotId && (
           <Animated.View
@@ -614,16 +706,16 @@ export default function ExploreScreen() {
           <>
             <View style={styles.headerRow}>
               <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
-              <Link href="/settings" style={styles.accountLink}>
-                {session ? "Mi cuenta" : "Entrar"}
-              </Link>
+              {profileButton}
             </View>
             <Text style={styles.title}>¿Qué se te antoja hoy?</Text>
             <Text style={styles.subtitle}>Encuentra tu próximo taco favorito.</Text>
             <Link href="/propose" style={styles.proposeLink}>
               ¿No encuentras tu taquería? Propónla
             </Link>
-            {filterControls}
+            <View style={{ marginTop: spacing.lg }}>{searchPill}</View>
+            {summaryRow}
+            {filterPanel}
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Puestos para descubrir</Text>
               <Text style={styles.count}>{items.length} lugares</Text>
@@ -700,14 +792,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerRowFloating: {
-    minHeight: 30,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  accountLink: { color: colors.green, fontSize: 13, fontWeight: "900", paddingVertical: 10 },
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
   title: {
     marginTop: 11,
@@ -725,45 +809,175 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 4,
   },
-  search: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    borderRadius: 15,
-    backgroundColor: colors.paper,
-    paddingHorizontal: 16,
-    height: 52,
-    color: colors.ink,
-    fontSize: 15,
-  },
-  controls: { flexDirection: "row", gap: 9, marginTop: 11 },
   icon: { marginRight: 6 },
-  locationButton: {
+  collapsedRow: {
     flexDirection: "row",
-    backgroundColor: colors.green,
-    borderRadius: 13,
-    minHeight: 44,
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 13,
+    gap: spacing.sm,
   },
-  locationText: { color: colors.white, fontWeight: "800", fontSize: 12 },
-  areaButton: {
+  searchPill: {
     flex: 1,
     flexDirection: "row",
-    gap: 6,
+    alignItems: "center",
+    height: sizes.headerPill,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paper,
     borderWidth: 1,
-    borderColor: colors.lineSoft,
-    borderRadius: 13,
-    minHeight: 44,
+    borderColor: colors.line,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.xs,
+    gap: spacing.sm,
+    ...elevation.float,
+  },
+  searchPillInput: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 14,
+  },
+  pillDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: colors.line,
+  },
+  profileButton: {
+    width: sizes.headerPill,
+    height: sizes.headerPill,
+    borderRadius: sizes.headerPill / 2,
+    backgroundColor: colors.paper,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.paper,
+    overflow: "hidden",
+    ...elevation.float,
   },
-  areaText: { color: colors.ink, fontWeight: "700", fontSize: 13 },
-  areaOptions: { marginTop: 9, maxHeight: 50 },
-  areaChipSpacing: { marginRight: 8 },
-  typeRow: { maxHeight: 50, marginTop: 14 },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  summaryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  summaryChipText: { color: colors.ink, fontWeight: "700", fontSize: 12 },
+  countPill: {
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countPillText: { color: colors.paper, fontWeight: "800", fontSize: 12 },
+  panel: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.paper,
+    borderBottomLeftRadius: radii.sheet,
+    borderBottomRightRadius: radii.sheet,
+    padding: spacing.lg,
+    ...elevation.float,
+  },
+  panelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  panelSearchInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.cream,
+    paddingHorizontal: spacing.md,
+    color: colors.ink,
+    fontSize: 14,
+  },
+  panelSectionLabel: {
+    ...typography.label,
+    color: colors.muted,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  panelChipRow: { gap: 8 },
+  panelFooter: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  bottomControls: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.lg,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  listPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paper,
+    ...elevation.float,
+  },
+  listPillText: { color: colors.ink, fontWeight: "800", fontSize: 13 },
+  bottomRightControls: {
+    alignItems: "flex-end",
+    gap: spacing.md,
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: sizes.fab,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    backgroundColor: colors.redStrong,
+    ...elevation.float,
+  },
+  addButtonCompact: {
+    width: sizes.fab,
+    paddingHorizontal: 0,
+    justifyContent: "center",
+  },
+  addButtonText: { color: colors.paper, fontWeight: "800", fontSize: 13 },
+  markerWrap: { width: 44, height: 44 },
+  marker: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  markerSparkle: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.paper,
+  },
   sectionRow: {
     marginTop: 23,
     marginBottom: 10,
@@ -830,16 +1044,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingTop: 56,
     paddingHorizontal: 16,
-    maxHeight: "70%",
   },
-  mapOverlayScroll: {
-    backgroundColor: colors.paper,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    maxHeight: "100%",
-  },
-  mapOverlayContent: { padding: 14 },
   mapCenterState: {
     position: "absolute",
     top: 0,
@@ -853,7 +1058,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 24,
+    bottom: 100,
     borderRadius: 18,
     backgroundColor: colors.paper,
     padding: 20,
@@ -863,7 +1068,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 24,
+    bottom: 100,
     padding: 24,
     borderRadius: 18,
     backgroundColor: colors.paper,
@@ -879,18 +1084,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     marginBottom: 5,
-  },
-  mapCaption: {
-    position: "absolute",
-    bottom: 24,
-    alignSelf: "center",
-    color: colors.muted,
-    fontSize: 10,
-    fontWeight: "700",
-    backgroundColor: colors.paper,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
   },
   loadMore: {
     minHeight: 44,
