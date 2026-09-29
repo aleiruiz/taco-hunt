@@ -68,7 +68,11 @@ export function Button({
         size === "lg" && styles.lg,
         { backgroundColor: variant === "ghost" ? "transparent" : variantColors[variant] },
         variant === "secondary" && { borderWidth: 1, borderColor: colors.line },
-        variant === "danger" && { borderWidth: 1, borderColor: colors.dangerText, backgroundColor: colors.dangerBg },
+        variant === "danger" && {
+          borderWidth: 1,
+          borderColor: colors.dangerText,
+          backgroundColor: colors.dangerBg,
+        },
         (disabled || loading) && styles.disabled,
         pressed && !disabled && !loading && styles.pressed,
         style,
@@ -79,8 +83,19 @@ export function Button({
         <ActivityIndicator color={indicatorColor[variant]} />
       ) : (
         <>
-          {icon && <Ionicons name={icon} size={iconSize} color={textColors[variant]} style={{ marginRight: 8 }} />}
-          <Text style={[styles.text, size === "lg" && styles.lgText, { color: textColors[variant] }]}>{label}</Text>
+          {icon && (
+            <Ionicons
+              name={icon}
+              size={iconSize}
+              color={textColors[variant]}
+              style={{ marginRight: 8 }}
+            />
+          )}
+          <Text
+            style={[styles.text, size === "lg" && styles.lgText, { color: textColors[variant] }]}
+          >
+            {label}
+          </Text>
         </>
       )}
     </Pressable>

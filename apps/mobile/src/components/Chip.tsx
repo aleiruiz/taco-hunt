@@ -16,16 +16,21 @@ export function Chip({ label, selected = false, icon, dashed = false, onPress }:
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={[
-        styles.chip,
-        dashed && styles.dashed,
-        selected && styles.selected,
-      ]}
+      style={[styles.chip, dashed && styles.dashed, selected && styles.selected]}
     >
       <View style={styles.content}>
-        {icon && <Ionicons name={icon} size={14} color={selected ? colors.paper : colors.ink} style={{ marginRight: 6 }} />}
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={14}
+            color={selected ? colors.paper : colors.ink}
+            style={{ marginRight: 6 }}
+          />
+        )}
         <Text style={[styles.text, selected && styles.selectedText]}>{label}</Text>
-        {selected && <Ionicons name="checkmark" size={14} color={colors.paper} style={{ marginLeft: 6 }} />}
+        {selected && (
+          <Ionicons name="checkmark" size={14} color={colors.paper} style={{ marginLeft: 6 }} />
+        )}
       </View>
     </Pressable>
   );

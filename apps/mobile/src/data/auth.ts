@@ -11,7 +11,8 @@ export interface AuthUser {
   id: string;
   email: string;
   displayName?: string;
-  avatarPreset: "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
+  avatarPreset:
+    "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
   avatarPhotoUrl?: string;
 }
 

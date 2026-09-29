@@ -31,7 +31,12 @@ const styles = StyleSheet.create({
   icon: {
     marginBottom: spacing.lg,
   },
-  title: { ...typography.sectionTitle, color: colors.ink, textAlign: "center", marginBottom: spacing.sm },
+  title: {
+    ...typography.sectionTitle,
+    color: colors.ink,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
   subtitle: { fontSize: 14, color: colors.muted, textAlign: "center", marginBottom: spacing.lg },
   button: { minWidth: 200 },
 });

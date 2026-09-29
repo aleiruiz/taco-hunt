@@ -41,7 +41,13 @@ const styles = StyleSheet.create({
   lockedIcon: {
     opacity: 0.5,
   },
-  label: { fontSize: 12, fontWeight: "700", textAlign: "center", marginTop: spacing.sm, color: colors.ink },
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginTop: spacing.sm,
+    color: colors.ink,
+  },
   lockedLabel: { color: colors.muted },
   progress: { fontSize: 10, color: colors.muted, marginTop: spacing.xs },
 });

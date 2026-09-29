@@ -2,7 +2,8 @@ import { View, Image, StyleSheet } from "react-native";
 import { colors, sizes } from "@/theme";
 
 type Size = 24 | 32 | 40 | 72;
-type Preset = "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
+type Preset =
+  "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
 
 const AVATAR_PRESETS: Record<Preset, any> = {
   pastor: require("@/assets/avatars/pastor.svg"),
@@ -37,7 +38,10 @@ export function Avatar({ size = 40, preset = "pastor", photoUrl, accessibilityLa
       ]}
     >
       {photoUrl ? (
-        <Image source={{ uri: photoUrl }} style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]} />
+        <Image
+          source={{ uri: photoUrl }}
+          style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]}
+        />
       ) : (
         <Image source={AVATAR_PRESETS[preset]} style={{ width: size, height: size }} />
       )}

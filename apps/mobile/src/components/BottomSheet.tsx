@@ -78,13 +78,8 @@ export function BottomSheet({ visible, onClose, children, snapPoints = [0.5] }: 
           },
         ]}
       >
-        <View
-          style={styles.handle}
-          onLayout={handleContentLayout}
-        />
-        <View style={styles.content}>
-          {children}
-        </View>
+        <View style={styles.handle} onLayout={handleContentLayout} />
+        <View style={styles.content}>{children}</View>
       </Animated.View>
     </>
   );
@@ -92,11 +87,11 @@ export function BottomSheet({ visible, onClose, children, snapPoints = [0.5] }: 
 
 const styles = StyleSheet.create({
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.scrim,
   },
   sheet: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     backgroundColor: "transparent",
   },

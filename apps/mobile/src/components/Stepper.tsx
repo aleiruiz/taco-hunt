@@ -11,13 +11,7 @@ export function Stepper({ currentStep, totalSteps }: Props) {
     <View style={styles.container}>
       <View style={styles.bars}>
         {Array.from({ length: totalSteps }).map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.bar,
-              i < currentStep && styles.barFilled,
-            ]}
-          />
+          <View key={i} style={[styles.bar, i < currentStep && styles.barFilled]} />
         ))}
       </View>
       <Text style={styles.text}>

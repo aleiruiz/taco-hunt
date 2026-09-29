@@ -31,6 +31,8 @@ export const colors = {
     tortilla: "#F9DEAE",
     salsa: "#FBE2DC",
     comal: "#EFE4D5",
+    aguacate: "#DCEBC7",
+    horchata: "#F3E9D6",
   },
 } as const;
 
@@ -62,8 +64,20 @@ export const radii = {
 } as const;
 
 export const elevation = {
-  float: { shadowColor: colors.ink, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.14, shadowRadius: 14, elevation: 4 },
-  sheet: { shadowColor: colors.ink, shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.16, shadowRadius: 18, elevation: 8 },
+  float: {
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  sheet: {
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    elevation: 8,
+  },
 } as const;
 
 export const typography = {
