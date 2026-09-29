@@ -94,6 +94,7 @@ export default function ExploreScreen() {
   const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
   const sheetAnimRef = useRef(new Animated.Value(0)).current;
   const selectedSpotIdRef = useRef<string | null>(null);
+  const closingRef = useRef(false);
 
   // Keep ref synchronized with current state to avoid closure issues in async callbacks
   useEffect(() => {
@@ -279,21 +280,34 @@ export default function ExploreScreen() {
     }
   }, []);
 
-  const closeSheet = useCallback(() => {
+  const closeSheet = useCallback((): boolean => {
+    // Guard against re-entrance: if already closing, reject this request
+    if (closingRef.current) {
+      return false;
+    }
+
+    closingRef.current = true;
     const closingSpotId = selectedSpotIdRef.current;
     Animated.timing(sheetAnimRef, {
       toValue: 0,
       duration: 300,
       useNativeDriver: false,
     }).start(({ finished }) => {
-      // Only clear state if animation finished and this spot is still being closed
-      // (i.e., the user hasn't selected a different marker during the animation)
-      if (finished && selectedSpotIdRef.current === closingSpotId) {
-        setSelectedSpotId(null);
-        setSelectedSpot(null);
-        setSpotError("");
+      try {
+        // Only clear state if animation finished and this spot is still being closed
+        // (i.e., the user hasn't selected a different marker during the animation)
+        if (finished && selectedSpotIdRef.current === closingSpotId) {
+          setSelectedSpotId(null);
+          setSelectedSpot(null);
+          setSpotError("");
+        }
+      } finally {
+        // Always reset the closing guard when animation completes
+        closingRef.current = false;
       }
     });
+
+    return true;
   }, []);
 
   const CustomMarkerContent = () => (
@@ -504,7 +518,7 @@ export default function ExploreScreen() {
                   <Text style={styles.previewNeighborhood}>{selectedSpot?.neighborhood}</Text>
                 </View>
                 <Pressable
-                  onPress={closeSheet}
+                  onPress={() => closeSheet()}
                   accessibilityRole="button"
                   accessibilityLabel="Cerrar tarjeta"
                   style={styles.closeButton}
@@ -547,11 +561,12 @@ export default function ExploreScreen() {
 
                   <Pressable
                     onPress={() => {
-                      closeSheet();
-                      router.push({
-                        pathname: "/spot/[id]",
-                        params: { id: selectedSpotId },
-                      } as Href);
+                      if (closeSheet()) {
+                        router.push({
+                          pathname: "/spot/[id]",
+                          params: { id: selectedSpotId },
+                        } as Href);
+                      }
                     }}
                     style={styles.previewViewButton}
                   >
