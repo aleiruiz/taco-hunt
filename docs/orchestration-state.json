@@ -301,11 +301,11 @@
     },
     "T47": {
       "pr": 36,
-      "headSha": "7027b50",
+      "headSha": "20f07e8",
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. T45 merged (5b68e74); rebased --onto origin/main and retargeted PR #36 to base=main. CI (Lint/types/format, GitGuardian) green on 7027b50; CodeRabbit review in progress. Data needs: opening-time chips have no backing field yet (local UI state only); duplicate-match card only surfaces after a failed submit (today's dedupe check is server-side on POST, not pre-submission); the dashed pending-pin-on-map behavior isn't wired into index.tsx."
+      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. CodeRabbit found 5 real findings on 7027b50: taco-type chips were discarded silently by submit() (removed - taco types now added post-publish, T44's job); manual mode could submit the default city-center coordinates with no explicit location confirmation (added a Confirmar ubicación gate before step 3); Proponer otra didn't reset lat/long/pinFromGoogle after success; error banner always showed a fixed string instead of the real server message (incl. the 409 duplicate case); step gates checked non-blank instead of the schema's min(2) chars. Fixed as 20f07e8; CI green, awaiting re-review."
     },
     "T48": {
       "pr": 37,
