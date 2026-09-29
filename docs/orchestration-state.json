@@ -13,14 +13,6 @@
  },
  "workers": [
   {
-   "taskId": "T23",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T23-place-refresh",
-   "branch": "codex/T23-place-refresh",
-   "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree. PR #24 open, head 3e06c5f, CI green, mergeable. Not merged yet."
-  },
-  {
    "taskId": "T24",
    "worktree": "C:/Repos/taco-hunt-worktrees/T24-places-cost-controls",
    "branch": "codex/T24-places-cost-controls",
@@ -238,9 +230,9 @@
     "T20"
    ],
    "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR. CodeRabbit found and this fixed 10 real issues across three rounds (HTTPS enforcement, env-var validation, a stale-read race, refresh-limit monopolization, missing timeout, incomplete-response handling, report dedup, a concurrent-duplicate-report race requiring a new migration). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
-   "status": "in_review",
+   "status": "merged",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
-   "headSha": "3e06c5fea0c423a86bf138c6b88d16f59aff070d",
+   "headSha": "fb4caa098c134efeb0a6865658688d2a061bbf08",
    "coderabbitReviewedSha": null
   },
   "T24": {
