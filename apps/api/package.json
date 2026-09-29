@@ -12,7 +12,8 @@
     "build": "pnpm --filter @taco-hunt/contracts build && tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
-    "media:cleanup": "tsx scripts/cleanup-orphan-photos.ts"
+    "media:cleanup": "tsx scripts/cleanup-orphan-photos.ts",
+    "places:refresh": "tsx scripts/refresh-place-candidates.ts"
   },
   "dependencies": {
     "@fastify/multipart": "^10.1.2",
