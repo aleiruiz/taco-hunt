@@ -259,8 +259,13 @@ export default function ProposeScreen() {
               <Pressable
                 key={option}
                 onPress={() => {
+                  if (option === source) return;
                   setSource(option);
-                  if (option === "manual") setLocationConfirmed(false);
+                  setName("");
+                  setNeighborhood("");
+                  setSourceRef("");
+                  setPinFromGoogle(false);
+                  setLocationConfirmed(false);
                 }}
                 style={[styles.segment, source === option && styles.segmentActive]}
               >
