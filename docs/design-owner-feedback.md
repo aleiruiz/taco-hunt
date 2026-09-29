@@ -218,13 +218,16 @@ New components: `IconButton` (label required), `SearchBar`, `SuggestionRow` (+ s
 
 ## Task mapping
 
-| Section                                            | Task(s)                                        |
-| -------------------------------------------------- | ---------------------------------------------- |
-| §1 Sign-up, confirmation, landing                  | T32                                            |
-| §2 Minimized header, bottom controls, sparkle pins | **no task yet** (touches `index.tsx` with T34) |
-| §3 Add-a-taquería entry point and flow             | **no task yet** (`propose.tsx`)                |
-| §4 Empty states, incentives, retos                 | **no task yet** (needs a progress endpoint)    |
-| §5 Search autocomplete                             | T35                                            |
-| §6 Gallery and upload                              | T39 (UI), T37 (API), T36 (picker)              |
-| §7 Profile and avatars                             | T41 (UI), T40 (API)                            |
-| §8–§9 Accessibility, tokens, components            | whichever task first needs each piece          |
+All UI is built first (Phase A in `docs/plan-delegacion.md`) with fixture data; API work (Phase B) starts only after every Phase A task is merged and follows the Data needs the UI tasks list.
+
+| Section                                            | Phase A (UI)       | Phase B (API) |
+| -------------------------------------------------- | ------------------ | ------------- |
+| §9 Tokens and shared components                    | T45 (first)        | —             |
+| §1 Sign-up, confirmation, landing                  | T32                | T40           |
+| §2 Minimized header, bottom controls, sparkle pins | T46                | T33, T34      |
+| §3 Add-a-taquería entry point and flow             | T47                | via T51       |
+| §4 Empty states, incentives, retos                 | T48                | T49           |
+| §5 Search autocomplete                             | T35                | T52           |
+| §6 Gallery and upload                              | T36, T39, T38      | T37           |
+| §7 Profile and avatars                             | T41                | T40           |
+| §8 Accessibility                                   | every Phase A task | —             |

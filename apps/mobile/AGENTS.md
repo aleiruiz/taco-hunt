@@ -11,6 +11,10 @@ Expo + React Native app (expo-router, file-based routes in `app/`). UI copy is i
 - Icons: Ionicons from `@expo/vector-icons` (decided in T30). No emoji as UI icons.
 - New tokens and components planned for P2.7 (`redStrong`, `greenSoft`, `goldSoft`, `pendingText`, `placeholder`, `scrim`, avatar fills, `Button` `accent` variant, `IconButton`, `EmptyState`, `StatusBadge`, `Avatar`, and others) are specified in `docs/design-owner-feedback.md` §9. Use those names and values.
 
+## UI first, fixtures until the API exists
+
+Phase A tasks build the whole UI before any API work. When a screen needs data that no existing endpoint returns, add a typed fixture adapter in `src/data/` (same function signature the real call will have) and list the fields/states under **Data needs** in the PR. Phase B tasks replace the adapter body with the real call; screens shouldn't change.
+
 ## Design specs
 
 - Map-first home, pins, preview card, clustering: `docs/design-map-first.md`.

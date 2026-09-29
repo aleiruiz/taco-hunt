@@ -266,101 +266,186 @@
       "headSha": "643ff6c",
       "coderabbitReviewedSha": "83b598a"
     },
-    "T31": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "Fix POST /v1/reviews 503: drop tt from FOR SHARE OF (taco_hunt_api has SELECT only on taco_types).",
+    "T45": {
       "pr": null,
       "headSha": null,
-      "coderabbitReviewedSha": null
+      "coderabbitReviewedSha": null,
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens, Button/Chip/Card extensions, new shared components, avatar SVGs, src/data fixture-adapter pattern."
     },
     "T32": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "Post-auth flow: confirm + navigate when sign-up/sign-in yields a session; AuthScreen to theme.ts/Button.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
-    },
-    "T33": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "GET /v1/spots/map viewport pins (bbox), no geographic cap, per-request limit with server clusters, cacheable.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
-    },
-    "T34": {
       "status": "blocked",
-      "dependsOn": ["T33"],
-      "note": "Map loads pins by viewport as you move (debounced, id-keyed cache), never all at once; chips are camera shortcuts; taco type is the only hiding filter.",
+      "dependsOn": ["T45"],
+      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
+    },
+    "T46": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": ["T45"],
+      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx."
     },
     "T35": {
       "status": "blocked",
-      "dependsOn": ["T34"],
+      "dependsOn": ["T46"],
       "waitingOnDesign": "minimized header search",
-      "note": "Autocomplete via GET /v1/search/suggest over all Taco Hunt stands/neighborhoods, no area cap, proximity-ranked (no Google).",
+      "note": "Phase A. Search autocomplete UI with fixtures (design §5); API in T52.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
+    },
+    "T47": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": ["T45"],
+      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed."
+    },
+    "T48": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": ["T45"],
+      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49."
     },
     "T36": {
       "status": "blocked",
-      "dependsOn": ["T31"],
-      "note": "Mobile review photo upload against T11 API; adds expo-image-picker (both lockfiles).",
+      "dependsOn": ["T45"],
+      "note": "Phase A. Review photo upload UI on existing T11 API (expo-image-picker); end-to-end check after T31.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     },
-    "T37": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "Stand photos API with pre-moderation; extend account deletion + privacy docs.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
-    },
-    "T38": {
+    "T44": {
       "status": "blocked",
-      "dependsOn": ["T37"],
-      "note": "Admin panel photo moderation for stand photos (profile photos use T40's automated review).",
+      "dependsOn": ["T45", "T48"],
+      "note": "Phase A. Taco-type proposals on stand page + admin tacos queue, existing API. After T48 (same stand page).",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     },
     "T39": {
       "status": "blocked",
-      "dependsOn": ["T36", "T37"],
+      "dependsOn": ["T36", "T44"],
       "waitingOnDesign": "photo gallery",
-      "note": "Stand page photo gallery and upload.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
-    },
-    "T40": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "Profile API GET/PATCH /v1/me, persist sign-up display name, avatar preset + photo shown immediately with automated review (revert on reject); extend account deletion.",
+      "note": "Phase A. Stand gallery + upload + uploader-only pending state with fixtures (design §6); API in T37.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     },
     "T41": {
       "status": "blocked",
-      "dependsOn": ["T36", "T40"],
+      "dependsOn": ["T45", "T36"],
       "waitingOnDesign": "profile screen and avatar art",
-      "note": "Profile screen evolving Mis tacos; avatars on reviews.",
+      "note": "Phase A. Profile + avatars UI with fixtures (design §7); API in T40.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     },
+    "T38": {
+      "status": "blocked",
+      "dependsOn": ["T45"],
+      "note": "Phase A. Admin stand-photo moderation UI with fixtures; API in T37.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T50": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": ["T45", "T38"],
+      "note": "Phase A. Import-candidate review panel UI with fixtures (split from T42)."
+    },
+    "T51": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": [
+        "T45",
+        "T32",
+        "T46",
+        "T35",
+        "T47",
+        "T48",
+        "T36",
+        "T44",
+        "T39",
+        "T41",
+        "T38",
+        "T50"
+      ],
+      "note": "Phase B gate. Consolidate Phase A Data needs into packages/contracts in one PR; waits for all Phase A."
+    },
+    "T31": {
+      "status": "blocked",
+      "dependsOn": ["T51"],
+      "note": "Phase B. Fix POST /v1/reviews 503: drop tt from FOR SHARE OF (taco_hunt_api has SELECT only on taco_types).",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T33": {
+      "status": "blocked",
+      "dependsOn": ["T51"],
+      "note": "Phase B. GET /v1/spots/map viewport pins (bbox), no geographic cap, per-request limit with server clusters, cacheable.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T34": {
+      "status": "blocked",
+      "dependsOn": ["T33", "T46"],
+      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T52": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": ["T51", "T35"],
+      "note": "Phase B. GET /v1/search/suggest (all stands/neighborhoods, no area cap, proximity-ranked) + swap T35 fixtures."
+    },
+    "T37": {
+      "status": "blocked",
+      "dependsOn": ["T51"],
+      "note": "Phase B. Stand photos API (pre-moderated, signed URLs, deletion coverage) + swap T39/T38 fixtures.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T40": {
+      "status": "blocked",
+      "dependsOn": ["T51"],
+      "note": "Phase B. Profile API, display name, avatar preset + photo shown immediately with automated review (revert on reject) + swap T41/T32 fixtures.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T49": {
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null,
+      "status": "blocked",
+      "dependsOn": ["T51"],
+      "note": "Phase B. GET /v1/me/progress for challenges/badges + swap T48 fixtures."
+    },
     "T42": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "Admin approval of import_candidates into spots with Google autocomplete address lookup + manual pin adjust.",
+      "status": "blocked",
+      "dependsOn": ["T51"],
+      "note": "Phase B. Import-candidate approval API + swap T50 fixtures.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -368,15 +453,7 @@
     "T43": {
       "status": "blocked",
       "dependsOn": ["T42"],
-      "note": "Research ~100 Monterrey taquerias from articles/guides/social (facts only, source URL provenance), stage via T13 importer, no taco types.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
-    },
-    "T44": {
-      "status": "ready",
-      "dependsOn": [],
-      "note": "Mobile taco-type proposals on stand page + tacos queue in admin panel.",
+      "note": "Research ~100 Monterrey taquerías (facts only, source URL provenance), stage via T13 importer, no taco types. After T42.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
