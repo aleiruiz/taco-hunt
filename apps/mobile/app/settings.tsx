@@ -99,6 +99,9 @@ export default function SettingsScreen() {
           <Text style={styles.body}>
             Tu sesión se guarda de forma segura en este dispositivo y se renueva automáticamente.
           </Text>
+          <Link href="/retos" asChild>
+            <Button label="Retos e insignias" variant="secondary" style={styles.button} />
+          </Link>
           <Button
             label="Cerrar sesión"
             onPress={() => void handleSignOut()}
