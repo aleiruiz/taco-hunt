@@ -18,3 +18,6 @@ dist/
 build/
 coverage/
 .task-docker-config/
+
+# Local orchestrator check-in log (keep on disk; do not commit)
+docs/orchestration-log.md
