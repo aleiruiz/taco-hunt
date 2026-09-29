@@ -13,28 +13,20 @@
  },
  "workers": [
   {
-   "taskId": "T21",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T21-mobile-autocomplete",
-   "branch": "codex/T21-mobile-autocomplete",
-   "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator itself in this worktree (owner opted into the orchestrator implementing tasks directly instead of spawning separate worker sessions; see CLAUDE.md). PR #23 opened 2026-09-28T23:00Z, CI running, auto_fix monitor on. Not merged yet."
-  },
-  {
    "taskId": "T23",
    "worktree": "C:/Repos/taco-hunt-worktrees/T23-place-refresh",
    "branch": "codex/T23-place-refresh",
    "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
    "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree. PR #24 opened 2026-09-28T23:45Z, CI running, auto_fix monitor on. Not merged yet."
+   "note": "Implemented by the orchestrator in this worktree. PR #24 open, head 3e06c5f, CI green, mergeable. Not merged yet."
   },
   {
-   "taskId": "T14",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T14-account-lifecycle",
-   "branch": "codex/T14-account-lifecycle",
-   "baseCommit": "db08a1371eb897bde4593fefd78fff70cd9903de",
+   "taskId": "T24",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T24-places-cost-controls",
+   "branch": "codex/T24-places-cost-controls",
+   "baseCommit": "2f672ba",
    "sessionId": null,
-   "note": "Implemented by the orchestrator on Sonnet 5 (owner declined the recommended model escalation). PR #25 opened 2026-09-29T00:45Z, CI running, auto_fix monitor on. Not merged yet."
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. Scope: restricted keys, quotas, dedup, alerts, emergency shutoff for Google Places calls (T17/T21/T23's server-side integrations)."
   }
  ],
  "tasks": {
@@ -224,9 +216,9 @@
     "T17"
    ],
    "note": "Old worktrees (t21-address-autocomplete, t21-autocomplete-recovery) held uncommitted WIP that was never turned into a PR; snapshotted to branches codex/T21-address-autocomplete-abandoned (f1f3256) and codex/T21-mobile-autocomplete-recovery (58e715f) for reference, then discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: GET /v1/places/autocomplete + GET /v1/places/:placeId/resolve, wired into propose.tsx's autocomplete mode. Typecheck/lint/format clean; not exercised against a live Google Places key or a device/Expo (unavailable in this environment) — flagged in the PR. CodeRabbit found and this fixed 4 real issues across two rounds (ILIKE escaping, fetch timeouts, a redundant re-search, a stale in-flight request repopulating the list). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
-   "status": "in_review",
+   "status": "merged",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/23",
-   "headSha": "e56e99f2dcb8da4e4345c797f91e7ea501684230",
+   "headSha": "e10ac11",
    "coderabbitReviewedSha": null
   },
   "T22": {
@@ -248,16 +240,16 @@
    "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR. CodeRabbit found and this fixed 10 real issues across three rounds (HTTPS enforcement, env-var validation, a stale-read race, refresh-limit monopolization, missing timeout, incomplete-response handling, report dedup, a concurrent-duplicate-report race requiring a new migration). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
    "status": "in_review",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
-   "headSha": "4a1cfcc2228824813686e831279a186f3e0a8ef5",
+   "headSha": "3e06c5fea0c423a86bf138c6b88d16f59aff070d",
    "coderabbitReviewedSha": null
   },
   "T24": {
-   "status": "blocked",
+   "status": "in_progress",
    "dependsOn": [
     "T17",
     "T21"
    ],
-   "note": "T17 merged; T21 not yet merged. Per plan/runbook, assign as soon as T21 merges — do not wait for board order.",
+   "note": "T17 and T21 both merged; picked up by the orchestrator 2026-09-29T03:05Z in worktree ../taco-hunt-worktrees/T24-places-cost-controls, branch codex/T24-places-cost-controls, base main@2f672ba.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
@@ -282,9 +274,9 @@
     "T20"
    ],
    "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. CodeRabbit found a real bug beyond the diff itself: apps/api/src/auth/profile.service.ts's findOrCreate (used by every authenticated route) could throw an unhandled foreign-key-violation error for a request made with a still-valid access token after its account was deleted; now caught and rethrown as a clean 401. Also batched Storage photo deletion (1,000/batch) and corrected an inaccurate privacy.md claim about token revocation. Declined to add an integration test per CLAUDE.md's no-tests-unless-requested rule; that one thread stays open. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
-   "status": "in_review",
+   "status": "merged",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
-   "headSha": "ab3aa69ed5a4f4ad1b9adff52f56013f290ea037",
+   "headSha": "2f672ba",
    "coderabbitReviewedSha": null
   },
   "T15": {
