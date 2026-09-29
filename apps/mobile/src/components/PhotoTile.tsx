@@ -7,13 +7,22 @@ type Props = {
   dashed?: boolean;
   onPress?: () => void;
   size?: number;
+  accessibilityLabel?: string;
 };
 
-export function PhotoTile({ photoUrl, dashed = false, onPress, size = 96 }: Props) {
+export function PhotoTile({
+  photoUrl,
+  dashed = false,
+  onPress,
+  size = 96,
+  accessibilityLabel,
+}: Props) {
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={onPress ? accessibilityLabel : undefined}
       style={[
         styles.tile,
         {

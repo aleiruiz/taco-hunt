@@ -210,7 +210,7 @@ export default function SpotScreen() {
                   disabled={favoriteBusy}
                   onPress={() => void toggleFavorite()}
                 />
-                <IconButton icon="ellipsis-horizontal" label="Más opciones" onPress={openReport} />
+                <IconButton icon="flag-outline" label="Reportar este puesto" onPress={openReport} />
               </View>
             </View>
             {spot.lastVerifiedAt ? (
@@ -245,6 +245,7 @@ export default function SpotScreen() {
             <PhotoTile
               dashed
               size={96}
+              accessibilityLabel="Subir la primera foto. Próximamente."
               onPress={() =>
                 Alert.alert(
                   "Próximamente",
