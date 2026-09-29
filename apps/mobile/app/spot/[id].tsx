@@ -162,7 +162,12 @@ export default function SpotScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: spot?.name ?? "Puesto" }} />
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Volver"
+        onPress={() => router.back()}
+        style={styles.back}
+      >
         <Ionicons name="chevron-back" size={16} color={colors.green} />
         <Text style={styles.backText}>Volver</Text>
       </Pressable>

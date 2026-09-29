@@ -88,7 +88,11 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       style={styles.screen}
     >
       <Link href="/" asChild>
-        <Pressable accessibilityRole="link" style={styles.back}>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Explorar sin cuenta"
+          style={styles.back}
+        >
           <Ionicons name="chevron-back" size={16} color={colors.green} />
           <Text style={styles.backText}>Explorar sin cuenta</Text>
         </Pressable>

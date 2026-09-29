@@ -64,7 +64,11 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Link href="/" asChild>
-        <Pressable accessibilityRole="link" style={styles.back}>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Volver a explorar"
+          style={styles.back}
+        >
           <Ionicons name="chevron-back" size={16} color={colors.green} />
           <Text style={styles.backText}>Volver a explorar</Text>
         </Pressable>

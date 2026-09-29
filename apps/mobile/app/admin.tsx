@@ -87,7 +87,7 @@ export default function AdminScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Link href="/settings" asChild>
-        <Pressable accessibilityRole="link" style={styles.back}>
+        <Pressable accessibilityRole="link" accessibilityLabel="Ajustes" style={styles.back}>
           <Ionicons name="chevron-back" size={16} color={colors.green} />
           <Text style={styles.backText}>Ajustes</Text>
         </Pressable>
