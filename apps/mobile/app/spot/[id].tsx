@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -58,6 +58,7 @@ export default function SpotScreen() {
   const [reportNote, setReportNote] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportError, setReportError] = useState("");
+  const reportSubmissionId = useRef(0);
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -111,8 +112,14 @@ export default function SpotScreen() {
     setReportError("");
     setReportOpen(true);
   }
+  function closeReport() {
+    reportSubmissionId.current += 1;
+    setReportSubmitting(false);
+    setReportOpen(false);
+  }
   async function submitReport() {
     if (!session || !reportReason) return;
+    const submissionId = ++reportSubmissionId.current;
     setReportSubmitting(true);
     setReportError("");
     try {
@@ -122,16 +129,18 @@ export default function SpotScreen() {
         reason: reportReason,
         note: reportNote.trim() || undefined,
       });
+      if (reportSubmissionId.current !== submissionId) return;
       setReportOpen(false);
       Alert.alert("Gracias", "Tu reporte fue enviado. Nuestro equipo lo revisará.");
     } catch (submitError) {
+      if (reportSubmissionId.current !== submissionId) return;
       setReportError(
         submitError instanceof ReportConflictError
           ? "Ya tienes un reporte abierto para este puesto."
           : "No pudimos enviar el reporte. Inténtalo de nuevo.",
       );
     } finally {
-      setReportSubmitting(false);
+      if (reportSubmissionId.current === submissionId) setReportSubmitting(false);
     }
   }
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
@@ -263,12 +272,7 @@ export default function SpotScreen() {
           </>
         )
       )}
-      <Modal
-        visible={reportOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setReportOpen(false)}
-      >
+      <Modal visible={reportOpen} animationType="slide" transparent onRequestClose={closeReport}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Reportar este puesto</Text>
@@ -301,7 +305,7 @@ export default function SpotScreen() {
               <Button
                 label="Cancelar"
                 variant="secondary"
-                onPress={() => setReportOpen(false)}
+                onPress={closeReport}
                 style={{ flex: 1 }}
               />
               <Button
