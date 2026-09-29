@@ -142,3 +142,7 @@ export async function setFavorite(session: Session, spotId: string, favorite: bo
     method: favorite ? "PUT" : "DELETE",
   });
 }
+
+export async function deleteAccount(session: Session) {
+  await request<void>("/me", session, { method: "DELETE" });
+}

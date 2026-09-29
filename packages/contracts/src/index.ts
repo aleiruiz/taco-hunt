@@ -241,3 +241,43 @@ export const reportSchema = z.object({
   reason: z.enum(["inaccurate", "abusive", "spam", "closed", "other"]),
   note: z.string().max(500).optional(),
 });
+
+export const placeAutocompleteQuerySchema = z.object({
+  q: z.string().trim().min(2).max(100),
+});
+export type PlaceAutocompleteQuery = z.infer<typeof placeAutocompleteQuerySchema>;
+
+export const placeSuggestionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("spot"),
+    id: uuidSchema,
+    name: z.string(),
+    neighborhood: z.string(),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }),
+  z.object({
+    kind: z.literal("google"),
+    placeId: z.string().min(1).max(300),
+    text: z.string(),
+    secondaryText: z.string().nullable(),
+  }),
+]);
+export type PlaceSuggestion = z.infer<typeof placeSuggestionSchema>;
+
+export const placeAutocompleteResponseSchema = z.object({
+  items: z.array(placeSuggestionSchema),
+  attribution: z.string().nullable(),
+});
+export type PlaceAutocompleteResponse = z.infer<typeof placeAutocompleteResponseSchema>;
+
+export const placeResolveResponseSchema = z.object({
+  placeId: z.string(),
+  name: z.string(),
+  neighborhood: z.string(),
+  formattedAddress: z.string().nullable(),
+  latitude: z.number().min(25).max(27),
+  longitude: z.number().min(-101.5).max(-99),
+  attribution: z.string().nullable(),
+});
+export type PlaceResolveResponse = z.infer<typeof placeResolveResponseSchema>;
