@@ -11,32 +11,7 @@
    "note": "Merged 2026-09-28T19:53Z with 2 unresolved CodeRabbit findings on the reviewed head: (1) use !cancelled() instead of always(); (2) formatting step checks only .github/workflows/ci.yml instead of repo-wide pnpm format:check. Main CI no longer enforces repo-wide formatting. Needs owner decision."
   }
  },
- "workers": [
-  {
-   "taskId": "T25",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T25-map-first-home",
-   "branch": "codex/T25-map-first-home",
-   "baseCommit": "81d96ab",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #28 open, CI green (lint/types/format, GitGuardian), CodeRabbit review still pending. auto_fix monitor could not be enabled (denied by auto-mode classifier) - needs manual/periodic check instead."
-  },
-  {
-   "taskId": "T28",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T28-report-flow",
-   "branch": "codex/T28-report-flow",
-   "baseCommit": "d43efa3",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #29 opened at b5e74fd, CI pending."
-  },
-  {
-   "taskId": "T30",
-   "worktree": "C:/Repos/taco-hunt-worktrees/T30-icon-set-swap",
-   "branch": "codex/T30-icon-set-swap",
-   "baseCommit": "5d0ddfd",
-   "sessionId": null,
-   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #30 opened at 40a6781, CI pending."
-  }
- ],
+ "workers": [],
  "tasks": {
   "T00": {
    "status": "merged",
@@ -323,19 +298,19 @@
    "coderabbitReviewedSha": null
   },
   "T25": {
-   "status": "in_review",
+   "status": "merged",
    "dependsOn": [],
-   "note": "Implemented by the orchestrator in worktree C:/Repos/taco-hunt-worktrees/T25-map-first-home, branch codex/T25-map-first-home. Map is now the default view, full-bleed, with search/filters/mode-toggle as a floating overlay card; list mode kept as secondary view, unchanged layout. lint/typecheck clean, prettier applied. PR #28 opened at 611f45b, CI pending, not yet reviewed by CodeRabbit or merged.",
+   "note": "Implemented by the orchestrator: map is now the default explore view, full-bleed, with search/filters/mode-toggle as a floating overlay card; list mode kept as secondary view. CodeRabbit found 1 real issue (conditional MapView mount/unmount dropping pan/zoom state on every loading/error/empty transition) - fixed; documented why the map-mode-only-shows-30-spots finding is a pre-existing limitation, not a T25 regression, and left as a follow-up. Merged 2026-09-29 as a80db23.",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/28",
-   "headSha": "611f45b",
-   "coderabbitReviewedSha": null
+   "headSha": "a80db23",
+   "coderabbitReviewedSha": "a10c108"
   },
   "T26": {
-   "status": "blocked",
+   "status": "ready",
    "dependsOn": [
     "T25"
    ],
-   "note": "Custom branded pin markers + tap-to-preview bottom card, sourced from existing GET /spots/:id (no API change needed).",
+   "note": "Custom branded pin markers + tap-to-preview bottom card, sourced from existing GET /spots/:id (no API change needed). Unblocked now that T25 is merged.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
@@ -351,12 +326,12 @@
    "coderabbitReviewedSha": null
   },
   "T28": {
-   "status": "in_review",
+   "status": "merged",
    "dependsOn": [],
-   "note": "Implemented by the orchestrator in worktree C:/Repos/taco-hunt-worktrees/T28-report-flow, branch codex/T28-report-flow. Adds a 'Reportar este puesto' modal on spot/[id].tsx (first modal pattern in the mobile app), new src/features/reports/api.ts calling POST /v1/reports. Scoped to targetType 'spot' only (review-reporting has no UI hook point on that screen). lint/typecheck clean, prettier applied. PR #29 opened at b5e74fd, CI pending, not yet reviewed by CodeRabbit or merged.",
+   "note": "Implemented by the orchestrator: 'Reportar este puesto' modal on spot/[id].tsx (first modal pattern in the mobile app), new src/features/reports/api.ts calling POST /v1/reports. Scoped to targetType 'spot' only (review-reporting has no UI hook point on that screen). CodeRabbit found 1 real issue (stale submitReport completion could fire against a reopened form after cancel) - fixed with a submission-id ref; the HTTPS-validation-in-createReport suggestion was not applied (inconsistent with every other fetch call in the app, EXPO_PUBLIC_API_URL is a build-time env var not attacker input). Merged 2026-09-29 as 2ca46be.",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/29",
-   "headSha": "b5e74fd",
-   "coderabbitReviewedSha": null
+   "headSha": "2ca46be",
+   "coderabbitReviewedSha": "2846454"
   },
   "T29": {
    "status": "merged",
@@ -367,12 +342,12 @@
    "coderabbitReviewedSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8"
   },
   "T30": {
-   "status": "in_review",
+   "status": "merged",
    "dependsOn": [],
-   "note": "Implemented by the orchestrator in worktree C:/Repos/taco-hunt-worktrees/T30-icon-set-swap, branch codex/T30-icon-set-swap. Chose @expo/vector-icons (Ionicons) over Phosphor/Lucide - decision logged in orchestration-log.md before touching apps/mobile/package.json + pnpm-lock.yaml. Swapped back-chevrons, location/area controls, list/map toggle, map-empty pin, favorite heart, list-row chevron across 8 mobile files; taco emoji left as branding. lint/typecheck clean, prettier applied. PR #30 opened at 40a6781, CI pending - flagged a risk in the PR body that the lockfile was regenerated with pnpm 9.15.9 (env constraint: Node 20.13.1 can't run the pinned pnpm@11.25.0) instead of the pinned pnpm version, so frozen-lockfile install in CI needs verifying.",
+   "note": "Implemented by the orchestrator: chose @expo/vector-icons (Ionicons) over Phosphor/Lucide - decision logged in orchestration-log.md before touching apps/mobile/package.json + pnpm-lock.yaml. Swapped back-chevrons, location/area controls, list/map toggle, map-empty pin, favorite heart, list-row chevron across 8 mobile files; taco emoji left as branding. Also had to update apps/mobile/package-lock.json (separate standalone npm lockfile CI installs via npm ci --legacy-peer-deps) after the first push failed CI - missed on the first commit. Rebased onto main after T25/T28 merged (real conflicts in index.tsx and spot/[id].tsx, resolved by hand: kept T25's map-first structure + T28's report modal, added Ionicons throughout). CodeRabbit found 1 real issue post-rebase (back-button Pressables lost their accessible name once the icon was split from the text) - fixed across all 6 affected files including spot/[id].tsx (not explicitly flagged but same pattern). Merged 2026-09-29 as 643ff6c.",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/30",
-   "headSha": "40a6781",
-   "coderabbitReviewedSha": null
+   "headSha": "643ff6c",
+   "coderabbitReviewedSha": "83b598a"
   }
  }
 }
