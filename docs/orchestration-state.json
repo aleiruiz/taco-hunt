@@ -316,13 +316,13 @@
    "coderabbitReviewedSha": "8094cdd"
   },
   "T27": {
-   "status": "ready",
+   "status": "in_review",
    "dependsOn": [
     "T26"
    ],
-   "note": "Marker clustering for dense areas. Unblocked now that T26 is merged.",
-   "pr": null,
-   "headSha": null,
+   "note": "Chose react-native-map-clustering (decision logged in orchestration-log.md) - drop-in MapView wrapper, no manual supercluster integration needed. Orchestrator added the dependency to apps/mobile/package.json + both lockfiles and verified npm ci reproduces cleanly, then delegated the MapView->ClusteredMapView swap to a Haiku worker. Verified the resulting diff by hand: minimal, swaps MapView only in mode==\"mapa\", styles clusters with colors.red/colors.white, no changes to individual marker tap behavior. PR #32 opened at 219e6f9, CI/CodeRabbit pending.",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/32",
+   "headSha": "219e6f9",
    "coderabbitReviewedSha": null
   },
   "T28": {
