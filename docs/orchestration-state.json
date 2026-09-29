@@ -306,21 +306,21 @@
    "coderabbitReviewedSha": "a10c108"
   },
   "T26": {
-   "status": "ready",
+   "status": "merged",
    "dependsOn": [
     "T25"
    ],
-   "note": "Custom branded pin markers + tap-to-preview bottom card, sourced from existing GET /spots/:id (no API change needed). Unblocked now that T25 is merged.",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
+   "note": "Implemented by a delegated Haiku 4.5 worker (orchestrator supervised: prepared worktree, reviewed every diff by hand, wrote the fix-delegation prompts). Custom round marker (View+emoji) replacing default react-native-maps pins; tap opens an Animated.View slide-up bottom sheet (no new dependency) showing name/neighborhood/best taco/review snippet from GET /v1/spots/:id, with an in-memory cache. Went through 4 review rounds with CodeRabbit, catching real bugs each time: (1) worker's first pass used a nonexistent `review.text` field (real field is `body`) and picked 'best taco' as tacos[0] which the API sorts alphabetically, not by score - orchestrator caught both before requesting review; (2) CodeRabbit found a stale-response/animation race + missing marker accessibilityLabel - fixed, but the fix itself had a classic React closure bug (comparing against state captured at callback-creation time instead of current value) that the orchestrator caught by reading the diff, fixed with a synced ref; (3) CodeRabbit found a double-close re-entrance edge case - added a closingRef guard; (4) CodeRabbit found the best-taco lookup silently failed when the spot scrolled out of the loaded items list - added a fallback that computes best-by-score from the detail response instead of just tacos[0]. Merged 2026-09-29 as a7df5f7.",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/31",
+   "headSha": "a7df5f7",
+   "coderabbitReviewedSha": "8094cdd"
   },
   "T27": {
-   "status": "blocked",
+   "status": "ready",
    "dependsOn": [
     "T26"
    ],
-   "note": "Marker clustering for dense areas.",
+   "note": "Marker clustering for dense areas. Unblocked now that T26 is merged.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
