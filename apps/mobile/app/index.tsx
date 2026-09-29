@@ -50,6 +50,7 @@ type SpotDetail = {
   id: string;
   name: string;
   neighborhood: string;
+  tacos?: Taco[];
   reviews?: Review[];
 };
 type Page = { items: Spot[]; nextCursor: string | null };
@@ -537,14 +538,25 @@ export default function ExploreScreen() {
                 <>
                   {(() => {
                     const spotFromList = items.find((i) => i.id === selectedSpotId);
-                    return spotFromList?.bestTaco ? (
+                    // Fallback: if spot is not in current items list, derive best taco from selectedSpot.tacos
+                    const bestTaco =
+                      spotFromList?.bestTaco ||
+                      selectedSpot?.tacos?.reduce((best, current) => {
+                        if (!best) return current;
+                        // Treat null/undefined score as lowest (never rank first)
+                        const bestScore = best.score ?? -Infinity;
+                        const currentScore = current.score ?? -Infinity;
+                        return currentScore > bestScore ? current : best;
+                      });
+
+                    return bestTaco ? (
                       <View style={{ marginTop: spacing.md }}>
                         <Text style={styles.previewLabel}>Mejor taco</Text>
                         <Text style={styles.previewTaco}>
-                          {spotFromList.bestTaco.name} ·{" "}
-                          {spotFromList.bestTaco.score === null
+                          {bestTaco.name} ·{" "}
+                          {bestTaco.score === null
                             ? "Sin reseñas"
-                            : `${spotFromList.bestTaco.score.toFixed(1)} ★`}
+                            : `${bestTaco.score.toFixed(1)} ★`}
                         </Text>
                       </View>
                     ) : null;
