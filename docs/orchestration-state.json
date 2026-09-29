@@ -19,6 +19,14 @@
    "baseCommit": "2f672ba",
    "sessionId": null,
    "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. PR #26 opened at a1bc0df, CI running, auto_fix monitor on. Not merged yet."
+  },
+  {
+   "taskId": "T25",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T25-map-first-home",
+   "branch": "codex/T25-map-first-home",
+   "baseCommit": "81d96ab",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #28 opened at 611f45b, CI pending. auto_fix monitor could not be enabled (denied by auto-mode classifier) - needs manual/periodic check instead."
   }
  ],
  "tasks": {
@@ -306,11 +314,11 @@
    "coderabbitReviewedSha": null
   },
   "T25": {
-   "status": "ready",
+   "status": "in_review",
    "dependsOn": [],
-   "note": "Added 2026-09-29 after an owner-requested UX/design review (not a build-spec gap): map-first home layout, full-bleed map as default view. See docs/plan-delegacion.md P2.6.",
-   "pr": null,
-   "headSha": null,
+   "note": "Implemented by the orchestrator in worktree C:/Repos/taco-hunt-worktrees/T25-map-first-home, branch codex/T25-map-first-home. Map is now the default view, full-bleed, with search/filters/mode-toggle as a floating overlay card; list mode kept as secondary view, unchanged layout. lint/typecheck clean, prettier applied. PR #28 opened at 611f45b, CI pending, not yet reviewed by CodeRabbit or merged.",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/28",
+   "headSha": "611f45b",
    "coderabbitReviewedSha": null
   },
   "T26": {
