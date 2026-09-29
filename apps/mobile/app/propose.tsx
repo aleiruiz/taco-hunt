@@ -23,7 +23,6 @@ type Proposal = {
   createdAt: string;
 };
 type NearbyCandidate = { id: string; name: string; neighborhood: string; distanceMeters: number };
-type TacoType = { id: string; slug: string; nameEs: string };
 type OpeningTime = "manana" | "tarde" | "noche";
 const OPENING_TIME_LABEL: Record<OpeningTime, string> = {
   manana: "Mañana",
@@ -42,10 +41,9 @@ export default function ProposeScreen() {
   const [latitude, setLatitude] = useState(25.6866);
   const [longitude, setLongitude] = useState(-100.3161);
   const [pinFromGoogle, setPinFromGoogle] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [note, setNote] = useState("");
   const [sourceRef, setSourceRef] = useState("");
-  const [tacoTypes, setTacoTypes] = useState<TacoType[]>([]);
-  const [selectedTypeIds, setSelectedTypeIds] = useState<string[]>([]);
   const [openingTimes, setOpeningTimes] = useState<OpeningTime[]>([]);
   const [nearbyCandidates, setNearbyCandidates] = useState<NearbyCandidate[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -71,15 +69,6 @@ export default function ProposeScreen() {
     void loadMine();
   }, [loadMine]);
 
-  useEffect(() => {
-    fetch(`${API}/taco-types`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { items: TacoType[] } | null) => data && setTacoTypes(data.items))
-      .catch(() => {
-        /* Type chips are optional in step 3; the flow works without them. */
-      });
-  }, []);
-
   async function useLocation() {
     setLocating(true);
     setError("");
@@ -95,17 +84,12 @@ export default function ProposeScreen() {
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
       setPinFromGoogle(false);
+      setLocationConfirmed(true);
     } catch {
       setError("No pudimos leer tu ubicación. Arrastra el mapa para ajustar el pin.");
     } finally {
       setLocating(false);
     }
-  }
-
-  function toggleType(id: string) {
-    setSelectedTypeIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
   }
 
   function toggleOpeningTime(time: OpeningTime) {
@@ -150,8 +134,11 @@ export default function ProposeScreen() {
       setNeighborhood("");
       setNote("");
       setSourceRef("");
-      setSelectedTypeIds([]);
       setOpeningTimes([]);
+      setLatitude(25.6866);
+      setLongitude(-100.3161);
+      setPinFromGoogle(false);
+      setLocationConfirmed(false);
       setStep(1);
       await loadMine();
     } catch (cause) {
@@ -164,6 +151,7 @@ export default function ProposeScreen() {
   function startOver() {
     setSubmitted(null);
     setStep(1);
+    setLocationConfirmed(false);
     setError("");
   }
 
@@ -270,7 +258,10 @@ export default function ProposeScreen() {
             {(["autocomplete", "manual"] as Source[]).map((option) => (
               <Pressable
                 key={option}
-                onPress={() => setSource(option)}
+                onPress={() => {
+                  setSource(option);
+                  if (option === "manual") setLocationConfirmed(false);
+                }}
                 style={[styles.segment, source === option && styles.segmentActive]}
               >
                 <Text style={[styles.segmentText, source === option && styles.segmentTextActive]}>
@@ -291,6 +282,7 @@ export default function ProposeScreen() {
                     setLongitude(place.longitude);
                     setSourceRef(place.placeId);
                     setPinFromGoogle(true);
+                    setLocationConfirmed(true);
                     setError("");
                   }}
                   onSelectExistingSpot={(spot) => router.push(`/spot/${spot.id}`)}
@@ -328,7 +320,7 @@ export default function ProposeScreen() {
           <Button
             label="Siguiente"
             variant="primary"
-            disabled={!name.trim()}
+            disabled={name.trim().length < 2}
             onPress={() => setStep(2)}
             style={{ marginTop: spacing.lg }}
           />
@@ -368,6 +360,14 @@ export default function ProposeScreen() {
             onPress={() => void useLocation()}
             style={{ marginTop: spacing.md }}
           />
+          <Button
+            label={locationConfirmed ? "Ubicación confirmada" : "Confirmar ubicación"}
+            variant="secondary"
+            icon={locationConfirmed ? "checkmark" : undefined}
+            disabled={locationConfirmed}
+            onPress={() => setLocationConfirmed(true)}
+            style={{ marginTop: spacing.sm }}
+          />
           <Text style={styles.label}>Colonia o municipio</Text>
           <TextInput
             value={neighborhood}
@@ -392,7 +392,7 @@ export default function ProposeScreen() {
             <Button
               label="Siguiente"
               variant="primary"
-              disabled={!neighborhood.trim()}
+              disabled={neighborhood.trim().length < 2 || !locationConfirmed}
               onPress={() => setStep(3)}
               style={{ flex: 2 }}
             />
@@ -403,18 +403,9 @@ export default function ProposeScreen() {
       {step === 3 && (
         <Card>
           <Text style={styles.stepTitle}>Detalles que ayudan (opcional)</Text>
-          <Text style={styles.label}>Tipos de taco</Text>
-          <View style={styles.chipWrap}>
-            {tacoTypes.map((type) => (
-              <Chip
-                key={type.id}
-                label={type.nameEs}
-                selected={selectedTypeIds.includes(type.id)}
-                onPress={() => toggleType(type.id)}
-              />
-            ))}
-            <Chip label="+ Otro" dashed onPress={() => router.push(`/propose?tacoType=other`)} />
-          </View>
+          <Text style={styles.body}>
+            Los tipos de taco se agregan una vez que la taquería esté publicada.
+          </Text>
           <Text style={styles.label}>Horario</Text>
           <View style={styles.chipWrap}>
             {(Object.keys(OPENING_TIME_LABEL) as OpeningTime[]).map((time) => (
@@ -431,7 +422,7 @@ export default function ProposeScreen() {
           <Text style={styles.muted}>También pasa por revisión.</Text>
           {error ? (
             <Text accessibilityRole="alert" style={styles.error}>
-              No se pudo enviar… lo que llenaste sigue aquí.
+              {error} Lo que llenaste sigue aquí.
             </Text>
           ) : null}
           {nearbyCandidates.length > 0 ? (
