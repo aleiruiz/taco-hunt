@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Platform,
   Pressable,
@@ -16,8 +17,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
-import { colors } from "@/theme";
+import { colors, spacing, radii } from "@/theme";
 import { Chip } from "@/components/Chip";
+import { Card } from "@/components/Card";
 
 type TacoType = { id: string; slug: string; nameEs: string };
 type Taco = {
@@ -36,6 +38,20 @@ type Spot = {
   lastVerifiedAt: string | null;
   reviewCount: number;
   bestTaco: Taco | null;
+};
+type Review = {
+  id: string;
+  text: string;
+  score?: number;
+  createdAt?: string;
+  author?: string;
+};
+type SpotDetail = {
+  id: string;
+  name: string;
+  neighborhood: string;
+  tacos: Taco[];
+  reviews?: Review[];
 };
 type Page = { items: Spot[]; nextCursor: string | null };
 type Area = { label: string; north: number; south: number; east: number; west: number };
@@ -70,8 +86,14 @@ export default function ExploreScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState("");
+  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const [selectedSpot, setSelectedSpot] = useState<SpotDetail | null>(null);
+  const [spotLoading, setSpotLoading] = useState(false);
+  const [spotError, setSpotError] = useState("");
   const router = useRouter();
   const { session } = useAuth();
+  const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
+  const sheetAnimRef = useRef(new Animated.Value(0)).current;
 
   const loadTypes = useCallback(async () => {
     try {
@@ -208,6 +230,72 @@ export default function ExploreScreen() {
     void load(query, activeType, next);
   };
 
+  const handleMarkerPress = useCallback(async (spotId: string) => {
+    setSelectedSpotId(spotId);
+    setSpotError("");
+
+    const cached = spotCacheRef.current.get(spotId);
+    if (cached) {
+      setSelectedSpot(cached);
+      Animated.timing(sheetAnimRef, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+      return;
+    }
+
+    setSpotLoading(true);
+    try {
+      const response = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
+      if (!response.ok) throw new Error("Failed to fetch spot");
+      const spot = (await response.json()) as SpotDetail;
+      spotCacheRef.current.set(spotId, spot);
+      setSelectedSpot(spot);
+      Animated.timing(sheetAnimRef, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }).start();
+    } catch {
+      setSpotError("No se pudo cargar la información del puesto. Intenta de nuevo.");
+    } finally {
+      setSpotLoading(false);
+    }
+  }, []);
+
+  const closeSheet = useCallback(() => {
+    Animated.timing(sheetAnimRef, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start(() => {
+      setSelectedSpotId(null);
+      setSelectedSpot(null);
+      setSpotError("");
+    });
+  }, [sheetAnimRef]);
+
+  const CustomMarkerContent = () => (
+    <View
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.red,
+        alignItems: "center",
+        justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 5,
+      }}
+    >
+      <Text style={{ fontSize: 24 }}>🌮</Text>
+    </View>
+  );
+
   const modeToggle = (
     <View style={styles.modeRow}>
       <Pressable
@@ -321,12 +409,10 @@ export default function ExploreScreen() {
             <Marker
               key={item.id}
               coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-              title={item.name}
-              description={item.neighborhood}
-              onCalloutPress={() =>
-                router.push({ pathname: "/spot/[id]", params: { id: item.id } } as Href)
-              }
-            />
+              onPress={() => void handleMarkerPress(item.id)}
+            >
+              <CustomMarkerContent />
+            </Marker>
           ))}
         </MapView>
         <View style={styles.mapOverlay} pointerEvents="box-none">
@@ -373,6 +459,84 @@ export default function ExploreScreen() {
           <Text style={styles.mapCaption}>
             Toca un marcador para ver el puesto · {items.length} puestos
           </Text>
+        )}
+        {selectedSpotId && (
+          <Animated.View
+            style={[
+              styles.bottomSheet,
+              {
+                transform: [
+                  {
+                    translateY: sheetAnimRef.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [500, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Card style={styles.previewCard}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.previewTitle}>{selectedSpot?.name}</Text>
+                  <Text style={styles.previewNeighborhood}>{selectedSpot?.neighborhood}</Text>
+                </View>
+                <Pressable
+                  onPress={closeSheet}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar tarjeta"
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={20} color={colors.ink} />
+                </Pressable>
+              </View>
+
+              {spotLoading ? (
+                <View style={{ marginTop: spacing.md, alignItems: "center" }}>
+                  <ActivityIndicator color={colors.red} />
+                </View>
+              ) : spotError ? (
+                <Text style={[styles.previewError, { marginTop: spacing.md }]}>{spotError}</Text>
+              ) : selectedSpot ? (
+                <>
+                  {selectedSpot.tacos && selectedSpot.tacos.length > 0 && (
+                    <View style={{ marginTop: spacing.md }}>
+                      <Text style={styles.previewLabel}>Mejor taco</Text>
+                      {selectedSpot.tacos[0] && (
+                        <Text style={styles.previewTaco}>
+                          {selectedSpot.tacos[0].name} ·{" "}
+                          {selectedSpot.tacos[0].score === null
+                            ? "Sin reseñas"
+                            : `${selectedSpot.tacos[0].score.toFixed(1)} ★`}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+
+                  {selectedSpot.reviews && selectedSpot.reviews.length > 0 && (
+                    <View style={{ marginTop: spacing.md }}>
+                      <Text style={styles.previewLabel}>Reseña reciente</Text>
+                      <Text style={styles.previewReview}>{selectedSpot.reviews[0].text}</Text>
+                    </View>
+                  )}
+
+                  <Pressable
+                    onPress={() => {
+                      closeSheet();
+                      router.push({
+                        pathname: "/spot/[id]",
+                        params: { id: selectedSpotId },
+                      } as Href);
+                    }}
+                    style={styles.previewViewButton}
+                  >
+                    <Text style={styles.previewViewText}>Ver puesto completo</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </Card>
+          </Animated.View>
         )}
       </View>
     );
@@ -684,4 +848,73 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loadMoreText: { color: colors.white, fontWeight: "800", fontSize: 13 },
+  bottomSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  previewCard: {
+    marginHorizontal: 0,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  previewTitle: {
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  previewNeighborhood: {
+    color: colors.muted,
+    fontSize: 13,
+    marginTop: spacing.xs,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.cream,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewLabel: {
+    color: colors.green,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: spacing.xs,
+  },
+  previewTaco: {
+    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  previewReview: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  previewError: {
+    color: colors.dangerText,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  previewViewButton: {
+    marginTop: spacing.md,
+    minHeight: 44,
+    borderRadius: radii.md,
+    backgroundColor: colors.green,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  previewViewText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
 });
