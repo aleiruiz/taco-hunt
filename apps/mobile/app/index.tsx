@@ -229,51 +229,67 @@ export default function ExploreScreen() {
     void load(query, activeType, next);
   };
 
-  const handleMarkerPress = useCallback(async (spotId: string) => {
-    setSelectedSpotId(spotId);
-    setSpotError("");
+  const handleMarkerPress = useCallback(
+    async (spotId: string) => {
+      setSelectedSpotId(spotId);
+      setSelectedSpot(null);
+      setSpotError("");
+      setSpotLoading(true);
 
-    const cached = spotCacheRef.current.get(spotId);
-    if (cached) {
-      setSelectedSpot(cached);
+      // Start opening animation immediately
       Animated.timing(sheetAnimRef, {
         toValue: 1,
         duration: 300,
         useNativeDriver: false,
       }).start();
-      return;
-    }
 
-    setSpotLoading(true);
-    try {
-      const response = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
-      if (!response.ok) throw new Error("Failed to fetch spot");
-      const spot = (await response.json()) as SpotDetail;
-      spotCacheRef.current.set(spotId, spot);
-      setSelectedSpot(spot);
-      Animated.timing(sheetAnimRef, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }).start();
-    } catch {
-      setSpotError("No se pudo cargar la información del puesto. Intenta de nuevo.");
-    } finally {
-      setSpotLoading(false);
-    }
-  }, []);
+      const cached = spotCacheRef.current.get(spotId);
+      if (cached) {
+        setSelectedSpot(cached);
+        setSpotLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
+        if (!response.ok) throw new Error("Failed to fetch spot");
+        const spot = (await response.json()) as SpotDetail;
+
+        // Only update state if this spot is still the selected one (prevent stale responses)
+        if (selectedSpotId === spotId) {
+          spotCacheRef.current.set(spotId, spot);
+          setSelectedSpot(spot);
+        }
+      } catch {
+        // Only show error if this spot is still the selected one
+        if (selectedSpotId === spotId) {
+          setSpotError("No se pudo cargar la información del puesto. Intenta de nuevo.");
+        }
+      } finally {
+        // Only clear loading if this spot is still the selected one
+        if (selectedSpotId === spotId) {
+          setSpotLoading(false);
+        }
+      }
+    },
+    [selectedSpotId],
+  );
 
   const closeSheet = useCallback(() => {
+    const closingSpotId = selectedSpotId;
     Animated.timing(sheetAnimRef, {
       toValue: 0,
       duration: 300,
       useNativeDriver: false,
-    }).start(() => {
-      setSelectedSpotId(null);
-      setSelectedSpot(null);
-      setSpotError("");
+    }).start(({ finished }) => {
+      // Only clear state if animation finished and this spot is still being closed
+      if (finished && selectedSpotId === closingSpotId) {
+        setSelectedSpotId(null);
+        setSelectedSpot(null);
+        setSpotError("");
+      }
     });
-  }, [sheetAnimRef]);
+  }, [selectedSpotId]);
 
   const CustomMarkerContent = () => (
     <View
@@ -408,6 +424,7 @@ export default function ExploreScreen() {
             <Marker
               key={item.id}
               coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+              accessibilityLabel={`${item.name}, ${item.neighborhood}`}
               onPress={() => void handleMarkerPress(item.id)}
             >
               <CustomMarkerContent />
@@ -517,7 +534,9 @@ export default function ExploreScreen() {
                   {selectedSpot.reviews && selectedSpot.reviews.length > 0 && (
                     <View style={{ marginTop: spacing.md }}>
                       <Text style={styles.previewLabel}>Reseña reciente</Text>
-                      <Text style={styles.previewReview}>{selectedSpot.reviews[0].body}</Text>
+                      <Text style={styles.previewReview} numberOfLines={3}>
+                        {selectedSpot.reviews[0].body}
+                      </Text>
                     </View>
                   )}
 
