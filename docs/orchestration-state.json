@@ -309,11 +309,11 @@
     },
     "T48": {
       "pr": 37,
-      "headSha": "f536170",
+      "headSha": "d30e9e3",
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. Branched directly off main after T45 merged. CI green; awaiting CodeRabbit."
+      "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. CodeRabbit found 2 accessibility findings on f536170 (report IconButton labeled 'Más opciones' when it opens the report form directly; PhotoTile's placeholder tile had no accessibilityLabel/role of its own) - fixed as d30e9e3, adding an accessibilityLabel prop to the shared PhotoTile component. CI green, awaiting re-review."
     },
     "T36": {
       "status": "blocked",
