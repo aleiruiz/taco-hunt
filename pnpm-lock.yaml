@@ -119,6 +119,9 @@ importers:
       react-native:
         specifier: 0.86.3
         version: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-map-clustering:
+        specifier: ^4.0.0
+        version: 4.0.0(react-native-maps@1.27.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
       react-native-maps:
         specifier: 1.27.2
         version: 1.27.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
@@ -1173,6 +1176,13 @@ packages:
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
     engines: {node: '>=8'}
+
+  '@mapbox/geo-viewport@0.4.1':
+    resolution: {integrity: sha512-5g6eM3EOSl7+0p0VY+vHWEYjUlNzof936VKHTi/NuJVABjbYe8D2NAVJ0qt5C9Np4glUlhKFepgAgQ0OEybrjQ==}
+
+  '@mapbox/sphericalmercator@1.1.0':
+    resolution: {integrity: sha512-pEsfZyG4OMThlfFQbCte4gegvHUjxXCjz0KZ4Xk8NdOYTQBLflj6U8PL05RPAiuRAMAQNUUKJuL6qYZ5Y4kAWA==}
+    hasBin: true
 
   '@nestjs/common@11.2.6':
     resolution: {integrity: sha512-uXs98qEOesTf6rGs0OcvFpRdF4M6JvzyBmoIXcTYvojdte4HiwDYv+whaALoboyfu/fuq2umF74FLQu3V7ZPHw==}
@@ -2748,6 +2758,9 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
+  kdbush@4.1.0:
+    resolution: {integrity: sha512-e9vurzrXJQrFX6ckpHP3bvj5l+9CnYzkxDNnNQ1h2QTqdWsUAJgXiKdGNcOa1EY85dU8KbQ+z/FdQdB7P+9yfQ==}
+
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
@@ -3423,6 +3436,12 @@ packages:
       react: '*'
       react-native: '*'
 
+  react-native-map-clustering@4.0.0:
+    resolution: {integrity: sha512-+YNh4frhZIHQReURxYGHNy9MJ50GYWpW6psoBEjvTG6vb33eYu00GmO8Pu/9VwMB1YL5lOxZ9+sJClJ8Mz1Bxw==}
+    peerDependencies:
+      react-native: '*'
+      react-native-maps: '*'
+
   react-native-maps@1.27.2:
     resolution: {integrity: sha512-VKr+xZ2RZGHHJlY6KhlafvGSmK0dq/tUu5uhfJ7K9rwN5pUdubdugzMKGDU/16lXmQSg7xbClKhRctj3Pm5F5g==}
     engines: {node: '>= 20.19.4'}
@@ -3767,6 +3786,9 @@ packages:
   supabase@2.118.0:
     resolution: {integrity: sha512-0aPIlzBSBLwbJZCMZKD1QAwlc4xNnNvvk07QuSuuKBKzGLSeV3GovgTLlMKFTJ4JWfJubWF0URPLuPUr0kZr5g==}
     hasBin: true
+
+  supercluster@8.0.1:
+    resolution: {integrity: sha512-IiOea5kJ9iqzD2t7QJq/cREyLHTtSmUT6gQsweojg9WH2sYJqZK9SswTu6jrscO6D1G5v5vYZ9ru/eq85lXeZQ==}
 
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
@@ -5286,6 +5308,12 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.6.0
 
   '@lukeed/csprng@1.1.0': {}
+
+  '@mapbox/geo-viewport@0.4.1':
+    dependencies:
+      '@mapbox/sphericalmercator': 1.1.0
+
+  '@mapbox/sphericalmercator@1.1.0': {}
 
   '@nestjs/common@11.2.6(reflect-metadata@0.2.2)(rxjs@7.8.2)':
     dependencies:
@@ -6956,6 +6984,8 @@ snapshots:
 
   json5@2.2.3: {}
 
+  kdbush@4.1.0: {}
+
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
@@ -7911,6 +7941,13 @@ snapshots:
       react: 19.2.3
       react-native: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
 
+  react-native-map-clustering@4.0.0(react-native-maps@1.27.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)):
+    dependencies:
+      '@mapbox/geo-viewport': 0.4.1
+      react-native: 0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3)
+      react-native-maps: 1.27.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
+      supercluster: 8.0.1
+
   react-native-maps@1.27.2(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.87.1(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))(react@19.2.3):
     dependencies:
       '@types/geojson': 7946.0.16
@@ -8289,6 +8326,10 @@ snapshots:
       '@supabase/cli-linux-x64-musl': 2.118.0
       '@supabase/cli-windows-arm64': 2.118.0
       '@supabase/cli-windows-x64': 2.118.0
+
+  supercluster@8.0.1:
+    dependencies:
+      kdbush: 4.1.0
 
   supports-color@5.5.0:
     dependencies:
