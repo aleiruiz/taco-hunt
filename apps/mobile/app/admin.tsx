@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import { colors } from "@/theme";
 
@@ -85,8 +86,11 @@ export default function AdminScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Link href="/settings" style={styles.back}>
-        ‹ Ajustes
+      <Link href="/settings" asChild>
+        <Pressable accessibilityRole="link" accessibilityLabel="Ajustes" style={styles.back}>
+          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Text style={styles.backText}>Ajustes</Text>
+        </Pressable>
       </Link>
       <Text style={styles.kicker}>SOLO ADMINISTRADORES</Text>
       <Text style={styles.title}>Moderar la comunidad</Text>
@@ -216,8 +220,15 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { paddingHorizontal: 22, paddingTop: 56, paddingBottom: 40 },
   center: { flex: 1, padding: 28, justifyContent: "center", backgroundColor: colors.cream },
-  back: { color: colors.green, fontSize: 15, fontWeight: "800", minHeight: 44 },
-  kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginTop: 18 },
+  back: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44 },
+  backText: { color: colors.green, fontSize: 15, fontWeight: "800" },
+  kicker: {
+    color: colors.green,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 18,
+  },
   title: { color: colors.ink, fontSize: 30, fontWeight: "900", marginTop: 10 },
   body: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: 8 },
   link: { color: colors.red, fontWeight: "900", marginTop: 20 },

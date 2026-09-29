@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { authConfigured } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
 import { deleteAccount } from "@/features/contributions/api";
@@ -62,8 +63,15 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Link href="/" style={styles.back}>
-        ‹ Volver a explorar
+      <Link href="/" asChild>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Volver a explorar"
+          style={styles.back}
+        >
+          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Text style={styles.backText}>Volver a explorar</Text>
+        </Pressable>
       </Link>
       <Text style={styles.kicker}>TU CUENTA</Text>
       <Text style={styles.title}>Ajustes</Text>
@@ -124,7 +132,11 @@ export default function SettingsScreen() {
       )}
       {session ? null : (
         <Link href="/my-tacos" asChild>
-          <Button label="Mis tacos y favoritos" variant="secondary" style={styles.buttonSecondary} />
+          <Button
+            label="Mis tacos y favoritos"
+            variant="secondary"
+            style={styles.buttonSecondary}
+          />
         </Link>
       )}
       {!authConfigured ? (
@@ -147,14 +159,8 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { paddingHorizontal: 22, paddingTop: 56, paddingBottom: 40 },
-  back: {
-    color: colors.green,
-    fontSize: 15,
-    fontWeight: "800",
-    minHeight: 44,
-    textAlignVertical: "center",
-    marginBottom: 24,
-  },
+  back: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, marginBottom: 24 },
+  backText: { color: colors.green, fontSize: 15, fontWeight: "800" },
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
   title: { color: colors.ink, fontSize: 32, fontWeight: "900", marginTop: 10, marginBottom: 22 },
   card: { padding: 19 },

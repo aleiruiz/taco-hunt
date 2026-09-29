@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/theme";
 import { authConfigured, passwordResetRedirectUrl, supabase } from "./client";
 
 type Mode = "sign-in" | "sign-up" | "reset";
@@ -85,8 +87,15 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.screen}
     >
-      <Link href="/" style={styles.back}>
-        ‹ Explorar sin cuenta
+      <Link href="/" asChild>
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Explorar sin cuenta"
+          style={styles.back}
+        >
+          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Text style={styles.backText}>Explorar sin cuenta</Text>
+        </Pressable>
       </Link>
       <View style={styles.hero}>
         <Text style={styles.kicker}>TACO HUNT · MONTERREY</Text>
@@ -190,13 +199,8 @@ function Field({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#FBF3E6", paddingHorizontal: 24, paddingTop: 56 },
-  back: {
-    color: "#276C4F",
-    fontWeight: "800",
-    fontSize: 15,
-    minHeight: 44,
-    textAlignVertical: "center",
-  },
+  back: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44 },
+  backText: { color: "#276C4F", fontWeight: "800", fontSize: 15 },
   hero: { marginTop: 38 },
   kicker: { color: "#276C4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
   title: { marginTop: 12, color: "#302723", fontSize: 32, lineHeight: 38, fontWeight: "900" },

@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
 import { createReport, ReportConflictError, type ReportReason } from "@/features/reports/api";
@@ -161,8 +162,14 @@ export default function SpotScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: spot?.name ?? "Puesto" }} />
-      <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.back}>
-        <Text style={styles.backText}>‹ Volver</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Volver"
+        onPress={() => router.back()}
+        style={styles.back}
+      >
+        <Ionicons name="chevron-back" size={16} color={colors.green} />
+        <Text style={styles.backText}>Volver</Text>
       </Pressable>
       {loading ? (
         <ActivityIndicator color={colors.red} style={{ marginTop: 50 }} />
@@ -195,12 +202,18 @@ export default function SpotScreen() {
               onPress={() => void toggleFavorite()}
               style={styles.favoriteButton}
             >
+              <Ionicons
+                name={favorite ? "heart" : "heart-outline"}
+                size={16}
+                color={colors.red}
+                style={styles.icon}
+              />
               <Text style={styles.favoriteText}>
-                {favorite ? "♥  Guardado en favoritos" : "♡  Guardar en favoritos"}
+                {favorite ? "Guardado en favoritos" : "Guardar en favoritos"}
               </Text>
             </Pressable>
             <Button
-              label="⚑ Reportar este puesto"
+              label="Reportar este puesto"
               variant="ghost"
               onPress={openReport}
               style={styles.reportButton}
@@ -215,7 +228,7 @@ export default function SpotScreen() {
             {hasPin && (
               <View style={styles.pinCard}>
                 <View style={styles.pinIcon}>
-                  <Text style={{ fontSize: 23 }}>⌖</Text>
+                  <Ionicons name="location" size={23} color={colors.ink} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.pinTitle}>Ubicación del puesto</Text>
@@ -327,12 +340,20 @@ export default function SpotScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 22, paddingTop: 58, paddingBottom: 40 },
-  back: { minHeight: 44, justifyContent: "center", marginBottom: 26 },
+  back: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minHeight: 44,
+    justifyContent: "flex-start",
+    marginBottom: 26,
+  },
   backText: { color: colors.green, fontWeight: "800", fontSize: 15 },
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.4 },
   title: { color: colors.ink, fontSize: 32, lineHeight: 38, fontWeight: "900", marginTop: 10 },
   neighborhood: { color: colors.muted, fontSize: 16, marginTop: 5 },
   favoriteButton: {
+    flexDirection: "row",
     minHeight: 48,
     marginTop: 16,
     borderRadius: 14,
@@ -342,6 +363,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   favoriteText: { color: colors.red, fontWeight: "900" },
+  icon: { marginRight: 6 },
   reportButton: { marginTop: spacing.md },
   modalBackdrop: {
     flex: 1,

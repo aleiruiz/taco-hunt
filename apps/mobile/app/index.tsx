@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { Link, type Href, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -215,7 +216,13 @@ export default function ExploreScreen() {
         onPress={() => setMode("lista")}
         style={[styles.modeButton, mode === "lista" && styles.modeSelected]}
       >
-        <Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>☷ Lista</Text>
+        <Ionicons
+          name="list"
+          size={14}
+          color={mode === "lista" ? colors.ink : colors.muted}
+          style={styles.icon}
+        />
+        <Text style={[styles.modeText, mode === "lista" && styles.modeSelectedText]}>Lista</Text>
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -223,7 +230,13 @@ export default function ExploreScreen() {
         onPress={() => setMode("mapa")}
         style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}
       >
-        <Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>⌖ Mapa</Text>
+        <Ionicons
+          name="map"
+          size={14}
+          color={mode === "mapa" ? colors.ink : colors.muted}
+          style={styles.icon}
+        />
+        <Text style={[styles.modeText, mode === "mapa" && styles.modeSelectedText]}>Mapa</Text>
       </Pressable>
     </View>
   );
@@ -246,7 +259,10 @@ export default function ExploreScreen() {
           onPress={() => void locate()}
           style={styles.locationButton}
         >
-          <Text style={styles.locationText}>{locating ? "Buscando…" : "⌖  Usar mi ubicación"}</Text>
+          {!locating && (
+            <Ionicons name="navigate" size={14} color={colors.white} style={styles.icon} />
+          )}
+          <Text style={styles.locationText}>{locating ? "Buscando…" : "Usar mi ubicación"}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -254,7 +270,8 @@ export default function ExploreScreen() {
           onPress={() => setAreaPicker((open) => !open)}
           style={styles.areaButton}
         >
-          <Text style={styles.areaText}>⌄ {area.label}</Text>
+          <Text style={styles.areaText}>{area.label}</Text>
+          <Ionicons name="chevron-down" size={14} color={colors.ink} />
         </Pressable>
       </View>
       {areaPicker && (
@@ -345,7 +362,7 @@ export default function ExploreScreen() {
         ) : null}
         {!loading && !error && items.length === 0 && (
           <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}>
-            <Text style={styles.mapEmptyIcon}>⌖</Text>
+            <Ionicons name="location-outline" size={42} color={colors.red} />
             <Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text>
             <Text style={styles.muted}>
               Prueba otra zona o quita el filtro de taco para ver más lugares.
@@ -447,7 +464,7 @@ export default function ExploreScreen() {
                     : "Tacos por descubrir"}
                 </Text>
               </View>
-              <Text style={styles.arrow}>›</Text>
+              <Ionicons name="chevron-forward" size={22} color={colors.muted} />
             </Pressable>
           </Link>
         )}
@@ -502,7 +519,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   controls: { flexDirection: "row", gap: 9, marginTop: 11 },
+  icon: { marginRight: 6 },
   locationButton: {
+    flexDirection: "row",
     backgroundColor: colors.green,
     borderRadius: 13,
     minHeight: 44,
@@ -513,6 +532,8 @@ const styles = StyleSheet.create({
   locationText: { color: colors.white, fontWeight: "800", fontSize: 12 },
   areaButton: {
     flex: 1,
+    flexDirection: "row",
+    gap: 6,
     borderWidth: 1,
     borderColor: colors.lineSoft,
     borderRadius: 13,
@@ -544,6 +565,7 @@ const styles = StyleSheet.create({
   },
   modeButton: {
     flex: 1,
+    flexDirection: "row",
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
@@ -575,7 +597,6 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.ink, fontSize: 15, fontWeight: "800" },
   muted: { color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 19 },
   meta: { color: colors.green, fontSize: 12, fontWeight: "700", marginTop: 5 },
-  arrow: { color: colors.muted, fontSize: 23, paddingHorizontal: 4, fontWeight: "800" },
   empty: {
     marginTop: 16,
     borderRadius: 18,
@@ -633,7 +654,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  mapEmptyIcon: { color: colors.red, fontSize: 42, fontWeight: "800" },
   mapEmptyTitle: {
     color: colors.ink,
     fontSize: 16,

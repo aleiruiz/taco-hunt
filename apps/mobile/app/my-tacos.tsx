@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Link, Stack, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import {
   deleteReview,
@@ -104,7 +105,7 @@ export default function MyTacosScreen() {
               <Text style={styles.cardTitle}>{favorite.name}</Text>
               <Text style={styles.body}>{favorite.neighborhood}</Text>
             </View>
-            <Text style={styles.score}>♥</Text>
+            <Ionicons name="heart" size={21} color={colors.red} />
           </Pressable>
         ))
       )}
@@ -159,7 +160,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardTitle: { color: colors.ink, fontSize: 16, fontWeight: "900" },
-  score: { color: colors.red, fontSize: 21 },
   comment: { color: colors.ink, marginTop: 7, lineHeight: 20 },
   empty: { color: colors.muted, padding: 16, backgroundColor: colors.paper, borderRadius: 14 },
   notice: { padding: 14, backgroundColor: colors.tacoTile, borderRadius: 14, marginTop: 18 },
