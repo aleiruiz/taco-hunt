@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Pressable,
@@ -132,8 +133,11 @@ export default function ProposeScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <Link href="/" style={styles.back}>
-        ‹ Volver a explorar
+      <Link href="/" asChild>
+        <Pressable accessibilityRole="link" style={styles.back}>
+          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Text style={styles.backText}>Volver a explorar</Text>
+        </Pressable>
       </Link>
       <Text style={styles.kicker}>CONTRIBUYE A TACO HUNT</Text>
       <Text style={styles.title}>Propón una taquería</Text>
@@ -314,14 +318,8 @@ export default function ProposeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { paddingHorizontal: 22, paddingTop: 56, paddingBottom: 44 },
-  back: {
-    color: colors.green,
-    fontSize: 15,
-    fontWeight: "800",
-    minHeight: 44,
-    textAlignVertical: "center",
-    marginBottom: 24,
-  },
+  back: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, marginBottom: 24 },
+  backText: { color: colors.green, fontSize: 15, fontWeight: "800" },
   kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5 },
   title: { color: colors.ink, fontSize: 32, fontWeight: "900", marginTop: 10, marginBottom: 12 },
   body: { color: colors.muted, fontSize: 14, lineHeight: 21, marginBottom: 14 },
