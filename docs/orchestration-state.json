@@ -27,6 +27,14 @@
    "baseCommit": "d43efa3",
    "sessionId": null,
    "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #29 opened at b5e74fd, CI pending."
+  },
+  {
+   "taskId": "T30",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T30-icon-set-swap",
+   "branch": "codex/T30-icon-set-swap",
+   "baseCommit": "5d0ddfd",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29 (this run). PR #30 opened at 40a6781, CI pending."
   }
  ],
  "tasks": {
@@ -359,11 +367,11 @@
    "coderabbitReviewedSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8"
   },
   "T30": {
-   "status": "ready",
+   "status": "in_review",
    "dependsOn": [],
-   "note": "Icon set swap: Unicode glyphs to Phosphor/Lucide.",
-   "pr": null,
-   "headSha": null,
+   "note": "Implemented by the orchestrator in worktree C:/Repos/taco-hunt-worktrees/T30-icon-set-swap, branch codex/T30-icon-set-swap. Chose @expo/vector-icons (Ionicons) over Phosphor/Lucide - decision logged in orchestration-log.md before touching apps/mobile/package.json + pnpm-lock.yaml. Swapped back-chevrons, location/area controls, list/map toggle, map-empty pin, favorite heart, list-row chevron across 8 mobile files; taco emoji left as branding. lint/typecheck clean, prettier applied. PR #30 opened at 40a6781, CI pending - flagged a risk in the PR body that the lockfile was regenerated with pnpm 9.15.9 (env constraint: Node 20.13.1 can't run the pinned pnpm@11.25.0) instead of the pinned pnpm version, so frozen-lockfile install in CI needs verifying.",
+   "pr": "https://github.com/aleiruiz/taco-hunt/pull/30",
+   "headSha": "40a6781",
    "coderabbitReviewedSha": null
   }
  }
