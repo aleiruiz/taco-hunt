@@ -73,8 +73,10 @@ export class ReviewsController {
     const client = await this.connect();
     try {
       await client.query("begin");
+      // Row locks need UPDATE privilege on each locked table; taco_hunt_api only
+      // has SELECT on taco_types, so it is checked but not locked.
       const target = await client.query(
-        "select st.id from app_private.spot_tacos st join app_private.spots s on s.id=st.spot_id join app_private.taco_types tt on tt.id=st.taco_type_id where st.id=$1 and st.status='approved' and s.status='approved' and tt.active for share of st,s,tt",
+        "select st.id from app_private.spot_tacos st join app_private.spots s on s.id=st.spot_id join app_private.taco_types tt on tt.id=st.taco_type_id where st.id=$1 and st.status='approved' and s.status='approved' and tt.active for share of st,s",
         [parsed.data.spotTacoId],
       );
       if (!target.rowCount) throw new NotFoundException("Taco no encontrado");
