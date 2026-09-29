@@ -246,9 +246,9 @@
     "T20"
    ],
    "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR. CodeRabbit reviewed and left 7 findings; fixed all 7 (HTTPS enforcement on GOOGLE_PLACES_DETAILS_URL, PLACES_REFRESH_DELAY_MS validation, a stale-read race on the last_verified_at update, spots with open findings monopolizing the refresh limit, a missing Place Details timeout, an incomplete Google response being treated as confirmed-fresh, and report-dedup only matching this job's own tagged reports) — none needed a product decision.",
-   "status": "in_review",
+   "status": "changes_requested",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
-   "headSha": "23a46330c716f935ca56612a6485a6df94f90f77",
+   "headSha": "b7bfcac0f65ad537605624f3adbf6c494624ce27",
    "coderabbitReviewedSha": null
   },
   "T24": {
@@ -284,7 +284,7 @@
    "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. CodeRabbit found a real bug beyond the diff itself: apps/api/src/auth/profile.service.ts's findOrCreate (used by every authenticated route) could throw an unhandled foreign-key-violation error for a request made with a still-valid access token after its account was deleted; now caught and rethrown as a clean 401. Also batched Storage photo deletion (1,000/batch) and corrected an inaccurate privacy.md claim about token revocation. Declined to add an integration test per CLAUDE.md's no-tests-unless-requested rule; that one thread stays open. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
    "status": "in_review",
    "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
-   "headSha": "e025a9d488f844b66d8bdf6359db2084eb9e1ed7",
+   "headSha": "f6efbf8bdf468a25fcc10a463c5d61a796b90755",
    "coderabbitReviewedSha": null
   },
   "T15": {
