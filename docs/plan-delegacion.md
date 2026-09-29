@@ -55,6 +55,19 @@ T08, T09, and T10 can advance in parallel with frozen contracts. T11, T12, and T
 | T23 | Periodic review of candidates by `place_id`; send changes or closures to moderation without silently overwriting Taco Hunt data.                                                  | T17, T20   | apps/api/src/places/ and jobs          | Blocked   |
 | T24 | Maps/Places cost and safety controls: restricted keys, quotas, deduplication, alerts, and an emergency shutoff.                                                                   | T17, T21   | infrastructure and docs                | Blocked   |
 
+## P2.6: post-build UX/design follow-up (added 2026-09-29, owner-requested design review)
+
+Not in the original build-spec phases; added after all P0–P2.5 tasks closed and the owner asked for a UX/product design review. These improve on an already-spec-compliant app rather than closing a build-spec gap (T28 is the exception: it closes a real spec gap, §3.4's report flow). None of these block T14–T16.
+
+| ID  | Task and expected outcome                                                                                                           | Blocked by | Main area                          | Status  |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------- | ------- |
+| T25 | Map-first home layout: full-bleed map as the default view; search/filter bar floats on top instead of a scrolling header pushing it down. | —          | apps/mobile/app/index.tsx           | Ready   |
+| T26 | Custom branded pin markers and a tap-to-preview bottom card (name, best taco, recent review snippet) replacing default OS callouts.    | T25        | apps/mobile/app/index.tsx           | Blocked |
+| T27 | Marker clustering so dense areas don't turn into overlapping pins once real stand data loads.                                         | T26        | apps/mobile/app/index.tsx           | Blocked |
+| T28 | Report-a-stand/review mobile flow: build-spec.md §3.4 feature with no UI yet, backed by the existing `POST /v1/reports` and admin queue. | —          | apps/mobile/app/spot/[id].tsx       | Ready   |
+| T29 | Design system extraction: one `theme.ts` for colors/spacing/type tokens (build-spec.md §16.1) plus shared Button/Card/Chip components. | —          | apps/mobile/src/                    | Active  |
+| T30 | Icon set swap: replace Unicode-glyph "icons" with a real icon library (Phosphor/Lucide).                                              | —          | apps/mobile/                        | Ready   |
+
 ## P3: deliberately blocked until the end
 
 | ID  | Task and expected outcome                                                                                                                                                                          | Blocked by                                                                                       | Status          |

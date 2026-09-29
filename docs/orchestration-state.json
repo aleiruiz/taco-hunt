@@ -19,6 +19,14 @@
    "baseCommit": "2f672ba",
    "sessionId": null,
    "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:05Z. PR #26 opened at a1bc0df, CI running, auto_fix monitor on. Not merged yet."
+  },
+  {
+   "taskId": "T29",
+   "worktree": "C:/Repos/taco-hunt-worktrees/T29-design-system",
+   "branch": "codex/T29-design-system",
+   "baseCommit": "main",
+   "sessionId": null,
+   "note": "Implemented by the orchestrator in this worktree, started 2026-09-29T03:40Z. Scope: extract mobile theme.ts (colors/spacing/type tokens from build-spec.md \u00a716.1) and shared Button/Card/Chip components; no screen behavior changes."
   }
  ],
  "tasks": {
@@ -301,6 +309,58 @@
     "E03",
     "E04"
    ],
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T25": {
+   "status": "ready",
+   "dependsOn": [],
+   "note": "Added 2026-09-29 after an owner-requested UX/design review (not a build-spec gap): map-first home layout, full-bleed map as default view. See docs/plan-delegacion.md P2.6.",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T26": {
+   "status": "blocked",
+   "dependsOn": [
+    "T25"
+   ],
+   "note": "Custom branded pin markers + tap-to-preview bottom card, sourced from existing GET /spots/:id (no API change needed).",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T27": {
+   "status": "blocked",
+   "dependsOn": [
+    "T26"
+   ],
+   "note": "Marker clustering for dense areas.",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T28": {
+   "status": "ready",
+   "dependsOn": [],
+   "note": "Closes a real build-spec gap (§3.4): report-a-stand/review mobile UI, backed by existing POST /v1/reports and admin queue.",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T29": {
+   "status": "active",
+   "dependsOn": [],
+   "note": "Design system extraction: theme.ts + shared Button/Card/Chip. Owner chose this as the starting task among T25-T30 since the map/icon work builds on it.",
+   "pr": null,
+   "headSha": null,
+   "coderabbitReviewedSha": null
+  },
+  "T30": {
+   "status": "ready",
+   "dependsOn": [],
+   "note": "Icon set swap: Unicode glyphs to Phosphor/Lucide.",
    "pr": null,
    "headSha": null,
    "coderabbitReviewedSha": null
