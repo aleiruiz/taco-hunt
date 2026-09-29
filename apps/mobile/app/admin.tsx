@@ -102,7 +102,7 @@ export default function AdminScreen() {
           </Pressable>
         ))}
       </ScrollView>
-      {loading ? <ActivityIndicator color=colors.red style={styles.loader} /> : null}
+      {loading ? <ActivityIndicator color={colors.red} style={styles.loader} /> : null}
       {message ? <Text style={styles.notice}>{message}</Text> : null}
       {!loading && !message && items.length === 0 ? (
         <Text style={styles.empty}>No hay elementos pendientes.</Text>

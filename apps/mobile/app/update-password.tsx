@@ -56,7 +56,7 @@ export default function UpdatePasswordScreen() {
         <Text style={styles.kicker}>RECUPERAR ACCESO</Text>
         <Text style={styles.title}>Elige una contraseña nueva</Text>
         {loading ? (
-          <ActivityIndicator color=colors.red style={{ marginTop: 26 }} />
+          <ActivityIndicator color={colors.red} style={{ marginTop: 26 }} />
         ) : session ? (
           <>
             <Text style={styles.body}>
@@ -88,7 +88,7 @@ export default function UpdatePasswordScreen() {
               style={[styles.button, busy && styles.disabled]}
             >
               {busy ? (
-                <ActivityIndicator color=colors.paper />
+                <ActivityIndicator color={colors.paper} />
               ) : (
                 <Text style={styles.buttonText}>Guardar contraseña</Text>
               )}
