@@ -13,7 +13,7 @@ alter table app_private.reports
 -- system report by this one-time historical backfill.
 update app_private.reports
 set is_system = true
-where reporter_id is null and note like '[places-refresh] place_id %:%';
+where reporter_id is null and note like '[places-refresh] place\_id %:%' escape '\';
 
 -- Deterministically close any pre-existing duplicate open system reports for the
 -- same target before the unique index below can be created. Nothing enforced
