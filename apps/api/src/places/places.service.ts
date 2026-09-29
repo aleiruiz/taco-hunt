@@ -15,6 +15,9 @@ import { DATABASE_POOL } from "../database/database.module.js";
 import { RequestLimitService } from "../auth/request-limit.service.js";
 
 const GOOGLE_ATTRIBUTION = "Con la tecnología de Google";
+const GOOGLE_CALLS_SCOPE = "places-google-calls-global";
+const GOOGLE_CALLS_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DAILY_CALL_LIMIT = 2_000;
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -159,6 +162,8 @@ export class PlacesService {
     if (!trimmed) throw new BadRequestException("placeId requerido");
     this.limits.consume("places-resolve-user", profileId, 20, 60_000);
 
+    this.assertGoogleCallAllowed();
+
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
 
@@ -225,6 +230,32 @@ export class PlacesService {
     }
   }
 
+  /**
+   * Emergency shutoff (GOOGLE_PLACES_KILL_SWITCH) and a global daily call budget
+   * (GOOGLE_PLACES_DAILY_CALL_LIMIT), enforced before every outbound Google Places
+   * request regardless of caller, to bound billing exposure independent of the
+   * per-user rate limits above. See docs/google-places-controls.md.
+   */
+  private assertGoogleCallAllowed(): void {
+    if (process.env.GOOGLE_PLACES_KILL_SWITCH?.trim().toLowerCase() === "true") {
+      throw new ServiceUnavailableException("Google Places está deshabilitado temporalmente");
+    }
+
+    const configuredLimit = Number(process.env.GOOGLE_PLACES_DAILY_CALL_LIMIT);
+    const dailyLimit =
+      Number.isFinite(configuredLimit) && configuredLimit > 0
+        ? configuredLimit
+        : DEFAULT_DAILY_CALL_LIMIT;
+
+    try {
+      this.limits.consume(GOOGLE_CALLS_SCOPE, "all", dailyLimit, GOOGLE_CALLS_WINDOW_MS);
+    } catch {
+      throw new ServiceUnavailableException(
+        "Se alcanzó el límite diario de solicitudes a Google Places",
+      );
+    }
+  }
+
   private async searchLocalSpots(query: string) {
     const { rows } = await this.pool.query(
       `select id, name, neighborhood, latitude::float8 as latitude, longitude::float8 as longitude
@@ -245,6 +276,8 @@ export class PlacesService {
   }
 
   private async googleAutocomplete(query: string) {
+    this.assertGoogleCallAllowed();
+
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) return [];
 
@@ -292,6 +325,8 @@ export class PlacesService {
   }
 
   private async searchGooglePlaces(input: PlacesSearchInput): Promise<GooglePlace[]> {
+    this.assertGoogleCallAllowed();
+
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
 
