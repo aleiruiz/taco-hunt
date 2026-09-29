@@ -8,6 +8,7 @@ import { colors } from "@/theme";
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const tabs = [
   ["spots", "Propuestas"],
+  ["tacos", "Tipos de taco"],
   ["reports", "Reportes"],
   ["photos", "Fotos"],
   ["duplicates", "Duplicados"],
@@ -119,11 +120,13 @@ export default function AdminScreen() {
           <Text style={styles.body}>
             {tab === "duplicates"
               ? `${String(item.candidateName ?? "Candidato cercano")} · ${String(item.distanceMeters ?? "?")} m`
-              : tab === "reports"
-                ? `${String(item.reason ?? "Sin motivo")} · ${String(item.targetType ?? "contenido")}`
-                : tab === "photos"
-                  ? `${String(item.tacoName ?? "Taco")} · ${String(item.spotName ?? "Puesto")}`
-                  : `${String(item.neighborhood ?? "Sin colonia")} · ${String(item.status ?? "pendiente")}${item.moderationReason ? ` · ${String(item.moderationReason)}` : ""}`}
+              : tab === "tacos"
+                ? `Puesto: ${String(item.spotName ?? "Sin puesto")}`
+                : tab === "reports"
+                  ? `${String(item.reason ?? "Sin motivo")} · ${String(item.targetType ?? "contenido")}`
+                  : tab === "photos"
+                    ? `${String(item.tacoName ?? "Taco")} · ${String(item.spotName ?? "Puesto")}`
+                    : `${String(item.neighborhood ?? "Sin colonia")} · ${String(item.status ?? "pendiente")}${item.moderationReason ? ` · ${String(item.moderationReason)}` : ""}`}
           </Text>
           <View style={styles.actions}>
             {tab === "audit" ? (
@@ -150,6 +153,24 @@ export default function AdminScreen() {
                   label="Rechazar"
                   onPress={() =>
                     void run(`/admin/spot-proposals/${item.id}/reject`, {
+                      reason: "No cumple los criterios de publicación",
+                    })
+                  }
+                  danger
+                />
+              </>
+            ) : null}
+            {tab === "tacos" ? (
+              <>
+                <Action
+                  label="Aprobar"
+                  onPress={() => void run(`/admin/taco-proposals/${item.id}/approve`)}
+                  primary
+                />
+                <Action
+                  label="Rechazar"
+                  onPress={() =>
+                    void run(`/admin/taco-proposals/${item.id}/reject`, {
                       reason: "No cumple los criterios de publicación",
                     })
                   }
