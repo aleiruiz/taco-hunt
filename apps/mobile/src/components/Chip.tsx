@@ -16,6 +16,7 @@ export function Chip({ label, selected = false, icon, dashed = false, onPress }:
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
+      hitSlop={4}
       style={[styles.chip, dashed && styles.dashed, selected && styles.selected]}
     >
       <View style={styles.content}>

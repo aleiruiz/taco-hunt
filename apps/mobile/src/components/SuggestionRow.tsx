@@ -39,7 +39,7 @@ export function SuggestionRow(props: Props) {
       <Ionicons
         name={item.type === "colonia" ? "location" : "fast-food"}
         size={20}
-        color={item.type === "colonia" ? colors.greenSoft : colors.tacoTile}
+        color={item.type === "colonia" ? colors.green : colors.redStrong}
         style={styles.icon}
       />
       <View style={styles.content}>

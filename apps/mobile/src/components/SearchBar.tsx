@@ -18,7 +18,12 @@ export function SearchBar({ value, onClear, icon = "search", ...rest }: Props) {
         {...rest}
       />
       {value && (
-        <Pressable onPress={onClear} hitSlop={8}>
+        <Pressable
+          onPress={onClear}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Borrar búsqueda"
+        >
           <Ionicons name="close-circle" size={20} color={colors.muted} />
         </Pressable>
       )}

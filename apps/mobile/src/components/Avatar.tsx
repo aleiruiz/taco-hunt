@@ -1,19 +1,27 @@
 import { View, Image, StyleSheet } from "react-native";
 import { colors, sizes } from "@/theme";
+import PastorAvatar from "@/assets/avatars/pastor.svg";
+import MasaAvatar from "@/assets/avatars/masa.svg";
+import CilantroAvatar from "@/assets/avatars/cilantro.svg";
+import TortillaAvatar from "@/assets/avatars/tortilla.svg";
+import SalsaAvatar from "@/assets/avatars/salsa.svg";
+import ComalAvatar from "@/assets/avatars/comal.svg";
+import AguacateAvatar from "@/assets/avatars/aguacate.svg";
+import HorchataAvatar from "@/assets/avatars/horchata.svg";
 
 type Size = 24 | 32 | 40 | 72;
 type Preset =
   "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
 
-const AVATAR_PRESETS: Record<Preset, any> = {
-  pastor: require("@/assets/avatars/pastor.svg"),
-  masa: require("@/assets/avatars/masa.svg"),
-  cilantro: require("@/assets/avatars/cilantro.svg"),
-  tortilla: require("@/assets/avatars/tortilla.svg"),
-  salsa: require("@/assets/avatars/salsa.svg"),
-  comal: require("@/assets/avatars/comal.svg"),
-  aguacate: require("@/assets/avatars/aguacate.svg"),
-  horchata: require("@/assets/avatars/horchata.svg"),
+const AVATAR_PRESETS: Record<Preset, typeof PastorAvatar> = {
+  pastor: PastorAvatar,
+  masa: MasaAvatar,
+  cilantro: CilantroAvatar,
+  tortilla: TortillaAvatar,
+  salsa: SalsaAvatar,
+  comal: ComalAvatar,
+  aguacate: AguacateAvatar,
+  horchata: HorchataAvatar,
 };
 
 type Props = {
@@ -24,6 +32,7 @@ type Props = {
 };
 
 export function Avatar({ size = 40, preset = "pastor", photoUrl, accessibilityLabel }: Props) {
+  const PresetAvatar = AVATAR_PRESETS[preset];
   return (
     <View
       accessibilityLabel={accessibilityLabel}
@@ -43,7 +52,7 @@ export function Avatar({ size = 40, preset = "pastor", photoUrl, accessibilityLa
           style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }]}
         />
       ) : (
-        <Image source={AVATAR_PRESETS[preset]} style={{ width: size, height: size }} />
+        <PresetAvatar width={size} height={size} />
       )}
     </View>
   );

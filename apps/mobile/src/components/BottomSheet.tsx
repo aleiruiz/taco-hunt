@@ -13,9 +13,11 @@ export function BottomSheet({ visible, onClose, children, snapPoints = [0.5] }: 
   const slideAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [contentHeight, setContentHeight] = useState(300);
+  const [mounted, setMounted] = useState(visible);
 
   useEffect(() => {
     if (visible) {
+      setMounted(true);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -40,11 +42,11 @@ export function BottomSheet({ visible, onClose, children, snapPoints = [0.5] }: 
           duration: motion.base,
           useNativeDriver: false,
         }),
-      ]).start();
+      ]).start(() => setMounted(false));
     }
   }, [visible, slideAnim, fadeAnim]);
 
-  if (!visible) return null;
+  if (!mounted) return null;
 
   const handleContentLayout = (event: LayoutChangeEvent) => {
     setContentHeight(event.nativeEvent.layout.height);
@@ -64,6 +66,7 @@ export function BottomSheet({ visible, onClose, children, snapPoints = [0.5] }: 
       </Animated.View>
 
       <Animated.View
+        pointerEvents="box-none"
         style={[
           styles.sheet,
           {
@@ -78,8 +81,10 @@ export function BottomSheet({ visible, onClose, children, snapPoints = [0.5] }: 
           },
         ]}
       >
-        <View style={styles.handle} onLayout={handleContentLayout} />
-        <View style={styles.content}>{children}</View>
+        <View style={styles.handle} />
+        <View style={styles.content} onLayout={handleContentLayout}>
+          {children}
+        </View>
       </Animated.View>
     </>
   );
