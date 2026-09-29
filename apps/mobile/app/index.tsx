@@ -15,7 +15,8 @@ import {
 import { Link, type Href, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
+import ClusteredMapView from "react-native-map-clustering";
+import { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, spacing, radii } from "@/theme";
 import { Chip } from "@/components/Chip";
@@ -432,13 +433,15 @@ export default function ExploreScreen() {
   if (mode === "mapa") {
     return (
       <View style={styles.screen}>
-        <MapView
+        <ClusteredMapView
           provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
           style={StyleSheet.absoluteFill}
           initialRegion={mapRegion}
           region={mapRegion}
           accessibilityLabel="Mapa de puestos en la zona seleccionada"
           showsUserLocation={false}
+          clusterColor={colors.red}
+          clusterTextColor={colors.white}
         >
           {items.map((item) => (
             <Marker
@@ -450,7 +453,7 @@ export default function ExploreScreen() {
               <CustomMarkerContent />
             </Marker>
           ))}
-        </MapView>
+        </ClusteredMapView>
         <View style={styles.mapOverlay} pointerEvents="box-none">
           <ScrollView
             keyboardShouldPersistTaps="handled"
