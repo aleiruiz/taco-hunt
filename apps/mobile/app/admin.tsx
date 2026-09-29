@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 import { useAuth } from "@/auth/provider";
+import { colors } from "@/theme";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const tabs = [
@@ -101,7 +102,7 @@ export default function AdminScreen() {
           </Pressable>
         ))}
       </ScrollView>
-      {loading ? <ActivityIndicator color="#E95032" style={styles.loader} /> : null}
+      {loading ? <ActivityIndicator color=colors.red style={styles.loader} /> : null}
       {message ? <Text style={styles.notice}>{message}</Text> : null}
       {!loading && !message && items.length === 0 ? (
         <Text style={styles.empty}>No hay elementos pendientes.</Text>
@@ -212,47 +213,47 @@ function Action({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FBF3E6" },
+  screen: { flex: 1, backgroundColor: colors.cream },
   content: { paddingHorizontal: 22, paddingTop: 56, paddingBottom: 40 },
-  center: { flex: 1, padding: 28, justifyContent: "center", backgroundColor: "#FBF3E6" },
-  back: { color: "#276C4F", fontSize: 15, fontWeight: "800", minHeight: 44 },
-  kicker: { color: "#276C4F", fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginTop: 18 },
-  title: { color: "#302723", fontSize: 30, fontWeight: "900", marginTop: 10 },
-  body: { color: "#6C5D53", fontSize: 14, lineHeight: 20, marginTop: 8 },
-  link: { color: "#E95032", fontWeight: "900", marginTop: 20 },
+  center: { flex: 1, padding: 28, justifyContent: "center", backgroundColor: colors.cream },
+  back: { color: colors.green, fontSize: 15, fontWeight: "800", minHeight: 44 },
+  kicker: { color: colors.green, fontSize: 11, fontWeight: "800", letterSpacing: 1.5, marginTop: 18 },
+  title: { color: colors.ink, fontSize: 30, fontWeight: "900", marginTop: 10 },
+  body: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: 8 },
+  link: { color: colors.red, fontWeight: "900", marginTop: 20 },
   tabs: { marginTop: 24, maxHeight: 52 },
   tab: {
     borderWidth: 1,
-    borderColor: "#E8DCCB",
+    borderColor: colors.line,
     borderRadius: 18,
     paddingHorizontal: 14,
     minHeight: 44,
     justifyContent: "center",
     marginRight: 8,
-    backgroundColor: "#FFFAF1",
+    backgroundColor: colors.paper,
   },
-  activeTab: { backgroundColor: "#302723", borderColor: "#302723" },
-  tabText: { color: "#6C5D53", fontWeight: "800", fontSize: 12 },
-  activeTabText: { color: "#FFFAF1" },
+  activeTab: { backgroundColor: colors.ink, borderColor: colors.ink },
+  tabText: { color: colors.muted, fontWeight: "800", fontSize: 12 },
+  activeTabText: { color: colors.paper },
   loader: { marginTop: 28 },
   notice: {
     marginTop: 20,
     padding: 14,
     borderRadius: 14,
-    backgroundColor: "#F9DEAE",
-    color: "#302723",
+    backgroundColor: colors.tacoTile,
+    color: colors.ink,
     lineHeight: 20,
   },
-  empty: { marginTop: 30, color: "#6C5D53", textAlign: "center" },
+  empty: { marginTop: 30, color: colors.muted, textAlign: "center" },
   card: {
     marginTop: 12,
     padding: 16,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E8DCCB",
-    backgroundColor: "#FFFAF1",
+    borderColor: colors.line,
+    backgroundColor: colors.paper,
   },
-  cardTitle: { color: "#302723", fontSize: 16, fontWeight: "900" },
+  cardTitle: { color: colors.ink, fontSize: 16, fontWeight: "900" },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 14 },
   action: {
     minHeight: 40,
@@ -260,10 +261,10 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#DFD0BA",
+    borderColor: colors.lineSoft,
   },
-  primary: { backgroundColor: "#276C4F", borderColor: "#276C4F" },
-  danger: { backgroundColor: "#E95032", borderColor: "#E95032" },
-  actionText: { color: "#302723", fontWeight: "800", fontSize: 12 },
-  inverse: { color: "#FFFAF1" },
+  primary: { backgroundColor: colors.green, borderColor: colors.green },
+  danger: { backgroundColor: colors.red, borderColor: colors.red },
+  actionText: { color: colors.ink, fontWeight: "800", fontSize: 12 },
+  inverse: { color: colors.paper },
 });

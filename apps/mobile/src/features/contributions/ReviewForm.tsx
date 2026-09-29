@@ -10,16 +10,8 @@ import {
 } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { createReview, updateReview, type OwnReview, type ReviewInput } from "./api";
+import { colors } from "@/theme";
 
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  cream: "#FBF3E6",
-  line: "#E8DCCB",
-};
 const ratingLabels = ["Tortilla", "Relleno", "Salsa", "Relación calidad-precio"] as const;
 type Props = {
   session: Session;

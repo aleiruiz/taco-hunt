@@ -10,16 +10,7 @@ import {
   View,
 } from "react-native";
 import { fetchAutocomplete, resolvePlace, type PlaceSuggestion } from "./autocomplete";
-
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  line: "#DFD0BA",
-  cream: "#FBF3E6",
-};
+import { colors } from "@/theme";
 
 type ResolvedSelection = {
   name: string;
@@ -205,7 +196,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     backgroundColor: "#FFFDF8",
     paddingHorizontal: 13,
     color: colors.ink,
@@ -213,8 +204,8 @@ const styles = StyleSheet.create({
   },
   spinner: { marginTop: 10 },
   error: {
-    color: "#A92E24",
-    backgroundColor: "#FBE2DC",
+    color: colors.dangerText,
+    backgroundColor: colors.dangerBg,
     padding: 12,
     borderRadius: 10,
     marginTop: 10,
@@ -224,7 +215,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     backgroundColor: colors.paper,
     overflow: "hidden",
   },
@@ -236,7 +227,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: "#E8DCCB",
+    borderTopColor: colors.line,
   },
   rowFirst: { borderTopWidth: 0 },
   rowTitle: { color: colors.ink, fontWeight: "800", fontSize: 14 },
@@ -250,7 +241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: "#E8DCCB",
+    borderTopColor: colors.line,
   },
   selectedAttribution: {
     color: colors.muted,

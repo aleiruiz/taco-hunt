@@ -12,6 +12,7 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
 import { openDirections as openMapDirections } from "@/lib/directions";
+import { colors } from "@/theme";
 
 type Taco = {
   id: string;
@@ -30,16 +31,6 @@ type Spot = {
   tacos: Taco[];
 };
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  cream: "#FBF3E6",
-  line: "#E8DCCB",
-};
-
 export default function SpotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -269,7 +260,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 13,
-    backgroundColor: "#F9DEAE",
+    backgroundColor: colors.tacoTile,
     alignItems: "center",
     justifyContent: "center",
   },

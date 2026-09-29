@@ -12,17 +12,9 @@ import {
 } from "react-native";
 import { useAuth } from "@/auth/provider";
 import { PlaceAutocomplete } from "@/features/discovery/PlaceAutocomplete";
+import { colors } from "@/theme";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
-const colors = {
-  ink: "#302723",
-  muted: "#6C5D53",
-  red: "#E95032",
-  green: "#276C4F",
-  paper: "#FFFAF1",
-  line: "#DFD0BA",
-  cream: "#FBF3E6",
-};
 type Source = "manual" | "autocomplete";
 type Proposal = {
   id: string;
@@ -337,7 +329,7 @@ const styles = StyleSheet.create({
     padding: 19,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E8DCCB",
+    borderColor: colors.line,
     backgroundColor: colors.paper,
     marginTop: 18,
   },
@@ -356,7 +348,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -367,7 +359,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: colors.lineSoft,
     backgroundColor: "#FFFDF8",
     paddingHorizontal: 13,
     color: colors.ink,
@@ -389,8 +381,8 @@ const styles = StyleSheet.create({
   buttonText: { color: colors.paper, fontWeight: "900", textAlign: "center" },
   disabled: { opacity: 0.65 },
   error: {
-    color: "#A92E24",
-    backgroundColor: "#FBE2DC",
+    color: colors.dangerText,
+    backgroundColor: colors.dangerBg,
     padding: 12,
     borderRadius: 10,
     marginTop: 12,
@@ -411,7 +403,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 13,
     borderTopWidth: 1,
-    borderTopColor: "#E8DCCB",
+    borderTopColor: colors.line,
   },
   proposalCopy: { flex: 1, paddingRight: 10 },
   proposalName: { color: colors.ink, fontWeight: "900", fontSize: 15 },
@@ -425,7 +417,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "#E8DCCB",
+    borderTopColor: colors.line,
     marginTop: 8,
   },
 });
