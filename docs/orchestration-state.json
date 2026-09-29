@@ -272,7 +272,7 @@
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": [],
-      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. First push (7b53472) failed CI typecheck: theme.ts avatar map was missing aguacate/horchata, BottomSheet.tsx used the removed StyleSheet.absoluteFillObject. Fixed and pushed as af2f308; awaiting CI + CodeRabbit review of the new head."
+      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. First push (7b53472) failed CI typecheck (theme.ts avatar map missing aguacate/horchata, BottomSheet.tsx used removed StyleSheet.absoluteFillObject) - fixed as af2f308. CodeRabbit review of af2f308 found 7 actionable issues (Avatar rendering .svg via plain Image with no transformer configured, BottomSheet unmount/measure/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - fixed as 7fc34b5, adding react-native-svg + react-native-svg-transformer. That npm install left root pnpm-lock.yaml out of sync (apps/mobile has its own package-lock.json) - resynced as cc46dc4. Awaiting CI + a CodeRabbit review of cc46dc4. T46 (PR #35) is already stacked on top of this branch."
     },
     "T32": {
       "status": "blocked",
@@ -283,12 +283,12 @@
       "coderabbitReviewedSha": null
     },
     "T46": {
-      "pr": null,
-      "headSha": null,
+      "pr": 35,
+      "headSha": "f002396",
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx."
+      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. Stacked on T45 (base branch codex/T45-design-system, PR #35 targets PR #34) since T45 hasn't merged yet; needs re-basing onto main once T45 merges. Data needs: zone chips still use today's area bounding-box search pending T33/T34's camera-shortcut viewport loading; sparkle badge uses existing reviewCount."
     },
     "T35": {
       "status": "blocked",
