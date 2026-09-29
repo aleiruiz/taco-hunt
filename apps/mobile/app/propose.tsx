@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "@/auth/provider";
+import { PlaceAutocomplete } from "@/features/discovery/PlaceAutocomplete";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const colors = {
@@ -180,15 +181,23 @@ export default function ProposeScreen() {
         </View>
         {source === "autocomplete" ? (
           <>
-            <Text style={styles.label}>Referencia de la sugerencia</Text>
-            <TextInput
-              value={sourceRef}
-              onChangeText={setSourceRef}
-              placeholder="ID o referencia de la sugerencia"
-              placeholderTextColor="#9C8D80"
-              style={styles.input}
-              maxLength={200}
-            />
+            <Text style={styles.label}>Busca el lugar</Text>
+            {session ? (
+              <PlaceAutocomplete
+                session={session}
+                onSelectPlace={(place) => {
+                  setName(place.name);
+                  setNeighborhood(place.neighborhood);
+                  setLatitude(place.latitude.toFixed(6));
+                  setLongitude(place.longitude.toFixed(6));
+                  setSourceRef(place.placeId);
+                  setError("");
+                }}
+                onSelectExistingSpot={(spot) => router.push(`/spot/${spot.id}`)}
+              />
+            ) : (
+              <Text style={styles.body}>Inicia sesión para buscar sugerencias de Google.</Text>
+            )}
           </>
         ) : null}
         <Text style={styles.label}>Nombre</Text>

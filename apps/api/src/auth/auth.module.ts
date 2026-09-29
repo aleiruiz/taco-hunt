@@ -22,6 +22,12 @@ import { UserWriteRateLimitGuard } from "./user-write-rate-limit.guard.js";
     { provide: APP_GUARD, useClass: AuthContextGuard },
     { provide: APP_GUARD, useClass: UserWriteRateLimitGuard },
   ],
-  exports: [AuthRequiredGuard, AdminGuard, UserWriteRateLimitGuard, ProfileService],
+  exports: [
+    AuthRequiredGuard,
+    AdminGuard,
+    UserWriteRateLimitGuard,
+    ProfileService,
+    RequestLimitService,
+  ],
 })
 export class AuthModule {}
