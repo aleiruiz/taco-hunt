@@ -1,353 +1,385 @@
 {
- "schemaVersion": 2,
- "maxWorkers": 3,
- "baseBranch": "main",
- "infra": {
-  "ciQualityGate": {
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/22",
-   "status": "merged",
-   "headSha": "48e5f644b8211a92b9019508f4368f70e69168f4",
-   "coderabbitReviewedSha": "48e5f644b8211a92b9019508f4368f70e69168f4",
-   "note": "Merged 2026-09-28T19:53Z with 2 unresolved CodeRabbit findings on the reviewed head: (1) use !cancelled() instead of always(); (2) formatting step checks only .github/workflows/ci.yml instead of repo-wide pnpm format:check. Main CI no longer enforces repo-wide formatting. Needs owner decision."
+  "schemaVersion": 2,
+  "maxWorkers": 3,
+  "baseBranch": "main",
+  "infra": {
+    "ciQualityGate": {
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/22",
+      "status": "merged",
+      "headSha": "48e5f644b8211a92b9019508f4368f70e69168f4",
+      "coderabbitReviewedSha": "48e5f644b8211a92b9019508f4368f70e69168f4",
+      "note": "Merged 2026-09-28T19:53Z with 2 unresolved CodeRabbit findings on the reviewed head: (1) use !cancelled() instead of always(); (2) formatting step checks only .github/workflows/ci.yml instead of repo-wide pnpm format:check. Main CI no longer enforces repo-wide formatting. Needs owner decision."
+    }
+  },
+  "workers": [],
+  "tasks": {
+    "T00": {
+      "status": "merged",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T01": {
+      "status": "merged",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/3",
+      "note": "Merged 2026-09-28. No CodeRabbit review on record (app was installed later, around PR #16/#20).",
+      "headSha": "b4a723f1c5b6e9c6d9a4375ce7cb3511b580eab7",
+      "coderabbitReviewedSha": null
+    },
+    "T02": {
+      "status": "merged",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/2",
+      "note": "Merged 2026-09-28. Previous JSON snapshot was stale (showed this as an active worker awaiting rebase/E2E); GitHub shows it merged. No CodeRabbit review on record (app installed later).",
+      "headSha": "873c0fada7b9cd853a87cc0535a10c6b5d400e37",
+      "coderabbitReviewedSha": null
+    },
+    "T03": {
+      "status": "merged",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/1",
+      "note": "Merged 2026-09-28 despite documented mobile E2E gap (no Android SDK/emulator in the worker's environment). Previous JSON snapshot still showed this as external_blocked; GitHub shows it merged. No CodeRabbit review on record.",
+      "headSha": "59801a45d5f8873ab580a7de974cbad6838f1e6e",
+      "coderabbitReviewedSha": null
+    },
+    "T04": {
+      "status": "merged",
+      "dependsOn": ["T00"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/5",
+      "note": "PR #4 (lint/format) and follow-up PR #5 (CI/E2E guide) both merged.",
+      "headSha": "169188dfbadc3ded5521c4ae1011601a50cdfcf8",
+      "coderabbitReviewedSha": null
+    },
+    "T05": {
+      "status": "merged",
+      "dependsOn": ["T01", "T02"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/6",
+      "headSha": "9770346531b2008a507080b6a627a52c02c5d6fa",
+      "coderabbitReviewedSha": null
+    },
+    "T06": {
+      "status": "merged",
+      "dependsOn": ["T01", "T02"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/7",
+      "headSha": "7b13882ef19052d69c37ed7f4eaa73f03fd9e1b3",
+      "coderabbitReviewedSha": null
+    },
+    "T07": {
+      "status": "merged",
+      "dependsOn": ["T03", "T06"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/8",
+      "headSha": "944dec82226f9a82fb16a2cbdc7ee3c481dd6633",
+      "coderabbitReviewedSha": null
+    },
+    "T08": {
+      "status": "merged",
+      "dependsOn": ["T05", "T06"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/9",
+      "headSha": "19d034b1d8fe68391fa019fd80b1de78fae63ab7",
+      "coderabbitReviewedSha": null
+    },
+    "T09": {
+      "status": "merged",
+      "dependsOn": ["T05", "T06"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/10",
+      "headSha": "4c11c29525b69a2f3dc7832b40f4084a417e2f3c",
+      "coderabbitReviewedSha": null
+    },
+    "T10": {
+      "status": "merged",
+      "dependsOn": ["T02", "T03", "T07"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/12",
+      "headSha": "2f35ffb3e75b554b0d2388c9ef9d2f47d84053f2",
+      "coderabbitReviewedSha": null
+    },
+    "T11": {
+      "status": "merged",
+      "dependsOn": ["T06", "T08"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/11",
+      "headSha": "f8caf8b904bbb641ff5f3b64485afe53ad8211dd",
+      "coderabbitReviewedSha": null
+    },
+    "T12": {
+      "status": "merged",
+      "dependsOn": ["T03", "T05"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/16",
+      "note": "Last CodeRabbit review on record covered commit 1e4b377, not the final pre-merge head (c7fbe58); a small hardening commit landed after that review. Not re-opening a merged task, but flagged for visibility.",
+      "headSha": "c7fbe588e2f63a39eeaedf858862d80b54dbdaa0",
+      "coderabbitReviewedSha": "1e4b37732b482196b5a70bdb61cf0b8654f05aaa"
+    },
+    "T13": {
+      "status": "merged",
+      "dependsOn": ["T01", "T09"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/14",
+      "headSha": "2266fa39c15b7f50782205ac01464b1943ede2b4",
+      "coderabbitReviewedSha": null
+    },
+    "T17": {
+      "status": "merged",
+      "dependsOn": ["T02", "T06"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/13",
+      "headSha": "717a805b985e023cbe28307217ec96670a1366bd",
+      "coderabbitReviewedSha": null
+    },
+    "T18": {
+      "status": "merged",
+      "dependsOn": ["T02", "T03", "T06"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/15",
+      "headSha": "f0834a979cd951a6f71b5fae58bc56b706103284",
+      "coderabbitReviewedSha": null
+    },
+    "T19": {
+      "status": "merged",
+      "dependsOn": ["T06", "T09"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/17",
+      "headSha": "1d6f4178e940524d0d6e1406e20d0d19bdb9a522",
+      "coderabbitReviewedSha": null
+    },
+    "T20": {
+      "status": "merged",
+      "dependsOn": ["T18", "T19"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/19",
+      "note": "PR #18 (first attempt) closed unmerged due to conflicts; PR #19 is the merged recovery attempt.",
+      "headSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db",
+      "coderabbitReviewedSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db"
+    },
+    "T21": {
+      "dependsOn": ["T03", "T17"],
+      "note": "Old worktrees (t21-address-autocomplete, t21-autocomplete-recovery) held uncommitted WIP that was never turned into a PR; snapshotted to branches codex/T21-address-autocomplete-abandoned (f1f3256) and codex/T21-mobile-autocomplete-recovery (58e715f) for reference, then discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: GET /v1/places/autocomplete + GET /v1/places/:placeId/resolve, wired into propose.tsx's autocomplete mode. Typecheck/lint/format clean; not exercised against a live Google Places key or a device/Expo (unavailable in this environment) — flagged in the PR. CodeRabbit found and this fixed 4 real issues across two rounds (ILIKE escaping, fetch timeouts, a redundant re-search, a stale in-flight request repopulating the list). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
+      "status": "merged",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/23",
+      "headSha": "e10ac11",
+      "coderabbitReviewedSha": null
+    },
+    "T22": {
+      "status": "merged",
+      "dependsOn": ["T03", "T20"],
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/21",
+      "note": "Merged 2026-09-28T18:22Z as 644c7c4. Author pushed 6f951e8 (documented Apple Maps link + Android/Google Maps rationale for the geo: finding) and requested a re-review, but merged before CodeRabbit reviewed 6f951e8. Last CodeRabbit review covers e8022e4 only. Main CI on the merge commit failed. Flagged, not re-opened.",
+      "headSha": "6f951e850c05f8f4c8cbab9964e34ed397c76155",
+      "coderabbitReviewedSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53"
+    },
+    "T23": {
+      "dependsOn": ["T17", "T20"],
+      "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR. CodeRabbit found and this fixed 10 real issues across three rounds (HTTPS enforcement, env-var validation, a stale-read race, refresh-limit monopolization, missing timeout, incomplete-response handling, report dedup, a concurrent-duplicate-report race requiring a new migration). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
+      "status": "merged",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
+      "headSha": "fb4caa098c134efeb0a6865658688d2a061bbf08",
+      "coderabbitReviewedSha": null
+    },
+    "T24": {
+      "status": "merged",
+      "dependsOn": ["T17", "T21"],
+      "note": "Implemented fresh by the orchestrator: a global daily Google Places call budget and an emergency kill switch (GOOGLE_PLACES_KILL_SWITCH, GOOGLE_PLACES_DAILY_CALL_LIMIT) enforced in PlacesService before every outbound call (discovery/autocomplete/resolve) and in T23's refresh-place-candidates.ts script. Restricted-key setup, Cloud Console quotas, billing alerts and existing dedup (T17's place_id unique index, T23's report-tag dedup) documented in docs/google-places-controls.md rather than implemented, since that part of the task's scope is infrastructure configuration outside this repo. CodeRabbit found and this fixed 4 real issues across three rounds, all the same class of bug: assertGoogleCallAllowed() consuming the shared daily budget before checking GOOGLE_PLACES_API_KEY in googleAutocomplete, searchGooglePlaces and resolvePlace (a no-key request drained the budget with zero outbound calls), plus an expected kill-switch/budget rejection being logged as an unexpected failure in autocomplete()'s catch handler. Merged 2026-09-29 as 757a26c. Could not run pnpm typecheck/lint/format in this environment (pnpm not installed, no node_modules) — flagged in the PR; CI covered it.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/26",
+      "headSha": "757a26c",
+      "coderabbitReviewedSha": "14d69d9de256847fd73a9134d71afbcca6644763"
+    },
+    "T14": {
+      "dependsOn": [
+        "T01",
+        "T02",
+        "T03",
+        "T04",
+        "T05",
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T18",
+        "T19",
+        "T20"
+      ],
+      "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. CodeRabbit found a real bug beyond the diff itself: apps/api/src/auth/profile.service.ts's findOrCreate (used by every authenticated route) could throw an unhandled foreign-key-violation error for a request made with a still-valid access token after its account was deleted; now caught and rethrown as a clean 401. Also batched Storage photo deletion (1,000/batch) and corrected an inaccurate privacy.md claim about token revocation. Declined to add an integration test per CLAUDE.md's no-tests-unless-requested rule; that one thread stays open. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
+      "status": "merged",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
+      "headSha": "2f672ba",
+      "coderabbitReviewedSha": null
+    },
+    "T15": {
+      "status": "blocked",
+      "dependsOn": ["T14", "T17", "T18", "T19", "T20", "T21", "T22", "T23", "T24"],
+      "external": ["E01", "E02"],
+      "note": "All internal task dependencies (T14, T17-T24) are now merged as of T24/PR #26 on 2026-09-29. Only blocked on external inputs E01/E02.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T16": {
+      "status": "blocked",
+      "dependsOn": ["T15"],
+      "external": ["E03", "E04"],
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T25": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "Implemented by the orchestrator: map is now the default explore view, full-bleed, with search/filters/mode-toggle as a floating overlay card; list mode kept as secondary view. CodeRabbit found 1 real issue (conditional MapView mount/unmount dropping pan/zoom state on every loading/error/empty transition) - fixed; documented why the map-mode-only-shows-30-spots finding is a pre-existing limitation, not a T25 regression, and left as a follow-up. Merged 2026-09-29 as a80db23.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/28",
+      "headSha": "a80db23",
+      "coderabbitReviewedSha": "a10c108"
+    },
+    "T26": {
+      "status": "merged",
+      "dependsOn": ["T25"],
+      "note": "Implemented by a delegated Haiku 4.5 worker (orchestrator supervised: prepared worktree, reviewed every diff by hand, wrote the fix-delegation prompts). Custom round marker (View+emoji) replacing default react-native-maps pins; tap opens an Animated.View slide-up bottom sheet (no new dependency) showing name/neighborhood/best taco/review snippet from GET /v1/spots/:id, with an in-memory cache. Went through 4 review rounds with CodeRabbit, catching real bugs each time: (1) worker's first pass used a nonexistent `review.text` field (real field is `body`) and picked 'best taco' as tacos[0] which the API sorts alphabetically, not by score - orchestrator caught both before requesting review; (2) CodeRabbit found a stale-response/animation race + missing marker accessibilityLabel - fixed, but the fix itself had a classic React closure bug (comparing against state captured at callback-creation time instead of current value) that the orchestrator caught by reading the diff, fixed with a synced ref; (3) CodeRabbit found a double-close re-entrance edge case - added a closingRef guard; (4) CodeRabbit found the best-taco lookup silently failed when the spot scrolled out of the loaded items list - added a fallback that computes best-by-score from the detail response instead of just tacos[0]. Merged 2026-09-29 as a7df5f7.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/31",
+      "headSha": "a7df5f7",
+      "coderabbitReviewedSha": "8094cdd"
+    },
+    "T27": {
+      "status": "merged",
+      "dependsOn": ["T26"],
+      "note": "Chose react-native-map-clustering (decision logged in orchestration-log.md) - drop-in MapView wrapper, no manual supercluster integration needed. Orchestrator added the dependency to apps/mobile/package.json + both lockfiles and verified npm ci reproduces cleanly, then delegated the MapView->ClusteredMapView swap to a Haiku worker. Verified the resulting diff by hand: minimal, swaps MapView only in mode==\"mapa\", styles clusters with colors.red/colors.white, no changes to individual marker tap behavior. CodeRabbit reviewed the head SHA clean (no actionable findings). Merged 2026-09-29 as 3b636f8. Completes the T25-T27 map-first redesign series.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/32",
+      "headSha": "3b636f8",
+      "coderabbitReviewedSha": "219e6f9"
+    },
+    "T28": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "Implemented by the orchestrator: 'Reportar este puesto' modal on spot/[id].tsx (first modal pattern in the mobile app), new src/features/reports/api.ts calling POST /v1/reports. Scoped to targetType 'spot' only (review-reporting has no UI hook point on that screen). CodeRabbit found 1 real issue (stale submitReport completion could fire against a reopened form after cancel) - fixed with a submission-id ref; the HTTPS-validation-in-createReport suggestion was not applied (inconsistent with every other fetch call in the app, EXPO_PUBLIC_API_URL is a build-time env var not attacker input). Merged 2026-09-29 as 2ca46be.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/29",
+      "headSha": "2ca46be",
+      "coderabbitReviewedSha": "2846454"
+    },
+    "T29": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "Design system extraction: theme.ts + shared Button/Card/Chip. Owner chose this as the starting task among T25-T30 since the map/icon work builds on it. Merged 2026-09-29T04:32Z as 27954af. CodeRabbit found 1 real issue (Button lost its accessible name while loading) - fixed, replied, thread resolved, re-reviewed clean. Admin.tsx's tab/action buttons intentionally left on local styles (different color semantics); a few pre-existing off-shade error reds left unmerged. pnpm/node_modules unavailable in this environment, could not run typecheck/lint/format.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/27",
+      "headSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8",
+      "coderabbitReviewedSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8"
+    },
+    "T30": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "Implemented by the orchestrator: chose @expo/vector-icons (Ionicons) over Phosphor/Lucide - decision logged in orchestration-log.md before touching apps/mobile/package.json + pnpm-lock.yaml. Swapped back-chevrons, location/area controls, list/map toggle, map-empty pin, favorite heart, list-row chevron across 8 mobile files; taco emoji left as branding. Also had to update apps/mobile/package-lock.json (separate standalone npm lockfile CI installs via npm ci --legacy-peer-deps) after the first push failed CI - missed on the first commit. Rebased onto main after T25/T28 merged (real conflicts in index.tsx and spot/[id].tsx, resolved by hand: kept T25's map-first structure + T28's report modal, added Ionicons throughout). CodeRabbit found 1 real issue post-rebase (back-button Pressables lost their accessible name once the icon was split from the text) - fixed across all 6 affected files including spot/[id].tsx (not explicitly flagged but same pattern). Merged 2026-09-29 as 643ff6c.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/30",
+      "headSha": "643ff6c",
+      "coderabbitReviewedSha": "83b598a"
+    },
+    "T31": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Fix POST /v1/reviews 503: drop tt from FOR SHARE OF (taco_hunt_api has SELECT only on taco_types).",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T32": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Post-auth flow: confirm + navigate when sign-up/sign-in yields a session; AuthScreen to theme.ts/Button.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T33": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "GET /v1/spots/map compact metro-wide pins, approved only, capped, cacheable.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T34": {
+      "status": "blocked",
+      "dependsOn": ["T33"],
+      "note": "Map never hides by area; chips become camera shortcuts; taco type is the only hiding filter.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T35": {
+      "status": "blocked",
+      "dependsOn": ["T34"],
+      "waitingOnDesign": "minimized header search",
+      "note": "Client-side autocomplete over Taco Hunt stands/neighborhoods (no Google).",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T36": {
+      "status": "blocked",
+      "dependsOn": ["T31"],
+      "note": "Mobile review photo upload against T11 API; adds expo-image-picker (both lockfiles).",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T37": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Stand photos API with pre-moderation; extend account deletion + privacy docs.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T38": {
+      "status": "blocked",
+      "dependsOn": ["T37"],
+      "note": "Admin panel photo moderation (profile photos join after T40).",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T39": {
+      "status": "blocked",
+      "dependsOn": ["T36", "T37"],
+      "waitingOnDesign": "photo gallery",
+      "note": "Stand page photo gallery and upload.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T40": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Profile API GET/PATCH /v1/me, persist sign-up display name, avatar preset + pre-moderated photo; extend account deletion.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T41": {
+      "status": "blocked",
+      "dependsOn": ["T36", "T40"],
+      "waitingOnDesign": "profile screen and avatar art",
+      "note": "Profile screen evolving Mis tacos; avatars on reviews.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T42": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Admin approval of import_candidates into spots with Google autocomplete address lookup + manual pin adjust.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T43": {
+      "status": "blocked",
+      "dependsOn": ["T42"],
+      "note": "Research ~100 Monterrey taquerias from articles/guides/social (facts only, source URL provenance), stage via T13 importer, no taco types.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T44": {
+      "status": "ready",
+      "dependsOn": [],
+      "note": "Mobile taco-type proposals on stand page + tacos queue in admin panel.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    }
   }
- },
- "workers": [],
- "tasks": {
-  "T00": {
-   "status": "merged",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T01": {
-   "status": "merged",
-   "dependsOn": [
-    "T00"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/3",
-   "note": "Merged 2026-09-28. No CodeRabbit review on record (app was installed later, around PR #16/#20).",
-   "headSha": "b4a723f1c5b6e9c6d9a4375ce7cb3511b580eab7",
-   "coderabbitReviewedSha": null
-  },
-  "T02": {
-   "status": "merged",
-   "dependsOn": [
-    "T00"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/2",
-   "note": "Merged 2026-09-28. Previous JSON snapshot was stale (showed this as an active worker awaiting rebase/E2E); GitHub shows it merged. No CodeRabbit review on record (app installed later).",
-   "headSha": "873c0fada7b9cd853a87cc0535a10c6b5d400e37",
-   "coderabbitReviewedSha": null
-  },
-  "T03": {
-   "status": "merged",
-   "dependsOn": [
-    "T00"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/1",
-   "note": "Merged 2026-09-28 despite documented mobile E2E gap (no Android SDK/emulator in the worker's environment). Previous JSON snapshot still showed this as external_blocked; GitHub shows it merged. No CodeRabbit review on record.",
-   "headSha": "59801a45d5f8873ab580a7de974cbad6838f1e6e",
-   "coderabbitReviewedSha": null
-  },
-  "T04": {
-   "status": "merged",
-   "dependsOn": [
-    "T00"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/5",
-   "note": "PR #4 (lint/format) and follow-up PR #5 (CI/E2E guide) both merged.",
-   "headSha": "169188dfbadc3ded5521c4ae1011601a50cdfcf8",
-   "coderabbitReviewedSha": null
-  },
-  "T05": {
-   "status": "merged",
-   "dependsOn": [
-    "T01",
-    "T02"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/6",
-   "headSha": "9770346531b2008a507080b6a627a52c02c5d6fa",
-   "coderabbitReviewedSha": null
-  },
-  "T06": {
-   "status": "merged",
-   "dependsOn": [
-    "T01",
-    "T02"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/7",
-   "headSha": "7b13882ef19052d69c37ed7f4eaa73f03fd9e1b3",
-   "coderabbitReviewedSha": null
-  },
-  "T07": {
-   "status": "merged",
-   "dependsOn": [
-    "T03",
-    "T06"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/8",
-   "headSha": "944dec82226f9a82fb16a2cbdc7ee3c481dd6633",
-   "coderabbitReviewedSha": null
-  },
-  "T08": {
-   "status": "merged",
-   "dependsOn": [
-    "T05",
-    "T06"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/9",
-   "headSha": "19d034b1d8fe68391fa019fd80b1de78fae63ab7",
-   "coderabbitReviewedSha": null
-  },
-  "T09": {
-   "status": "merged",
-   "dependsOn": [
-    "T05",
-    "T06"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/10",
-   "headSha": "4c11c29525b69a2f3dc7832b40f4084a417e2f3c",
-   "coderabbitReviewedSha": null
-  },
-  "T10": {
-   "status": "merged",
-   "dependsOn": [
-    "T02",
-    "T03",
-    "T07"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/12",
-   "headSha": "2f35ffb3e75b554b0d2388c9ef9d2f47d84053f2",
-   "coderabbitReviewedSha": null
-  },
-  "T11": {
-   "status": "merged",
-   "dependsOn": [
-    "T06",
-    "T08"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/11",
-   "headSha": "f8caf8b904bbb641ff5f3b64485afe53ad8211dd",
-   "coderabbitReviewedSha": null
-  },
-  "T12": {
-   "status": "merged",
-   "dependsOn": [
-    "T03",
-    "T05"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/16",
-   "note": "Last CodeRabbit review on record covered commit 1e4b377, not the final pre-merge head (c7fbe58); a small hardening commit landed after that review. Not re-opening a merged task, but flagged for visibility.",
-   "headSha": "c7fbe588e2f63a39eeaedf858862d80b54dbdaa0",
-   "coderabbitReviewedSha": "1e4b37732b482196b5a70bdb61cf0b8654f05aaa"
-  },
-  "T13": {
-   "status": "merged",
-   "dependsOn": [
-    "T01",
-    "T09"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/14",
-   "headSha": "2266fa39c15b7f50782205ac01464b1943ede2b4",
-   "coderabbitReviewedSha": null
-  },
-  "T17": {
-   "status": "merged",
-   "dependsOn": [
-    "T02",
-    "T06"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/13",
-   "headSha": "717a805b985e023cbe28307217ec96670a1366bd",
-   "coderabbitReviewedSha": null
-  },
-  "T18": {
-   "status": "merged",
-   "dependsOn": [
-    "T02",
-    "T03",
-    "T06"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/15",
-   "headSha": "f0834a979cd951a6f71b5fae58bc56b706103284",
-   "coderabbitReviewedSha": null
-  },
-  "T19": {
-   "status": "merged",
-   "dependsOn": [
-    "T06",
-    "T09"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/17",
-   "headSha": "1d6f4178e940524d0d6e1406e20d0d19bdb9a522",
-   "coderabbitReviewedSha": null
-  },
-  "T20": {
-   "status": "merged",
-   "dependsOn": [
-    "T18",
-    "T19"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/19",
-   "note": "PR #18 (first attempt) closed unmerged due to conflicts; PR #19 is the merged recovery attempt.",
-   "headSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db",
-   "coderabbitReviewedSha": "4736d5074decf5dbe4b7b2a5fec53fa4f498b5db"
-  },
-  "T21": {
-   "dependsOn": [
-    "T03",
-    "T17"
-   ],
-   "note": "Old worktrees (t21-address-autocomplete, t21-autocomplete-recovery) held uncommitted WIP that was never turned into a PR; snapshotted to branches codex/T21-address-autocomplete-abandoned (f1f3256) and codex/T21-mobile-autocomplete-recovery (58e715f) for reference, then discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: GET /v1/places/autocomplete + GET /v1/places/:placeId/resolve, wired into propose.tsx's autocomplete mode. Typecheck/lint/format clean; not exercised against a live Google Places key or a device/Expo (unavailable in this environment) — flagged in the PR. CodeRabbit found and this fixed 4 real issues across two rounds (ILIKE escaping, fetch timeouts, a redundant re-search, a stale in-flight request repopulating the list). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
-   "status": "merged",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/23",
-   "headSha": "e10ac11",
-   "coderabbitReviewedSha": null
-  },
-  "T22": {
-   "status": "merged",
-   "dependsOn": [
-    "T03",
-    "T20"
-   ],
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/21",
-   "note": "Merged 2026-09-28T18:22Z as 644c7c4. Author pushed 6f951e8 (documented Apple Maps link + Android/Google Maps rationale for the geo: finding) and requested a re-review, but merged before CodeRabbit reviewed 6f951e8. Last CodeRabbit review covers e8022e4 only. Main CI on the merge commit failed. Flagged, not re-opened.",
-   "headSha": "6f951e850c05f8f4c8cbab9964e34ed397c76155",
-   "coderabbitReviewedSha": "e8022e4bc28619589dee26ad2ff6d5f1fa991f53"
-  },
-  "T23": {
-   "dependsOn": [
-    "T17",
-    "T20"
-   ],
-   "note": "Old worktree (t23-place-refresh) and its empty branch (zero commits beyond main) discarded per owner instruction to restart from scratch. Implemented fresh by the orchestrator: no existing code path promotes a T17 import_candidates row into a real spot and spots has no dedicated place_id column, so this is scoped to the reachable path — spots proposed via T21's mobile autocomplete (source_ref 'autocomplete:<place_id>'). apps/api/scripts/refresh-place-candidates.ts (CLI job, dry-run by default) re-checks those against Google Place Details; a finding is filed as an open report in the existing reports/moderation queue, never applied to the spot directly. Typecheck/lint/format clean; not exercised against a live Google Places key or a local Postgres/Supabase stack in this environment — flagged in the PR. CodeRabbit found and this fixed 10 real issues across three rounds (HTTPS enforcement, env-var validation, a stale-read race, refresh-limit monopolization, missing timeout, incomplete-response handling, report dedup, a concurrent-duplicate-report race requiring a new migration). The build-spec.md Google Places policy question is resolved (see docs/build-spec.md's Mapping row) — all threads on this PR are closed.",
-   "status": "merged",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/24",
-   "headSha": "fb4caa098c134efeb0a6865658688d2a061bbf08",
-   "coderabbitReviewedSha": null
-  },
-  "T24": {
-   "status": "merged",
-   "dependsOn": [
-    "T17",
-    "T21"
-   ],
-   "note": "Implemented fresh by the orchestrator: a global daily Google Places call budget and an emergency kill switch (GOOGLE_PLACES_KILL_SWITCH, GOOGLE_PLACES_DAILY_CALL_LIMIT) enforced in PlacesService before every outbound call (discovery/autocomplete/resolve) and in T23's refresh-place-candidates.ts script. Restricted-key setup, Cloud Console quotas, billing alerts and existing dedup (T17's place_id unique index, T23's report-tag dedup) documented in docs/google-places-controls.md rather than implemented, since that part of the task's scope is infrastructure configuration outside this repo. CodeRabbit found and this fixed 4 real issues across three rounds, all the same class of bug: assertGoogleCallAllowed() consuming the shared daily budget before checking GOOGLE_PLACES_API_KEY in googleAutocomplete, searchGooglePlaces and resolvePlace (a no-key request drained the budget with zero outbound calls), plus an expected kill-switch/budget rejection being logged as an unexpected failure in autocomplete()'s catch handler. Merged 2026-09-29 as 757a26c. Could not run pnpm typecheck/lint/format in this environment (pnpm not installed, no node_modules) — flagged in the PR; CI covered it.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/26",
-   "headSha": "757a26c",
-   "coderabbitReviewedSha": "14d69d9de256847fd73a9134d71afbcca6644763"
-  },
-  "T14": {
-   "dependsOn": [
-    "T01",
-    "T02",
-    "T03",
-    "T04",
-    "T05",
-    "T06",
-    "T07",
-    "T08",
-    "T09",
-    "T10",
-    "T11",
-    "T12",
-    "T13",
-    "T18",
-    "T19",
-    "T20"
-   ],
-   "note": "Per AGENTS.md/CLAUDE.md, this task calls for escalating to a stronger model given account-deletion correctness; owner explicitly chose to continue on Sonnet 5 instead (see docs/orchestration-log.md). Implemented DELETE /v1/me: no new migration needed, every profiles.id-referencing table already had the right on-delete rule (cascade to hard-delete reviews/favorites/media_uploads, set null to anonymize spot/taco proposal authorship, moderation audit, report authorship, approved_by/verified_by) from prior migrations. CodeRabbit found a real bug beyond the diff itself: apps/api/src/auth/profile.service.ts's findOrCreate (used by every authenticated route) could throw an unhandled foreign-key-violation error for a request made with a still-valid access token after its account was deleted; now caught and rethrown as a clean 401. Also batched Storage photo deletion (1,000/batch) and corrected an inaccurate privacy.md claim about token revocation. Declined to add an integration test per CLAUDE.md's no-tests-unless-requested rule; that one thread stays open. Not exercised against a live Supabase/Postgres stack in this environment — the highest-risk gap in this PR, flagged there.",
-   "status": "merged",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/25",
-   "headSha": "2f672ba",
-   "coderabbitReviewedSha": null
-  },
-  "T15": {
-   "status": "blocked",
-   "dependsOn": [
-    "T14",
-    "T17",
-    "T18",
-    "T19",
-    "T20",
-    "T21",
-    "T22",
-    "T23",
-    "T24"
-   ],
-   "external": [
-    "E01",
-    "E02"
-   ],
-   "note": "All internal task dependencies (T14, T17-T24) are now merged as of T24/PR #26 on 2026-09-29. Only blocked on external inputs E01/E02.",
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T16": {
-   "status": "blocked",
-   "dependsOn": [
-    "T15"
-   ],
-   "external": [
-    "E03",
-    "E04"
-   ],
-   "pr": null,
-   "headSha": null,
-   "coderabbitReviewedSha": null
-  },
-  "T25": {
-   "status": "merged",
-   "dependsOn": [],
-   "note": "Implemented by the orchestrator: map is now the default explore view, full-bleed, with search/filters/mode-toggle as a floating overlay card; list mode kept as secondary view. CodeRabbit found 1 real issue (conditional MapView mount/unmount dropping pan/zoom state on every loading/error/empty transition) - fixed; documented why the map-mode-only-shows-30-spots finding is a pre-existing limitation, not a T25 regression, and left as a follow-up. Merged 2026-09-29 as a80db23.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/28",
-   "headSha": "a80db23",
-   "coderabbitReviewedSha": "a10c108"
-  },
-  "T26": {
-   "status": "merged",
-   "dependsOn": [
-    "T25"
-   ],
-   "note": "Implemented by a delegated Haiku 4.5 worker (orchestrator supervised: prepared worktree, reviewed every diff by hand, wrote the fix-delegation prompts). Custom round marker (View+emoji) replacing default react-native-maps pins; tap opens an Animated.View slide-up bottom sheet (no new dependency) showing name/neighborhood/best taco/review snippet from GET /v1/spots/:id, with an in-memory cache. Went through 4 review rounds with CodeRabbit, catching real bugs each time: (1) worker's first pass used a nonexistent `review.text` field (real field is `body`) and picked 'best taco' as tacos[0] which the API sorts alphabetically, not by score - orchestrator caught both before requesting review; (2) CodeRabbit found a stale-response/animation race + missing marker accessibilityLabel - fixed, but the fix itself had a classic React closure bug (comparing against state captured at callback-creation time instead of current value) that the orchestrator caught by reading the diff, fixed with a synced ref; (3) CodeRabbit found a double-close re-entrance edge case - added a closingRef guard; (4) CodeRabbit found the best-taco lookup silently failed when the spot scrolled out of the loaded items list - added a fallback that computes best-by-score from the detail response instead of just tacos[0]. Merged 2026-09-29 as a7df5f7.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/31",
-   "headSha": "a7df5f7",
-   "coderabbitReviewedSha": "8094cdd"
-  },
-  "T27": {
-   "status": "merged",
-   "dependsOn": [
-    "T26"
-   ],
-   "note": "Chose react-native-map-clustering (decision logged in orchestration-log.md) - drop-in MapView wrapper, no manual supercluster integration needed. Orchestrator added the dependency to apps/mobile/package.json + both lockfiles and verified npm ci reproduces cleanly, then delegated the MapView->ClusteredMapView swap to a Haiku worker. Verified the resulting diff by hand: minimal, swaps MapView only in mode==\"mapa\", styles clusters with colors.red/colors.white, no changes to individual marker tap behavior. CodeRabbit reviewed the head SHA clean (no actionable findings). Merged 2026-09-29 as 3b636f8. Completes the T25-T27 map-first redesign series.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/32",
-   "headSha": "3b636f8",
-   "coderabbitReviewedSha": "219e6f9"
-  },
-  "T28": {
-   "status": "merged",
-   "dependsOn": [],
-   "note": "Implemented by the orchestrator: 'Reportar este puesto' modal on spot/[id].tsx (first modal pattern in the mobile app), new src/features/reports/api.ts calling POST /v1/reports. Scoped to targetType 'spot' only (review-reporting has no UI hook point on that screen). CodeRabbit found 1 real issue (stale submitReport completion could fire against a reopened form after cancel) - fixed with a submission-id ref; the HTTPS-validation-in-createReport suggestion was not applied (inconsistent with every other fetch call in the app, EXPO_PUBLIC_API_URL is a build-time env var not attacker input). Merged 2026-09-29 as 2ca46be.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/29",
-   "headSha": "2ca46be",
-   "coderabbitReviewedSha": "2846454"
-  },
-  "T29": {
-   "status": "merged",
-   "dependsOn": [],
-   "note": "Design system extraction: theme.ts + shared Button/Card/Chip. Owner chose this as the starting task among T25-T30 since the map/icon work builds on it. Merged 2026-09-29T04:32Z as 27954af. CodeRabbit found 1 real issue (Button lost its accessible name while loading) - fixed, replied, thread resolved, re-reviewed clean. Admin.tsx's tab/action buttons intentionally left on local styles (different color semantics); a few pre-existing off-shade error reds left unmerged. pnpm/node_modules unavailable in this environment, could not run typecheck/lint/format.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/27",
-   "headSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8",
-   "coderabbitReviewedSha": "24cb90cb7a60570d90470ea0906a7c7da8c852b8"
-  },
-  "T30": {
-   "status": "merged",
-   "dependsOn": [],
-   "note": "Implemented by the orchestrator: chose @expo/vector-icons (Ionicons) over Phosphor/Lucide - decision logged in orchestration-log.md before touching apps/mobile/package.json + pnpm-lock.yaml. Swapped back-chevrons, location/area controls, list/map toggle, map-empty pin, favorite heart, list-row chevron across 8 mobile files; taco emoji left as branding. Also had to update apps/mobile/package-lock.json (separate standalone npm lockfile CI installs via npm ci --legacy-peer-deps) after the first push failed CI - missed on the first commit. Rebased onto main after T25/T28 merged (real conflicts in index.tsx and spot/[id].tsx, resolved by hand: kept T25's map-first structure + T28's report modal, added Ionicons throughout). CodeRabbit found 1 real issue post-rebase (back-button Pressables lost their accessible name once the icon was split from the text) - fixed across all 6 affected files including spot/[id].tsx (not explicitly flagged but same pattern). Merged 2026-09-29 as 643ff6c.",
-   "pr": "https://github.com/aleiruiz/taco-hunt/pull/30",
-   "headSha": "643ff6c",
-   "coderabbitReviewedSha": "83b598a"
-  }
- }
 }
