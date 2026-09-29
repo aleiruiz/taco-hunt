@@ -324,11 +324,11 @@
       "coderabbitReviewedSha": null
     },
     "T44": {
-      "status": "ready",
+      "status": "active",
       "dependsOn": ["T45", "T48"],
-      "note": "Phase A. Taco-type proposals on stand page + admin tacos queue, existing API. After T48 (same stand page).",
-      "pr": null,
-      "headSha": null,
+      "note": "Phase A. Implemented by the orchestrator against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject): stand-page 'proponer un tipo de taco' modal (chip catalog pick + optional display name), author-only pending-status rows, and an admin 'Tipos de taco' tab. Typecheck/lint/format clean; not exercised against a live Expo/device or running API in this environment. Awaiting CI + CodeRabbit review.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/38",
+      "headSha": "9670029",
       "coderabbitReviewedSha": null
     },
     "T39": {
