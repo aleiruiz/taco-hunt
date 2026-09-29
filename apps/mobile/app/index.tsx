@@ -41,7 +41,7 @@ type Spot = {
 };
 type Review = {
   id: string;
-  text: string;
+  body: string;
   score?: number;
   createdAt?: string;
   author?: string;
@@ -50,7 +50,6 @@ type SpotDetail = {
   id: string;
   name: string;
   neighborhood: string;
-  tacos: Taco[];
   reviews?: Review[];
 };
 type Page = { items: Spot[]; nextCursor: string | null };
@@ -500,24 +499,25 @@ export default function ExploreScreen() {
                 <Text style={[styles.previewError, { marginTop: spacing.md }]}>{spotError}</Text>
               ) : selectedSpot ? (
                 <>
-                  {selectedSpot.tacos && selectedSpot.tacos.length > 0 && (
-                    <View style={{ marginTop: spacing.md }}>
-                      <Text style={styles.previewLabel}>Mejor taco</Text>
-                      {selectedSpot.tacos[0] && (
+                  {(() => {
+                    const spotFromList = items.find((i) => i.id === selectedSpotId);
+                    return spotFromList?.bestTaco ? (
+                      <View style={{ marginTop: spacing.md }}>
+                        <Text style={styles.previewLabel}>Mejor taco</Text>
                         <Text style={styles.previewTaco}>
-                          {selectedSpot.tacos[0].name} ·{" "}
-                          {selectedSpot.tacos[0].score === null
+                          {spotFromList.bestTaco.name} ·{" "}
+                          {spotFromList.bestTaco.score === null
                             ? "Sin reseñas"
-                            : `${selectedSpot.tacos[0].score.toFixed(1)} ★`}
+                            : `${spotFromList.bestTaco.score.toFixed(1)} ★`}
                         </Text>
-                      )}
-                    </View>
-                  )}
+                      </View>
+                    ) : null;
+                  })()}
 
                   {selectedSpot.reviews && selectedSpot.reviews.length > 0 && (
                     <View style={{ marginTop: spacing.md }}>
                       <Text style={styles.previewLabel}>Reseña reciente</Text>
-                      <Text style={styles.previewReview}>{selectedSpot.reviews[0].text}</Text>
+                      <Text style={styles.previewReview}>{selectedSpot.reviews[0].body}</Text>
                     </View>
                   )}
 
