@@ -15,6 +15,9 @@ import { DATABASE_POOL } from "../database/database.module.js";
 import { RequestLimitService } from "../auth/request-limit.service.js";
 
 const GOOGLE_ATTRIBUTION = "Con la tecnología de Google";
+const GOOGLE_CALLS_SCOPE = "places-google-calls-global";
+const GOOGLE_CALLS_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DAILY_CALL_LIMIT = 2_000;
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -42,6 +45,9 @@ type GooglePlace = {
 };
 
 type GooglePlacesResponse = { places?: GooglePlace[] };
+
+/** Expected kill-switch/budget rejection from assertGoogleCallAllowed(); never logged as a failure. */
+class GooglePlacesGuardRejectedException extends ServiceUnavailableException {}
 
 @Injectable()
 export class PlacesService {
@@ -140,9 +146,11 @@ export class PlacesService {
     const [localMatches, googleMatches] = await Promise.all([
       this.searchLocalSpots(query),
       this.googleAutocomplete(query).catch((error) => {
-        this.logger.warn(
-          `Google Places autocomplete unavailable: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        if (!(error instanceof GooglePlacesGuardRejectedException)) {
+          this.logger.warn(
+            `Google Places autocomplete unavailable: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
         return [];
       }),
     ]);
@@ -161,6 +169,8 @@ export class PlacesService {
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+
+    this.assertGoogleCallAllowed();
 
     try {
       const endpoint =
@@ -225,6 +235,34 @@ export class PlacesService {
     }
   }
 
+  /**
+   * Emergency shutoff (GOOGLE_PLACES_KILL_SWITCH) and a global daily call budget
+   * (GOOGLE_PLACES_DAILY_CALL_LIMIT), enforced before every outbound Google Places
+   * request regardless of caller, to bound billing exposure independent of the
+   * per-user rate limits above. See docs/google-places-controls.md.
+   */
+  private assertGoogleCallAllowed(): void {
+    if (process.env.GOOGLE_PLACES_KILL_SWITCH?.trim().toLowerCase() === "true") {
+      throw new GooglePlacesGuardRejectedException(
+        "Google Places está deshabilitado temporalmente",
+      );
+    }
+
+    const configuredLimit = Number(process.env.GOOGLE_PLACES_DAILY_CALL_LIMIT);
+    const dailyLimit =
+      Number.isFinite(configuredLimit) && configuredLimit > 0
+        ? configuredLimit
+        : DEFAULT_DAILY_CALL_LIMIT;
+
+    try {
+      this.limits.consume(GOOGLE_CALLS_SCOPE, "all", dailyLimit, GOOGLE_CALLS_WINDOW_MS);
+    } catch {
+      throw new GooglePlacesGuardRejectedException(
+        "Se alcanzó el límite diario de solicitudes a Google Places",
+      );
+    }
+  }
+
   private async searchLocalSpots(query: string) {
     const { rows } = await this.pool.query(
       `select id, name, neighborhood, latitude::float8 as latitude, longitude::float8 as longitude
@@ -247,6 +285,8 @@ export class PlacesService {
   private async googleAutocomplete(query: string) {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) return [];
+
+    this.assertGoogleCallAllowed();
 
     const endpoint =
       process.env.GOOGLE_PLACES_AUTOCOMPLETE_URL?.trim() ||
@@ -294,6 +334,8 @@ export class PlacesService {
   private async searchGooglePlaces(input: PlacesSearchInput): Promise<GooglePlace[]> {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+
+    this.assertGoogleCallAllowed();
 
     try {
       const endpoint =

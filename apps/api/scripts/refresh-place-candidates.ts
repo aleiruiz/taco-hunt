@@ -53,6 +53,10 @@ function resolveDetailsEndpoint(): string {
 }
 
 async function main(): Promise<void> {
+  if (process.env.GOOGLE_PLACES_KILL_SWITCH?.trim().toLowerCase() === "true") {
+    throw new Error("GOOGLE_PLACES_KILL_SWITCH is set; refusing to call Google Places");
+  }
+
   const spots = await eligibleSpots(limit);
   const findings: Finding[] = [];
   let confirmed = 0;
