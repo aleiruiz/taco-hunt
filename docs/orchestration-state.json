@@ -268,11 +268,11 @@
     },
     "T45": {
       "pr": 34,
-      "headSha": "af2f308",
-      "coderabbitReviewedSha": null,
-      "status": "ready_for_review",
+      "headSha": "cc46dc4",
+      "coderabbitReviewedSha": "cc46dc4",
+      "status": "merged",
       "dependsOn": [],
-      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. First push (7b53472) failed CI typecheck (theme.ts avatar map missing aguacate/horchata, BottomSheet.tsx used removed StyleSheet.absoluteFillObject) - fixed as af2f308. CodeRabbit review of af2f308 found 7 actionable issues (Avatar rendering .svg via plain Image with no transformer configured, BottomSheet unmount/measure/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - fixed as 7fc34b5, adding react-native-svg + react-native-svg-transformer. That npm install left root pnpm-lock.yaml out of sync (apps/mobile has its own package-lock.json) - resynced as cc46dc4. Awaiting CI + a CodeRabbit review of cc46dc4. T46 (PR #35) is already stacked on top of this branch."
+      "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. CodeRabbit found 7 actionable issues across two review passes (SVG avatars rendering blank, BottomSheet animation/measurement/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - all fixed; final head cc46dc4 was CI-green with no actionable findings left (the only change on that commit, pnpm-lock.yaml, is excluded from CodeRabbit review by its default path filters). Merged by the owner as 5b68e74."
     },
     "T32": {
       "status": "blocked",
@@ -284,11 +284,11 @@
     },
     "T46": {
       "pr": 35,
-      "headSha": "f002396",
+      "headSha": "1af84a1",
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. Stacked on T45 (base branch codex/T45-design-system, PR #35 targets PR #34) since T45 hasn't merged yet; needs re-basing onto main once T45 merges. Data needs: zone chips still use today's area bounding-box search pending T33/T34's camera-shortcut viewport loading; sparkle badge uses existing reviewCount. IMPORTANT: neither the CI workflow nor CodeRabbit runs against a non-main base branch (gh pr checks 35 shows CodeRabbit 'reviews are disabled for this base branch' and no Lint/types/format job at all) - only verified locally (typecheck/lint/format) so far; needs a real CI run + CodeRabbit review once retargeted to main after T45 merges."
+      "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. T45 merged (5b68e74); rebased --onto origin/main and retargeted PR #35 to base=main. CI (Lint/types/format, GitGuardian) green on 1af84a1; CodeRabbit review in progress. Data needs: zone chips still use today's area bounding-box search pending T33/T34's camera-shortcut viewport loading; sparkle badge uses existing reviewCount."
     },
     "T35": {
       "status": "blocked",
@@ -301,11 +301,11 @@
     },
     "T47": {
       "pr": 36,
-      "headSha": "46927d1",
+      "headSha": "7027b50",
       "coderabbitReviewedSha": null,
       "status": "ready_for_review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. Stacked on T45 (base branch codex/T45-design-system, PR #36 targets PR #34), independent of T46. Data needs: opening-time chips have no backing field yet (local UI state only); duplicate-match card only surfaces after a failed submit (today's dedupe check is server-side on POST, not pre-submission); the dashed pending-pin-on-map behavior isn't wired into index.tsx. Same CI/CodeRabbit limitation as T46: no run against a non-main base branch yet; only verified locally."
+      "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. T45 merged (5b68e74); rebased --onto origin/main and retargeted PR #36 to base=main. CI (Lint/types/format, GitGuardian) green on 7027b50; CodeRabbit review in progress. Data needs: opening-time chips have no backing field yet (local UI state only); duplicate-match card only surfaces after a failed submit (today's dedupe check is server-side on POST, not pre-submission); the dashed pending-pin-on-map behavior isn't wired into index.tsx."
     },
     "T48": {
       "pr": null,
