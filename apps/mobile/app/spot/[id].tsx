@@ -83,6 +83,7 @@ export default function SpotScreen() {
   const proposalRequestId = useRef(0);
   const currentUserId = useRef<string | null>(session?.user.id ?? null);
   currentUserId.current = session?.user.id ?? null;
+  const proposalsOwner = useRef<string | null>(null);
   const tacoSubmissionId = useRef(0);
   const loadTacoTypes = useCallback(() => {
     setTacoTypesLoading(true);
@@ -117,16 +118,22 @@ export default function SpotScreen() {
     useCallback(() => {
       const requestId = ++proposalRequestId.current;
       if (!session || !id) {
+        proposalsOwner.current = null;
         setMyTacoProposals([]);
         return undefined;
       }
       const userId = session.user.id;
+      if (proposalsOwner.current !== userId) {
+        proposalsOwner.current = null;
+        setMyTacoProposals([]);
+      }
       void listFavorites(session)
         .then(({ items }) => setFavoriteState(items.some((item) => item.id === id)))
         .catch(() => undefined);
       void listMyTacoProposals(session)
         .then((proposals) => {
           if (proposalRequestId.current !== requestId || currentUserId.current !== userId) return;
+          proposalsOwner.current = userId;
           setMyTacoProposals(proposals.filter((item) => item.spotId === id));
         })
         .catch(() => undefined);
