@@ -326,9 +326,9 @@
     "T44": {
       "status": "active",
       "dependsOn": ["T45", "T48"],
-      "note": "Phase A. Implemented by the orchestrator against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject): stand-page 'proponer un tipo de taco' modal (chip catalog pick + optional display name), author-only pending-status rows, and an admin 'Tipos de taco' tab. Typecheck/lint/format clean; not exercised against a live Expo/device or running API in this environment. Awaiting CI + CodeRabbit review.",
+      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8: (1) admin.tsx's queue tabs could bind one queue's approve/reject actions to another queue's item ids during a tab switch mid-load - now items are tagged with the queue that produced them and stale loads are discarded; (2) spot/[id].tsx didn't clear taco proposals on sign-out/account change, risking cross-user leakage on a long-lived mounted screen - now guarded with a request generation + current-user check; (3) a failed taco-type catalog fetch left no retry path - added error state + retry button; (4) the taco-proposal submission had the same reopen-modal race the report modal already guards against - added a matching generation counter; (5) the create response was cast to the wrong shape (server returns displayName, not name), which would have rendered a blank proposal label - added a distinct CreatedTacoProposal type and derive the display name from displayName or the selected catalog entry. Typecheck/lint/format clean. Awaiting CI + re-review of e5246f8.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/38",
-      "headSha": "9670029",
+      "headSha": "e5246f8",
       "coderabbitReviewedSha": null
     },
     "T39": {
