@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Link, type Href, useRouter } from "expo-router";
+import { Link, type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import ClusteredMapView from "react-native-map-clustering";
@@ -96,6 +96,7 @@ export default function ExploreScreen() {
   const [spotLoading, setSpotLoading] = useState(false);
   const [spotError, setSpotError] = useState("");
   const router = useRouter();
+  const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
   const { session } = useAuth();
   const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
   const sheetAnimRef = useRef(new Animated.Value(0)).current;
@@ -236,6 +237,10 @@ export default function ExploreScreen() {
     setActiveType(type);
     void load(query, type, area);
   };
+  useEffect(() => {
+    if (clearFilterAt) chooseType(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clearFilterAt]);
   const chooseArea = (next: Area) => {
     setArea(next);
     void load(query, activeType, next);
@@ -370,17 +375,25 @@ export default function ExploreScreen() {
 
   const searchPill = (
     <View style={styles.searchPill}>
-      <Ionicons name="search" size={18} color={colors.muted} />
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        onSubmitEditing={() => void load()}
-        placeholder="Busca un puesto o colonia"
-        placeholderTextColor={colors.placeholder}
-        returnKeyType="search"
-        style={styles.searchPillInput}
+      <Pressable
+        style={styles.searchPillTouchArea}
+        accessibilityRole="button"
         accessibilityLabel="Buscar puesto o colonia"
-      />
+        onPress={() =>
+          router.push({
+            pathname: "/search",
+            params: activeType ? { tacoType: activeType.nameEs } : {},
+          })
+        }
+      >
+        <Ionicons name="search" size={18} color={colors.muted} />
+        <Text
+          style={[styles.searchPillPlaceholder, !query && { color: colors.placeholder }]}
+          numberOfLines={1}
+        >
+          {query || "Busca un puesto o colonia"}
+        </Text>
+      </Pressable>
       <View style={styles.pillDivider} />
       <IconButton
         icon="options-outline"
@@ -830,6 +843,18 @@ const styles = StyleSheet.create({
     ...elevation.float,
   },
   searchPillInput: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 14,
+  },
+  searchPillTouchArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    height: "100%",
+  },
+  searchPillPlaceholder: {
     flex: 1,
     color: colors.ink,
     fontSize: 14,
