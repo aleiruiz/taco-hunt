@@ -25,6 +25,8 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const loadId = useRef(0);
+  const currentTab = useRef(tab);
+  currentTab.current = tab;
 
   const headers = useMemo(
     () => ({ Authorization: `Bearer ${session?.access_token ?? ""}` }),
@@ -62,13 +64,14 @@ export default function AdminScreen() {
   }, [load]);
 
   async function act(path: string, body: Record<string, string> = {}) {
+    const actingTab = tab;
     const response = await fetch(`${API}${path}`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error("La acción no pudo completarse.");
-    await load();
+    if (currentTab.current === actingTab) await load();
   }
 
   async function run(path: string, body?: Record<string, string>) {
