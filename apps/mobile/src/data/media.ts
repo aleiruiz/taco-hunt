@@ -72,3 +72,40 @@ export function getFixturePhotos(): Photo[] {
 export function getFixturePendingPhotos(): PendingPhoto[] {
   return [];
 }
+
+// --- T39: stand gallery ---
+
+const GALLERY_SAMPLE_URLS = [
+  "https://images.unsplash.com/photo-1613514785940-daed07799d9b?w=480",
+  "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=480",
+  "https://images.unsplash.com/photo-1611250188496-e966043a0629?w=480",
+  "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?w=480",
+];
+const GALLERY_SAMPLE_NAMES = ["Karla R.", "Iván M.", "Sofía G.", "Marco T."];
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * A deterministic (but not real) set of already-approved photos for a stand,
+ * so the gallery has something to show in the fixture-only Phase A UI. T37
+ * replaces this with GET /v1/spots/:id/photos.
+ */
+export function getFixtureApprovedPhotos(spotId: string, spotName: string): Photo[] {
+  const count = hashString(spotId) % (GALLERY_SAMPLE_URLS.length + 1);
+  return Array.from({ length: count }, (_, index) => ({
+    id: `${spotId}-approved-${index}`,
+    url: GALLERY_SAMPLE_URLS[index % GALLERY_SAMPLE_URLS.length],
+    uploaderId: `fixture-user-${index}`,
+    uploaderName: GALLERY_SAMPLE_NAMES[index % GALLERY_SAMPLE_NAMES.length],
+    spotId,
+    spotName,
+    status: "approved",
+    createdAt: new Date(Date.now() - index * 86_400_000).toISOString(),
+  }));
+}
