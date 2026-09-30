@@ -287,9 +287,9 @@
     "T32": {
       "status": "review",
       "dependsOn": ["T45"],
-      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40. Draft PR #39 opened; auth/review flow implemented. Landing integration remains intentionally outside the shared index/theme/components files pending a later integration decision.",
+      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40. PR #39 opened by a separate Codex worker session (thread 01a0f043-f2ab-7e93-b88b-dbf2c6244473, worktree C:/Users/Alei Ruiz/.codex/worktrees/150a/taco-hunt) that ran out of tokens after opening the PR, before addressing review. Orchestrator picked up the review: CI (lint/types/format, GitGuardian) green and CodeRabbit had already reviewed the head (bc9344b) with 1 real finding - EmailConfirmation.tsx's 'Abrir mi app de correo' used mailto: on Android, which opens a compose window instead of the inbox the user needs to read the confirmation email. Fixed as 0fc2438 (Android now opens the inbox via an ACTION_MAIN + CATEGORY_APP_EMAIL intent; iOS unchanged). Typecheck/lint/format clean in that worktree. Landing integration remains intentionally outside the shared index/theme/components files pending a later integration decision. Awaiting re-review of 0fc2438.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
-      "headSha": "bc9344b826c8241215d8062bdd457bac7519af03",
+      "headSha": "0fc2438",
       "coderabbitReviewedSha": null
     },
     "T46": {
