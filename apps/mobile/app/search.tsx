@@ -29,6 +29,7 @@ export default function SearchScreen() {
   const [colonias, setColonias] = useState<ColoniaSuggestion[]>([]);
   const [puestos, setPuestos] = useState<PuestoSuggestion[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
+  const [retryToken, setRetryToken] = useState(0);
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function SearchScreen() {
         });
     }, 350);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, retryToken]);
 
   function close() {
     router.back();
@@ -97,10 +98,7 @@ export default function SearchScreen() {
   }
 
   function retry() {
-    // Re-trigger the debounced search effect.
-    const current = query;
-    setQuery("");
-    setTimeout(() => setQuery(current), 0);
+    setRetryToken((token) => token + 1);
   }
 
   const coloniaItems: SuggestionItem[] = colonias.map((c) => ({
