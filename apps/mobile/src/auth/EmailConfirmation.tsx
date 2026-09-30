@@ -73,12 +73,14 @@ export function EmailConfirmation({
 
   async function openMail() {
     setError("");
+    if (Platform.OS === "android") {
+      // No Android URI scheme reliably opens the inbox (vs. a compose window)
+      // without a native intent module; fall back to manual instructions.
+      setError("Abre tu app de correo y busca el mensaje de Taco Hunt.");
+      return;
+    }
     try {
-      await Linking.openURL(
-        Platform.OS === "ios"
-          ? "message://"
-          : "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_EMAIL;end",
-      );
+      await Linking.openURL("message://");
     } catch {
       setError("Abre tu app de correo y busca el mensaje de Taco Hunt.");
     }
