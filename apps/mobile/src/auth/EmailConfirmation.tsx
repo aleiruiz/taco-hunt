@@ -74,7 +74,11 @@ export function EmailConfirmation({
   async function openMail() {
     setError("");
     try {
-      await Linking.openURL(Platform.OS === "ios" ? "message://" : "mailto:");
+      await Linking.openURL(
+        Platform.OS === "ios"
+          ? "message://"
+          : "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_EMAIL;end",
+      );
     } catch {
       setError("Abre tu app de correo y busca el mensaje de Taco Hunt.");
     }
