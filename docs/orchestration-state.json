@@ -331,22 +331,20 @@
       "coderabbitReviewedSha": "10e8ffd"
     },
     "T39": {
-      "status": "ready",
+      "status": "merged",
       "dependsOn": ["T36", "T44"],
-      "waitingOnDesign": "photo gallery",
-      "note": "Phase A. Stand gallery + upload + uploader-only pending state with fixtures (design §6); API in T37. Free now that T36 and T44 are both merged.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Phase A. Stand gallery + upload UI (design §6): hero photo redesign with floating icon buttons, photo strip, upload modal, fixture-backed getFixtureApprovedPhotos. API in T37. Implemented by the orchestrator in-session. CodeRabbit round 1 (head a23fffa) found 5 issues, most notably a Major sensitive-data-exposure bug (myPhotos not scoped by session/spot, could leak a prior user's pending photos after sign-out/sign-in) and a Major impure state-updater bug (Strict Mode could double-insert photos) - both fixed along with 3 minor ones, head 5a1bceb; a CodeRabbit nit (clear existing upload timer before starting a new one) fixed as 5dec772. CI green, no open threads. Merged as 454872e.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/44",
+      "headSha": "454872e",
+      "coderabbitReviewedSha": "5dec772"
     },
     "T41": {
-      "status": "ready",
+      "status": "merged",
       "dependsOn": ["T45", "T36"],
-      "waitingOnDesign": "profile screen and avatar art",
-      "note": "Phase A. Profile + avatars UI with fixtures (design §7); API in T40. Free now that T36 is merged.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Phase A. Profile + avatars UI (design §7): my-tacos.tsx redesigned into the full profile screen (header, stats/checklist, badge row, tabs, Mis propuestas), new AvatarSheet component. API in T40. Implemented by the orchestrator in-session. CodeRabbit round 1 (head 505f1f7) found 3 issues: only spotProposals counted from /me/proposals (missed tacoProposals), fixture display name shown to every real user instead of session.user.user_metadata.display_name, and AvatarSheet copy implying the local-only change is saved/reviewed - all fixed, head eaf219f. CI green, no open threads. Merged as 82f6946.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/45",
+      "headSha": "82f6946",
+      "coderabbitReviewedSha": "eaf219f"
     },
     "T38": {
       "status": "merged",
@@ -368,7 +366,7 @@
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": [
         "T45",
         "T32",
@@ -383,7 +381,7 @@
         "T38",
         "T50"
       ],
-      "note": "Phase B gate. Consolidate Phase A Data needs into packages/contracts in one PR; waits for all Phase A."
+      "note": "Phase B gate. Consolidate Phase A Data needs into packages/contracts in one PR. Free: all of Phase A (all 12 tasks above) is merged as of T39/T41. Opens Phase B; every Phase B task below depends on this one."
     },
     "T31": {
       "status": "merged",
