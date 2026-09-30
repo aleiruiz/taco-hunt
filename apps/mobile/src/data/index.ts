@@ -19,6 +19,7 @@
  * - proposals: spot proposal states, taco type proposals
  * - progress: challenge/badge progress
  * - media: photo upload states, moderation queues
+ * - importCandidates: admin review queue for CSV-staged import candidates
  */
 
 export * as authFixtures from "./auth";
@@ -27,3 +28,4 @@ export * as reviewsFixtures from "./reviews";
 export * as proposalsFixtures from "./proposals";
 export * as progressFixtures from "./progress";
 export * as mediaFixtures from "./media";
+export * as importCandidatesFixtures from "./importCandidates";
