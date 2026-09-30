@@ -15,11 +15,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
 import { createReport, ReportConflictError, type ReportReason } from "@/features/reports/api";
+import {
+  createTacoProposal,
+  listMyTacoProposals,
+  listTacoTypes,
+  TacoProposalConflictError,
+  type TacoProposal,
+  type TacoType,
+} from "@/features/proposals/api";
 import { openDirections as openMapDirections } from "@/lib/directions";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
 import { IconButton } from "@/components/IconButton";
 import { PhotoTile } from "@/components/PhotoTile";
+import { StatusBadge } from "@/components/StatusBadge";
 import { colors, radii, spacing, typography } from "@/theme";
 
 const REPORT_REASONS: { value: ReportReason; label: string }[] = [
@@ -62,6 +71,29 @@ export default function SpotScreen() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportError, setReportError] = useState("");
   const reportSubmissionId = useRef(0);
+  const [tacoTypes, setTacoTypes] = useState<TacoType[]>([]);
+  const [tacoTypesLoading, setTacoTypesLoading] = useState(true);
+  const [tacoTypesError, setTacoTypesError] = useState(false);
+  const [myTacoProposals, setMyTacoProposals] = useState<TacoProposal[]>([]);
+  const [proposalsOwnerId, setProposalsOwnerId] = useState<string | null>(null);
+  const [tacoModalOpen, setTacoModalOpen] = useState(false);
+  const [selectedTacoTypeId, setSelectedTacoTypeId] = useState<string | null>(null);
+  const [tacoDisplayName, setTacoDisplayName] = useState("");
+  const [tacoSubmitting, setTacoSubmitting] = useState(false);
+  const [tacoError, setTacoError] = useState("");
+  const proposalRequestId = useRef(0);
+  const currentUserId = useRef<string | null>(session?.user.id ?? null);
+  currentUserId.current = session?.user.id ?? null;
+  const proposalsOwner = useRef<string | null>(null);
+  const tacoSubmissionId = useRef(0);
+  const loadTacoTypes = useCallback(() => {
+    setTacoTypesLoading(true);
+    setTacoTypesError(false);
+    void listTacoTypes()
+      .then(setTacoTypes)
+      .catch(() => setTacoTypesError(true))
+      .finally(() => setTacoTypesLoading(false));
+  }, []);
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -85,13 +117,38 @@ export default function SpotScreen() {
   }, [load]);
   useFocusEffect(
     useCallback(() => {
-      if (!session || !id) return undefined;
+      const requestId = ++proposalRequestId.current;
+      if (!session || !id) {
+        proposalsOwner.current = null;
+        setProposalsOwnerId(null);
+        setMyTacoProposals([]);
+        return undefined;
+      }
+      const userId = session.user.id;
+      if (proposalsOwner.current !== userId) {
+        proposalsOwner.current = null;
+        setProposalsOwnerId(null);
+        setMyTacoProposals([]);
+      }
       void listFavorites(session)
         .then(({ items }) => setFavoriteState(items.some((item) => item.id === id)))
         .catch(() => undefined);
-      return undefined;
+      void listMyTacoProposals(session)
+        .then((proposals) => {
+          if (proposalRequestId.current !== requestId || currentUserId.current !== userId) return;
+          proposalsOwner.current = userId;
+          setProposalsOwnerId(userId);
+          setMyTacoProposals(proposals.filter((item) => item.spotId === id));
+        })
+        .catch(() => undefined);
+      return () => {
+        proposalRequestId.current += 1;
+      };
     }, [id, session]),
   );
+  useEffect(() => {
+    loadTacoTypes();
+  }, [loadTacoTypes]);
   async function toggleFavorite() {
     if (!session) {
       router.push("/sign-in");
@@ -146,6 +203,72 @@ export default function SpotScreen() {
       if (reportSubmissionId.current === submissionId) setReportSubmitting(false);
     }
   }
+  function openTacoModal() {
+    if (!session) {
+      router.push("/sign-in");
+      return;
+    }
+    setSelectedTacoTypeId(null);
+    setTacoDisplayName("");
+    setTacoError("");
+    setTacoModalOpen(true);
+  }
+  function closeTacoModal() {
+    tacoSubmissionId.current += 1;
+    setTacoSubmitting(false);
+    setTacoModalOpen(false);
+  }
+  async function submitTacoProposal() {
+    if (!session || !selectedTacoTypeId || !spot) return;
+    const submissionId = ++tacoSubmissionId.current;
+    const proposalContextId = proposalRequestId.current;
+    const proposalUserId = session.user.id;
+    const selectedType = tacoTypes.find((type) => type.id === selectedTacoTypeId);
+    setTacoSubmitting(true);
+    setTacoError("");
+    try {
+      const created = await createTacoProposal(session, {
+        spotId: spot.id,
+        tacoTypeId: selectedTacoTypeId,
+        displayName: tacoDisplayName.trim() || undefined,
+      });
+      const proposal: TacoProposal = {
+        id: created.id,
+        spotId: created.spotId,
+        spotName: spot.name,
+        tacoTypeId: created.tacoTypeId,
+        name: created.displayName ?? selectedType?.nameEs ?? "Tipo de taco",
+        status: created.status,
+        createdAt: created.createdAt,
+      };
+      if (
+        proposalRequestId.current === proposalContextId &&
+        currentUserId.current === proposalUserId
+      ) {
+        setMyTacoProposals((current) => [proposal, ...current]);
+      }
+      if (tacoSubmissionId.current !== submissionId) return;
+      setTacoModalOpen(false);
+    } catch (submitError) {
+      if (tacoSubmissionId.current !== submissionId) return;
+      setTacoError(
+        submitError instanceof TacoProposalConflictError
+          ? "Ya existe una propuesta o tipo de taco para este puesto."
+          : "No se pudo enviar. Lo que llenaste sigue aquí.",
+      );
+    } finally {
+      if (tacoSubmissionId.current === submissionId) setTacoSubmitting(false);
+    }
+  }
+  const visibleMyTacoProposals =
+    session && proposalsOwnerId === session.user.id ? myTacoProposals : [];
+  const availableTacoTypes = tacoTypes.filter(
+    (type) =>
+      !spot?.tacos.some((taco) => taco.tacoTypeId === type.id) &&
+      !visibleMyTacoProposals.some(
+        (proposal) => proposal.tacoTypeId === type.id && proposal.status === "pending",
+      ),
+  );
   const hasPin = typeof spot?.latitude === "number" && typeof spot.longitude === "number";
   const hasAnyReviews = spot?.tacos.some((taco) => taco.reviewCount > 0) ?? false;
   const openDirections = () => {
@@ -324,6 +447,23 @@ export default function SpotScreen() {
                 </Text>
               </View>
             )}
+            {visibleMyTacoProposals
+              .filter((proposal) => proposal.status !== "approved")
+              .map((proposal) => (
+                <View key={proposal.id} style={styles.pendingTacoRow}>
+                  <Text style={styles.tacoName}>{proposal.name}</Text>
+                  <StatusBadge status={proposal.status} />
+                </View>
+              ))}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="¿Venden otro taco? Agrégalo"
+              onPress={openTacoModal}
+              style={styles.dashedRow}
+            >
+              <Ionicons name="add-circle-outline" size={16} color={colors.redStrong} />
+              <Text style={styles.dashedRowText}>¿Venden otro taco? Agrégalo</Text>
+            </Pressable>
           </>
         )
       )}
@@ -370,6 +510,76 @@ export default function SpotScreen() {
                 loading={reportSubmitting}
                 onPress={() => void submitReport()}
                 style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        visible={tacoModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={closeTacoModal}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Proponer un tipo de taco</Text>
+            <Text style={styles.body}>
+              Un moderador lo revisa antes de publicarlo en este puesto.
+            </Text>
+            <View style={styles.reasonRow}>
+              {availableTacoTypes.map((type) => (
+                <Chip
+                  key={type.id}
+                  label={type.nameEs}
+                  selected={selectedTacoTypeId === type.id}
+                  onPress={() => setSelectedTacoTypeId(type.id)}
+                />
+              ))}
+              {tacoTypesLoading ? (
+                <ActivityIndicator color={colors.red} />
+              ) : tacoTypesError ? (
+                <View>
+                  <Text style={styles.body}>No pudimos cargar el catálogo de tacos.</Text>
+                  <Button
+                    label="Reintentar"
+                    variant="secondary"
+                    onPress={loadTacoTypes}
+                    style={{ marginTop: spacing.sm }}
+                  />
+                </View>
+              ) : availableTacoTypes.length === 0 ? (
+                <Text style={styles.body}>
+                  {tacoTypes.length === 0
+                    ? "Aún no hay tipos de taco en el catálogo."
+                    : "Ya hay una propuesta o tipo confirmado para cada tipo del catálogo."}
+                </Text>
+              ) : null}
+            </View>
+            <TextInput
+              value={tacoDisplayName}
+              onChangeText={setTacoDisplayName}
+              placeholder="Nombre en el menú (opcional, ej. Taco de pastor especial)"
+              placeholderTextColor={colors.placeholder}
+              maxLength={80}
+              style={styles.reportNoteInput}
+              accessibilityLabel="Nombre en el menú"
+            />
+            {tacoError ? <Text style={styles.reportError}>{tacoError}</Text> : null}
+            <View style={styles.modalActions}>
+              <Button
+                label="Cancelar"
+                variant="secondary"
+                onPress={closeTacoModal}
+                style={{ flex: 1 }}
+              />
+              <Button
+                label={tacoError ? "Reintentar envío" : "Enviar para revisión"}
+                variant="accent"
+                disabled={!selectedTacoTypeId}
+                loading={tacoSubmitting}
+                onPress={() => void submitTacoProposal()}
+                style={{ flex: 2 }}
               />
             </View>
           </View>
@@ -446,6 +656,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tacoName: { color: colors.ink, fontWeight: "800", fontSize: 16 },
+  pendingTacoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.goldSoft,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+  },
+  dashedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: 44,
+    marginTop: 4,
+  },
+  dashedRowText: { color: colors.redStrong, fontSize: 13, fontWeight: "700", flex: 1 },
   score: { color: colors.red, fontWeight: "900", fontSize: 16 },
   empty: { padding: 20, marginTop: 20, borderRadius: 16, backgroundColor: colors.paper },
   pinCard: {

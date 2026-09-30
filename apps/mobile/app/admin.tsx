@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +8,7 @@ import { colors } from "@/theme";
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const tabs = [
   ["spots", "Propuestas"],
+  ["tacos", "Tipos de taco"],
   ["reports", "Reportes"],
   ["photos", "Fotos"],
   ["duplicates", "Duplicados"],
@@ -20,8 +21,12 @@ export default function AdminScreen() {
   const { session } = useAuth();
   const [tab, setTab] = useState<Queue>("spots");
   const [items, setItems] = useState<QueueItem[]>([]);
+  const [itemsQueue, setItemsQueue] = useState<Queue | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const loadId = useRef(0);
+  const currentTab = useRef(tab);
+  currentTab.current = tab;
 
   const headers = useMemo(
     () => ({ Authorization: `Bearer ${session?.access_token ?? ""}` }),
@@ -30,6 +35,7 @@ export default function AdminScreen() {
 
   const load = useCallback(async () => {
     if (!session) return;
+    const requestId = ++loadId.current;
     setLoading(true);
     setMessage(null);
     try {
@@ -40,12 +46,16 @@ export default function AdminScreen() {
       if (response.status === 403) throw new Error("No tienes permisos de moderación.");
       if (!response.ok) throw new Error("No pudimos cargar esta cola.");
       const data = (await response.json()) as { items?: QueueItem[] };
+      if (loadId.current !== requestId) return;
       setItems(data.items ?? []);
+      setItemsQueue(tab);
     } catch (error) {
+      if (loadId.current !== requestId) return;
       setItems([]);
+      setItemsQueue(tab);
       setMessage(error instanceof Error ? error.message : "No pudimos cargar esta cola.");
     } finally {
-      setLoading(false);
+      if (loadId.current === requestId) setLoading(false);
     }
   }, [headers, session, tab]);
 
@@ -54,13 +64,14 @@ export default function AdminScreen() {
   }, [load]);
 
   async function act(path: string, body: Record<string, string> = {}) {
+    const actingTab = tab;
     const response = await fetch(`${API}${path}`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error("La acción no pudo completarse.");
-    await load();
+    if (currentTab.current === actingTab) await load();
   }
 
   async function run(path: string, body?: Record<string, string>) {
@@ -117,21 +128,23 @@ export default function AdminScreen() {
             {String(item.name ?? item.targetName ?? item.spotName ?? "Elemento")}
           </Text>
           <Text style={styles.body}>
-            {tab === "duplicates"
+            {itemsQueue === "duplicates"
               ? `${String(item.candidateName ?? "Candidato cercano")} · ${String(item.distanceMeters ?? "?")} m`
-              : tab === "reports"
-                ? `${String(item.reason ?? "Sin motivo")} · ${String(item.targetType ?? "contenido")}`
-                : tab === "photos"
-                  ? `${String(item.tacoName ?? "Taco")} · ${String(item.spotName ?? "Puesto")}`
-                  : `${String(item.neighborhood ?? "Sin colonia")} · ${String(item.status ?? "pendiente")}${item.moderationReason ? ` · ${String(item.moderationReason)}` : ""}`}
+              : itemsQueue === "tacos"
+                ? `Puesto: ${String(item.spotName ?? "Sin puesto")}`
+                : itemsQueue === "reports"
+                  ? `${String(item.reason ?? "Sin motivo")} · ${String(item.targetType ?? "contenido")}`
+                  : itemsQueue === "photos"
+                    ? `${String(item.tacoName ?? "Taco")} · ${String(item.spotName ?? "Puesto")}`
+                    : `${String(item.neighborhood ?? "Sin colonia")} · ${String(item.status ?? "pendiente")}${item.moderationReason ? ` · ${String(item.moderationReason)}` : ""}`}
           </Text>
           <View style={styles.actions}>
-            {tab === "audit" ? (
+            {tab === "audit" && itemsQueue === tab ? (
               <Text
                 style={styles.body}
               >{`${String(item.action ?? "acción")} · ${String(item.targetType ?? "elemento")} · ${String(item.reason ?? "Sin motivo")}`}</Text>
             ) : null}
-            {tab === "spots" ? (
+            {tab === "spots" && itemsQueue === tab ? (
               <>
                 <Action
                   label="Aprobar"
@@ -157,14 +170,32 @@ export default function AdminScreen() {
                 />
               </>
             ) : null}
-            {tab === "reports" ? (
+            {tab === "tacos" && itemsQueue === tab ? (
+              <>
+                <Action
+                  label="Aprobar"
+                  onPress={() => void run(`/admin/taco-proposals/${item.id}/approve`)}
+                  primary
+                />
+                <Action
+                  label="Rechazar"
+                  onPress={() =>
+                    void run(`/admin/taco-proposals/${item.id}/reject`, {
+                      reason: "No cumple los criterios de publicación",
+                    })
+                  }
+                  danger
+                />
+              </>
+            ) : null}
+            {tab === "reports" && itemsQueue === tab ? (
               <Action
                 label="Cerrar reporte"
                 onPress={() => void run(`/admin/reports/${item.id}/close`)}
                 primary
               />
             ) : null}
-            {tab === "photos" ? (
+            {tab === "photos" && itemsQueue === tab ? (
               <Action
                 label="Ocultar foto"
                 onPress={() =>
@@ -175,7 +206,7 @@ export default function AdminScreen() {
                 danger
               />
             ) : null}
-            {tab === "duplicates" ? (
+            {tab === "duplicates" && itemsQueue === tab ? (
               <Action
                 label="Fusionar propuesta"
                 onPress={() =>
