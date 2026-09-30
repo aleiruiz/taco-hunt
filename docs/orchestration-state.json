@@ -11,17 +11,7 @@
       "note": "Merged 2026-09-28T19:53Z with 2 unresolved CodeRabbit findings on the reviewed head: (1) use !cancelled() instead of always(); (2) formatting step checks only .github/workflows/ci.yml instead of repo-wide pnpm format:check. Main CI no longer enforces repo-wide formatting. Needs owner decision."
     }
   },
-  "workers": [
-    {
-      "task": "T32",
-      "threadId": "01a0f043-f2ab-7e93-b88b-dbf2c6244473",
-      "hostId": "local",
-      "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/150a/taco-hunt",
-      "branch": "codex/T32-auth-confirmation",
-      "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
-      "status": "review"
-    }
-  ],
+  "workers": [],
   "tasks": {
     "T00": {
       "status": "merged",
@@ -285,12 +275,12 @@
       "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. CodeRabbit found 7 actionable issues across two review passes (SVG avatars rendering blank, BottomSheet animation/measurement/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - all fixed; final head cc46dc4 was CI-green with no actionable findings left (the only change on that commit, pnpm-lock.yaml, is excluded from CodeRabbit review by its default path filters). Merged by the owner as 5b68e74."
     },
     "T32": {
-      "status": "review",
+      "status": "merged",
       "dependsOn": ["T45"],
-      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40. PR #39 opened by a separate Codex worker session (thread 01a0f043-f2ab-7e93-b88b-dbf2c6244473, worktree C:/Users/Alei Ruiz/.codex/worktrees/150a/taco-hunt) that ran out of tokens after opening the PR, before addressing review. Orchestrator picked it up: CI (lint/types/format, GitGuardian) green. CodeRabbit round 1 (bc9344b) found 1 real issue - EmailConfirmation.tsx's 'Abrir mi app de correo' used mailto: on Android, opening a compose window instead of the inbox - fixed as 0fc2438 with an ACTION_MAIN + CATEGORY_APP_EMAIL intent URI. Round 2 (0fc2438) found that fix itself was unreliable: React Native's Linking.openURL doesn't parse an embedded MAIN/APP_EMAIL selector inside an intent: URI, so the call could reject. Without a native intent module there's no dependable Android URI for this, so reverted to showing the existing manual-instructions message directly on Android (fixed as e05528e); iOS keeps message://. Typecheck/lint/format clean in that worktree. Landing integration remains intentionally outside the shared index/theme/components files pending a later integration decision. Awaiting re-review of e05528e.",
+      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40. PR #39 opened by a separate Codex worker session (thread 01a0f043-f2ab-7e93-b88b-dbf2c6244473) that ran out of tokens after opening the PR, before addressing review; orchestrator picked it up directly in that worktree since it would not be reused. CodeRabbit round 1 (bc9344b) found 1 real issue - EmailConfirmation.tsx's 'Abrir mi app de correo' used mailto: on Android, opening a compose window instead of the inbox - fixed as 0fc2438 with an ACTION_MAIN + CATEGORY_APP_EMAIL intent URI. Round 2 (0fc2438) found that fix itself unreliable (RN's Linking.openURL doesn't parse an embedded MAIN/APP_EMAIL selector inside an intent: URI), so reverted to the existing manual-instructions message on Android; iOS keeps message://. Fixed as e05528e, reviewed clean (no actionable comments). CI green throughout. Landing integration remains intentionally outside the shared index/theme/components files pending a later integration decision. Merged 2026-09-30T16:42:28Z as 9074774.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
-      "headSha": "e05528e",
-      "coderabbitReviewedSha": null
+      "headSha": "9074774",
+      "coderabbitReviewedSha": "e05528e"
     },
     "T46": {
       "pr": 35,
