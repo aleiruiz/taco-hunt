@@ -11,7 +11,17 @@
       "note": "Merged 2026-09-28T19:53Z with 2 unresolved CodeRabbit findings on the reviewed head: (1) use !cancelled() instead of always(); (2) formatting step checks only .github/workflows/ci.yml instead of repo-wide pnpm format:check. Main CI no longer enforces repo-wide formatting. Needs owner decision."
     }
   },
-  "workers": [],
+  "workers": [
+    {
+      "task": "T32",
+      "threadId": "01a0f043-f2ab-7e93-b88b-dbf2c6244473",
+      "hostId": "local",
+      "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/150a/taco-hunt",
+      "branch": "codex/T32-auth-confirmation",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
+      "status": "active"
+    }
+  ],
   "tasks": {
     "T00": {
       "status": "merged",
@@ -275,11 +285,11 @@
       "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. CodeRabbit found 7 actionable issues across two review passes (SVG avatars rendering blank, BottomSheet animation/measurement/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - all fixed; final head cc46dc4 was CI-green with no actionable findings left (the only change on that commit, pnpm-lock.yaml, is excluded from CodeRabbit review by its default path filters). Merged by the owner as 5b68e74."
     },
     "T32": {
-      "status": "ready",
+      "status": "active",
       "dependsOn": ["T45"],
-      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40.",
-      "pr": null,
-      "headSha": null,
+      "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40. Draft PR #39 opened; auth/review flow implemented. Landing integration remains intentionally outside the shared index/theme/components files pending a later integration decision.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
+      "headSha": "3502f1b121607b7d9588f619d5086f837fdf7e86",
       "coderabbitReviewedSha": null
     },
     "T46": {
@@ -326,9 +336,9 @@
     "T44": {
       "status": "active",
       "dependsOn": ["T45", "T48"],
-      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8: queue/tab action-binding race in admin.tsx, taco proposals not cleared on sign-out/account change, no retry on catalog fetch failure, a reopen-modal submission race, and a create-response type mismatch that would have rendered a blank proposal label. Round 2 (e5246f8) found 1 more (empty-catalog indefinite spinner) - fixed as 5ec559b. Round 3 (5ec559b) found 1 more actionable issue (a just-completed proposal could leak across a mid-request account switch) - fixed as b2ee80f - and, separately, its architecture review flagged a Medium/inferred residual gap: the proposal cache was only cleared after the replacement fetch resolved (or never, if it failed), so a fast account switch could briefly show the previous account's private proposals. Addressed as ce148ef (clear immediately on observing a different user, before starting the replacement fetch). CI green throughout. Typecheck/lint/format clean. Awaiting re-review of ce148ef.",
+      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8. Round 2 (e5246f8) found 1 more (empty-catalog indefinite spinner) - fixed as 5ec559b. Round 3 (5ec559b) found 1 actionable issue (proposal leak across a mid-request account switch, fixed as b2ee80f) plus a Medium/inferred architecture-review gap (cache only cleared after the replacement fetch resolved) addressed as ce148ef. Round 4 (ce148ef) found 1 more: the ce148ef fix cleared myTacoProposals from inside useFocusEffect's callback, which runs after render/paint, so a frame could still show the outgoing account's proposal rows (and use them to filter availableTacoTypes) between a session change and the effect running. Fixed as 82b2b03: added proposalsOwnerId render state and derive visibleMyTacoProposals from it, so stale rows can never reach render regardless of effect timing. CI green throughout. Typecheck/lint/format clean. Awaiting re-review of 82b2b03.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/38",
-      "headSha": "ce148ef",
+      "headSha": "82b2b03",
       "coderabbitReviewedSha": null
     },
     "T39": {
