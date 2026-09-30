@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import MapView, { Marker } from "react-native-maps";
 import { useAuth } from "@/auth/provider";
-import { colors, radii, spacing } from "@/theme";
+import { colors, radii, spacing, typography } from "@/theme";
 import { PhotoTile } from "@/components/PhotoTile";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/Button";
 import { getFixturePhotos, type Photo } from "@/data/media";
+import { getFixtureImportCandidates, type ImportCandidate } from "@/data/importCandidates";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const tabs = [
@@ -24,6 +26,7 @@ const tabs = [
   ["reports", "Reportes"],
   ["photos", "Fotos"],
   ["standPhotos", "Fotos de puestos"],
+  ["importCandidates", "Candidatos"],
   ["duplicates", "Duplicados"],
   ["audit", "Bitácora"],
 ] as const;
@@ -38,6 +41,13 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [standPhotos, setStandPhotos] = useState<Photo[]>(() => getFixturePhotos());
+  const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>(() =>
+    getFixtureImportCandidates(),
+  );
+  const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(null);
+  const [candidatePins, setCandidatePins] = useState<
+    Record<string, { latitude: number; longitude: number }>
+  >({});
   const loadId = useRef(0);
   const currentTab = useRef(tab);
   currentTab.current = tab;
@@ -59,8 +69,43 @@ export default function AdminScreen() {
     }
   }
 
+  function candidatePin(candidate: ImportCandidate) {
+    return (
+      candidatePins[candidate.id] ?? {
+        latitude: candidate.latitude,
+        longitude: candidate.longitude,
+      }
+    );
+  }
+
+  function adjustCandidatePin(candidateId: string, latitude: number, longitude: number) {
+    setCandidatePins((current) => ({ ...current, [candidateId]: { latitude, longitude } }));
+  }
+
+  function moderateImportCandidate(
+    candidateId: string,
+    decision: "approved" | "rejected" | "merged",
+  ) {
+    const candidate = importCandidates.find((item) => item.id === candidateId);
+    setImportCandidates((current) => current.filter((item) => item.id !== candidateId));
+    setCandidatePins((current) => {
+      const { [candidateId]: _removed, ...rest } = current;
+      return rest;
+    });
+    if (expandedCandidateId === candidateId) setExpandedCandidateId(null);
+    if (candidate) {
+      const message =
+        decision === "approved"
+          ? `${candidate.normalizedName} publicado en el mapa.`
+          : decision === "merged"
+            ? `${candidate.normalizedName} fusionado con un puesto existente.`
+            : `${candidate.normalizedName} rechazado.`;
+      AccessibilityInfo.announceForAccessibility(message);
+    }
+  }
+
   const load = useCallback(async () => {
-    if (!session || tab === "standPhotos") return;
+    if (!session || tab === "standPhotos" || tab === "importCandidates") return;
     const requestId = ++loadId.current;
     setLoading(true);
     setMessage(null);
@@ -143,7 +188,112 @@ export default function AdminScreen() {
           </Pressable>
         ))}
       </ScrollView>
-      {tab === "standPhotos" ? (
+      {tab === "importCandidates" ? (
+        <>
+          <Text style={styles.body}>
+            Puestos investigados por el equipo (web_research), en espera de revisión antes de
+            publicarse en el mapa.
+          </Text>
+          {importCandidates.length === 0 ? (
+            <Text style={styles.empty}>No hay candidatos pendientes.</Text>
+          ) : (
+            importCandidates.map((candidate) => {
+              const expanded = expandedCandidateId === candidate.id;
+              const pin = candidatePin(candidate);
+              return (
+                <View key={candidate.id} style={styles.card}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${expanded ? "Contraer" : "Expandir"} ${candidate.normalizedName}`}
+                    accessibilityState={{ expanded }}
+                    onPress={() => setExpandedCandidateId(expanded ? null : candidate.id)}
+                    style={styles.candidateHeader}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTitle}>{candidate.normalizedName}</Text>
+                      <Text style={styles.body}>{candidate.address}</Text>
+                      {candidate.matches.length > 0 ? (
+                        <View style={styles.candidateMatchBadge}>
+                          <StatusBadge
+                            status="pending"
+                            reason={`${candidate.matches.length} posible(s) duplicado(s)`}
+                          />
+                        </View>
+                      ) : null}
+                    </View>
+                    <Ionicons
+                      name={expanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={colors.muted}
+                    />
+                  </Pressable>
+                  {expanded ? (
+                    <View style={styles.candidateDetail}>
+                      <Text style={styles.candidateLabel}>PROCEDENCIA</Text>
+                      <Text style={styles.body}>
+                        Original: "{candidate.originalName}" · fuente: {candidate.source} ·{" "}
+                        {candidate.sourceRef}
+                      </Text>
+                      <Text style={styles.body}>{candidate.licenseRef}</Text>
+
+                      {candidate.matches.length > 0 ? (
+                        <>
+                          <Text style={styles.candidateLabel}>POSIBLES DUPLICADOS</Text>
+                          {candidate.matches.map((match) => (
+                            <Text key={match.spotId} style={styles.body}>
+                              {match.spotName} · {match.distanceMeters} m
+                            </Text>
+                          ))}
+                        </>
+                      ) : null}
+
+                      <Text style={styles.candidateLabel}>PIN (AJUSTA ARRASTRANDO EL MAPA)</Text>
+                      <View style={styles.candidateMapWrap}>
+                        <MapView
+                          style={StyleSheet.absoluteFill}
+                          initialRegion={{
+                            latitude: pin.latitude,
+                            longitude: pin.longitude,
+                            latitudeDelta: 0.01,
+                            longitudeDelta: 0.01,
+                          }}
+                          onRegionChangeComplete={(region) =>
+                            adjustCandidatePin(candidate.id, region.latitude, region.longitude)
+                          }
+                        >
+                          <Marker coordinate={pin} />
+                        </MapView>
+                      </View>
+                      <Text style={styles.body}>
+                        {pin.latitude.toFixed(5)}, {pin.longitude.toFixed(5)}
+                      </Text>
+
+                      <View style={styles.actions}>
+                        <Action
+                          label="Aprobar"
+                          onPress={() => moderateImportCandidate(candidate.id, "approved")}
+                          primary
+                        />
+                        {candidate.matches.length > 0 ? (
+                          <Action
+                            label="Fusionar con existente"
+                            onPress={() => moderateImportCandidate(candidate.id, "merged")}
+                          />
+                        ) : null}
+                        <Action
+                          label="Rechazar"
+                          onPress={() => moderateImportCandidate(candidate.id, "rejected")}
+                          danger
+                        />
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })
+          )}
+        </>
+      ) : tab === "standPhotos" ? (
         <>
           <Text style={styles.body}>
             Fotos de puestos pendientes de revisión. Solo quien las subió las ve hasta que se
@@ -383,6 +533,29 @@ const styles = StyleSheet.create({
   photoCardBody: { flex: 1 },
   photoCardBadge: { marginTop: spacing.sm, alignSelf: "flex-start" },
   photoActionButton: { flex: 1, minWidth: 0 },
+  candidateHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  candidateMatchBadge: { marginTop: spacing.sm, alignSelf: "flex-start" },
+  candidateDetail: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.lineSoft,
+  },
+  candidateLabel: {
+    ...typography.label,
+    color: colors.muted,
+    letterSpacing: 1,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  candidateMapWrap: {
+    height: 160,
+    borderRadius: radii.md,
+    overflow: "hidden",
+    marginTop: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
   action: {
     minHeight: 40,
     paddingHorizontal: 12,
