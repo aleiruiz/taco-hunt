@@ -312,6 +312,7 @@ export default function SpotScreen() {
     setUploadBusy(true);
     setUploadError("");
     setUploadProgress(0);
+    if (uploadTimer.current) clearInterval(uploadTimer.current);
     uploadTimer.current = setInterval(() => {
       setUploadProgress((current) => Math.min(100, current + 20));
     }, 200);
