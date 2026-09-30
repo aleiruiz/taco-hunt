@@ -75,6 +75,7 @@ export default function SpotScreen() {
   const [tacoTypesLoading, setTacoTypesLoading] = useState(true);
   const [tacoTypesError, setTacoTypesError] = useState(false);
   const [myTacoProposals, setMyTacoProposals] = useState<TacoProposal[]>([]);
+  const [proposalsOwnerId, setProposalsOwnerId] = useState<string | null>(null);
   const [tacoModalOpen, setTacoModalOpen] = useState(false);
   const [selectedTacoTypeId, setSelectedTacoTypeId] = useState<string | null>(null);
   const [tacoDisplayName, setTacoDisplayName] = useState("");
@@ -119,12 +120,14 @@ export default function SpotScreen() {
       const requestId = ++proposalRequestId.current;
       if (!session || !id) {
         proposalsOwner.current = null;
+        setProposalsOwnerId(null);
         setMyTacoProposals([]);
         return undefined;
       }
       const userId = session.user.id;
       if (proposalsOwner.current !== userId) {
         proposalsOwner.current = null;
+        setProposalsOwnerId(null);
         setMyTacoProposals([]);
       }
       void listFavorites(session)
@@ -134,6 +137,7 @@ export default function SpotScreen() {
         .then((proposals) => {
           if (proposalRequestId.current !== requestId || currentUserId.current !== userId) return;
           proposalsOwner.current = userId;
+          setProposalsOwnerId(userId);
           setMyTacoProposals(proposals.filter((item) => item.spotId === id));
         })
         .catch(() => undefined);
@@ -256,10 +260,12 @@ export default function SpotScreen() {
       if (tacoSubmissionId.current === submissionId) setTacoSubmitting(false);
     }
   }
+  const visibleMyTacoProposals =
+    session && proposalsOwnerId === session.user.id ? myTacoProposals : [];
   const availableTacoTypes = tacoTypes.filter(
     (type) =>
       !spot?.tacos.some((taco) => taco.tacoTypeId === type.id) &&
-      !myTacoProposals.some(
+      !visibleMyTacoProposals.some(
         (proposal) => proposal.tacoTypeId === type.id && proposal.status === "pending",
       ),
   );
@@ -441,7 +447,7 @@ export default function SpotScreen() {
                 </Text>
               </View>
             )}
-            {myTacoProposals
+            {visibleMyTacoProposals
               .filter((proposal) => proposal.status !== "approved")
               .map((proposal) => (
                 <View key={proposal.id} style={styles.pendingTacoRow}>
