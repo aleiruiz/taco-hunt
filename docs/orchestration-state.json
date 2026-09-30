@@ -363,10 +363,10 @@
       "note": "Phase A. Import-candidate review panel UI with fixtures (split from T42): new 'Candidatos' admin tab, draggable-map pin adjustment. Implemented by the orchestrator in-session. CodeRabbit reviewed head 74f6caa with no actionable comments. CI green. Merged as da29904."
     },
     "T51": {
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null,
-      "status": "ready",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/46",
+      "headSha": "c4618ec",
+      "coderabbitReviewedSha": "64f00ac",
+      "status": "merged",
       "dependsOn": [
         "T45",
         "T32",
@@ -381,7 +381,7 @@
         "T38",
         "T50"
       ],
-      "note": "Phase B gate. Consolidate Phase A Data needs into packages/contracts in one PR. Free: all of Phase A (all 12 tasks above) is merged as of T39/T41. Opens Phase B; every Phase B task below depends on this one."
+      "note": "Phase B gate. Consolidated every Phase A PR's Data needs into packages/contracts (additive-only zod schemas + openapi.yaml paths for T33/T34, T52, T37, T40, T49, T42; no handlers). Implemented by the orchestrator in-session. CodeRabbit round 1 (head 0aa0747) found 4 issues, including a Major information-disclosure bug (the public GET /v1/spots/:id/photos response used the full private SpotPhoto schema, exposing uploaderId/status/rejectionReason) - fixed with a new publicSpotPhotoSchema, head 64f00ac. CI green, no open threads. Merged as c4618ec. Opens Phase B."
     },
     "T31": {
       "status": "merged",
@@ -392,9 +392,9 @@
       "coderabbitReviewedSha": "1d9f174"
     },
     "T33": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T51"],
-      "note": "Phase B. GET /v1/spots/map viewport pins (bbox), no geographic cap, per-request limit with server clusters, cacheable.",
+      "note": "Phase B. GET /v1/spots/map viewport pins (bbox), no geographic cap, per-request limit with server clusters, cacheable. Free now that T51 is merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -411,22 +411,22 @@
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T51", "T35"],
-      "note": "Phase B. GET /v1/search/suggest (all stands/neighborhoods, no area cap, proximity-ranked) + swap T35 fixtures."
+      "note": "Phase B. GET /v1/search/suggest (all stands/neighborhoods, no area cap, proximity-ranked) + swap T35 fixtures. Free now that T51 is merged."
     },
     "T37": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T51"],
-      "note": "Phase B. Stand photos API (pre-moderated, signed URLs, deletion coverage) + swap T39/T38 fixtures.",
+      "note": "Phase B. Stand photos API (pre-moderated, signed URLs, deletion coverage) + swap T39/T38 fixtures. Free now that T51 is merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     },
     "T40": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T51"],
-      "note": "Phase B. Profile API, display name, avatar preset + photo shown immediately with automated review (revert on reject) + swap T41/T32 fixtures.",
+      "note": "Phase B. Profile API, display name, avatar preset + photo shown immediately with automated review (revert on reject) + swap T41/T32 fixtures. Free now that T51 is merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -435,14 +435,14 @@
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T51"],
-      "note": "Phase B. GET /v1/me/progress for challenges/badges + swap T48 fixtures."
+      "note": "Phase B. GET /v1/me/progress for challenges/badges + swap T48 fixtures. Free now that T51 is merged."
     },
     "T42": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T51"],
-      "note": "Phase B. Import-candidate approval API + swap T50 fixtures.",
+      "note": "Phase B. Import-candidate approval API + swap T50 fixtures. Free now that T51 is merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
