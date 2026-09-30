@@ -291,12 +291,12 @@
       "note": "Phase A. Minimized search header, filter panel, bottom controls, sparkle pins (design §2). Hot file index.tsx. CodeRabbit found 2 minor accessibility findings (summary chip needed an action+zone accessibilityLabel; the filter-panel dismiss overlay needed accessibilityRole=\"button\") - fixed as 5b61874, which came back with no actionable findings. Merged as 39cca9a1."
     },
     "T35": {
-      "status": "review",
+      "status": "merged",
       "dependsOn": ["T46"],
-      "note": "Phase A. Search autocomplete UI with fixtures (design §5); API in T52. Implemented by the orchestrator in-session (not a separate worker). PR opened.",
+      "note": "Phase A. Search autocomplete UI with fixtures (design §5); API in T52. Implemented by the orchestrator in-session. CodeRabbit round 1 (head 063ce1f) found 1 issue: retry() cleared and restored query in the same tick, which could leave the screen stuck in the error state or flicker to idle instead of retrying. Fixed with an explicit retryToken effect dependency, head 9f0bdef, which came back clean. Merged as 35de25a.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/40",
-      "headSha": "063ce1f",
-      "coderabbitReviewedSha": null
+      "headSha": "35de25a",
+      "coderabbitReviewedSha": "9f0bdef"
     },
     "T47": {
       "pr": 36,
@@ -349,20 +349,20 @@
       "coderabbitReviewedSha": null
     },
     "T38": {
-      "status": "review",
+      "status": "merged",
       "dependsOn": ["T45"],
-      "note": "Phase A. Admin stand-photo moderation UI with fixtures; API in T37. Implemented by the orchestrator in-session. PR opened.",
+      "note": "Phase A. Admin stand-photo moderation UI with fixtures (new standPhotos tab); API in T37. Implemented by the orchestrator in-session. CodeRabbit reviewed head 022073d with no actionable comments. CI green. Merged as 240ece9.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/41",
-      "headSha": "022073d",
-      "coderabbitReviewedSha": null
+      "headSha": "240ece9",
+      "coderabbitReviewedSha": "022073d"
     },
     "T50": {
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null,
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T45", "T38"],
-      "note": "Phase A. Import-candidate review panel UI with fixtures (split from T42)."
+      "note": "Phase A. Import-candidate review panel UI with fixtures (split from T42). Free now that T38 (same admin screen) is merged."
     },
     "T51": {
       "pr": null,
