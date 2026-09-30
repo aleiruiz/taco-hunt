@@ -210,6 +210,8 @@ export default function SpotScreen() {
   async function submitTacoProposal() {
     if (!session || !selectedTacoTypeId || !spot) return;
     const submissionId = ++tacoSubmissionId.current;
+    const proposalContextId = proposalRequestId.current;
+    const proposalUserId = session.user.id;
     const selectedType = tacoTypes.find((type) => type.id === selectedTacoTypeId);
     setTacoSubmitting(true);
     setTacoError("");
@@ -228,7 +230,12 @@ export default function SpotScreen() {
         status: created.status,
         createdAt: created.createdAt,
       };
-      setMyTacoProposals((current) => [proposal, ...current]);
+      if (
+        proposalRequestId.current === proposalContextId &&
+        currentUserId.current === proposalUserId
+      ) {
+        setMyTacoProposals((current) => [proposal, ...current]);
+      }
       if (tacoSubmissionId.current !== submissionId) return;
       setTacoModalOpen(false);
     } catch (submitError) {
