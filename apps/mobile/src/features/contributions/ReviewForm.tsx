@@ -24,6 +24,7 @@ import { IconButton } from "@/components/IconButton";
 import { Button } from "@/components/Button";
 
 const ratingLabels = ["Tortilla", "Relleno", "Salsa", "Relación calidad-precio"] as const;
+const MAX_REVIEW_PHOTO_BYTES = 2 * 1024 * 1024;
 type Props = {
   session: Session;
   spotTacoId?: string;
@@ -60,9 +61,17 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
 
   async function uploadAsset(asset: ImagePicker.ImagePickerAsset) {
     const opId = ++photoOpId.current;
-    setPhotoPicker(asset);
     setPhotoUri(asset.uri);
     setPhotoUploadId(null);
+    if (asset.fileSize != null && asset.fileSize > MAX_REVIEW_PHOTO_BYTES) {
+      setPhotoPicker(null);
+      setPhotoUploading(false);
+      const message = "La foto debe pesar como máximo 2 MB. Elige una foto más pequeña.";
+      setPhotoError(message);
+      AccessibilityInfo.announceForAccessibility(message);
+      return;
+    }
+    setPhotoPicker(asset);
     setPhotoUploading(true);
     setPhotoError(null);
     try {
@@ -87,11 +96,9 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
   async function pickFromLibrary() {
     setPhotoChooserOpen(false);
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setPhotoError("Necesitamos acceso a tus fotos para elegir una. Actívalo en Ajustes.");
-        return;
-      }
+      // Single-image selection via launchImageLibraryAsync doesn't require a
+      // library permission grant on supported platforms (Expo SDK 57) — the
+      // system picker handles access to the one photo the user selects.
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         quality: 0.8,
