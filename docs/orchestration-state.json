@@ -357,12 +357,12 @@
       "coderabbitReviewedSha": "022073d"
     },
     "T50": {
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null,
-      "status": "ready",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/43",
+      "headSha": "da29904",
+      "coderabbitReviewedSha": "74f6caa",
+      "status": "merged",
       "dependsOn": ["T45", "T38"],
-      "note": "Phase A. Import-candidate review panel UI with fixtures (split from T42). Free now that T38 (same admin screen) is merged."
+      "note": "Phase A. Import-candidate review panel UI with fixtures (split from T42): new 'Candidatos' admin tab, draggable-map pin adjustment. Implemented by the orchestrator in-session. CodeRabbit reviewed head 74f6caa with no actionable comments. CI green. Merged as da29904."
     },
     "T51": {
       "pr": null,
