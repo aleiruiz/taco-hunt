@@ -268,7 +268,7 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
                 icon="close"
                 label="Quitar foto"
                 size={28}
-                color={colors.paper}
+                color={colors.ink}
                 elevated
                 onPress={removePhoto}
               />
