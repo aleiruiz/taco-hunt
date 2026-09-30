@@ -119,8 +119,8 @@ export function AvatarSheet({ visible, onClose, preset, photoUrl, onSave }: Prop
         })}
       </View>
       <Text style={styles.note}>
-        Tu foto se usa al instante junto a tus reseñas. Pasa por una revisión automática; si no
-        cumple las reglas, vuelve tu avatar y te avisamos.
+        Este cambio solo dura mientras esta pantalla está abierta. No se guarda como preferencia del
+        dispositivo ni se sube para una revisión automática.
       </Text>
       <Button label="Guardar" variant="primary" onPress={save} style={styles.saveButton} />
     </BottomSheet>

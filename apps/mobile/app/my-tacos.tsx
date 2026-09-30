@@ -56,6 +56,10 @@ export default function MyTacosScreen() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("favoritos");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  // Avatar preset/photo has no session-backed source yet (T40 adds
+  // GET/PATCH /v1/me); the fixture only seeds a starting point for this
+  // Phase A UI. Display name, once available, always comes from the real
+  // session below.
   const fixtureUser = getFixtureUser();
   const [avatar, setAvatar] = useState({
     preset: fixtureUser.avatarPreset,
@@ -80,8 +84,11 @@ export default function MyTacosScreen() {
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);
       if (proposalsResponse?.ok) {
-        const data = (await proposalsResponse.json()) as { spotProposals: Proposal[] };
-        setProposals(data.spotProposals);
+        const data = (await proposalsResponse.json()) as {
+          spotProposals: Proposal[];
+          tacoProposals: Proposal[];
+        };
+        setProposals([...data.spotProposals, ...data.tacoProposals]);
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No pudimos cargar tu perfil.");
@@ -128,6 +135,10 @@ export default function MyTacosScreen() {
     ? `Cazando tacos desde ${MONTHS_ES[memberSince.getMonth()]} ${memberSince.getFullYear()}`
     : null;
   const pendingProposals = proposals.filter((proposal) => proposal.status === "pending").length;
+  const displayName =
+    (typeof session.user.user_metadata?.display_name === "string"
+      ? session.user.user_metadata.display_name.trim()
+      : "") || "Explorador";
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -152,7 +163,7 @@ export default function MyTacosScreen() {
       <View style={styles.profileHeader}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Mi perfil, ${fixtureUser.displayName ?? "explorador"}. Cambiar foto`}
+          accessibilityLabel={`Mi perfil, ${displayName}. Cambiar foto`}
           onPress={() => setAvatarSheetOpen(true)}
           style={styles.avatarWrap}
         >
@@ -162,7 +173,7 @@ export default function MyTacosScreen() {
           </View>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{fixtureUser.displayName ?? "Explorador"}</Text>
+          <Text style={styles.name}>{displayName}</Text>
           {memberSinceLabel ? <Text style={styles.body}>{memberSinceLabel}</Text> : null}
           <Pressable
             accessibilityRole="button"
@@ -209,7 +220,7 @@ export default function MyTacosScreen() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${earnedBadges.length} insignias. Siguiente: ${nextBadge?.label ?? "todas ganadas"}`}
+        accessibilityLabel={`${earnedBadges.length} insignias, vista previa. Siguiente: ${nextBadge?.label ?? "todas ganadas"}`}
         onPress={() => router.push("/retos")}
         style={styles.badgeRow}
       >
@@ -217,6 +228,7 @@ export default function MyTacosScreen() {
         <Text style={styles.badgeRowText}>
           {earnedBadges.length} insignias
           {nextBadge ? ` · siguiente: ${nextBadge.label}` : ""}
+          <Text style={styles.badgeRowPreview}> · vista previa</Text>
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.paper} />
       </Pressable>
@@ -428,6 +440,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   badgeRowText: { flex: 1, color: colors.paper, fontWeight: "800", fontSize: 13 },
+  badgeRowPreview: { color: colors.gold, fontWeight: "700" },
   proposalsRow: {
     flexDirection: "row",
     alignItems: "center",
