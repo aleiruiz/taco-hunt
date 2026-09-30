@@ -53,6 +53,12 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoPicker, setPhotoPicker] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [photoChooserOpen, setPhotoChooserOpen] = useState(false);
+  // True once the user has explicitly removed a photo they picked this
+  // session (as opposed to never touching the photo control at all). Lets
+  // save() tell "no change to make" apart from "clear it" when patching an
+  // existing review — the update endpoint treats an omitted photoUploadId as
+  // keep-current and an explicit null as clear.
+  const [photoRemoved, setPhotoRemoved] = useState(false);
   const keys = ["tortilla", "filling", "salsa", "value"] as const;
   // Bumped on every new pick/retry so a slow upload that finishes after the
   // user moved on (picked another photo, or retried) can't clobber the
@@ -63,6 +69,7 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
     const opId = ++photoOpId.current;
     setPhotoUri(asset.uri);
     setPhotoUploadId(null);
+    setPhotoRemoved(false);
     if (asset.fileSize != null && asset.fileSize > MAX_REVIEW_PHOTO_BYTES) {
       setPhotoPicker(null);
       setPhotoUploading(false);
@@ -138,6 +145,7 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
     setPhotoPicker(null);
     setPhotoError(null);
     setPhotoUploading(false);
+    setPhotoRemoved(true);
     AccessibilityInfo.announceForAccessibility("Foto quitada.");
   }
 
@@ -170,7 +178,7 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
           ...ratings,
           pricePaidMxn: priceValue ?? null,
           body: body.trim() || null,
-          ...(photoUploadId ? { photoUploadId } : {}),
+          ...(photoUploadId ? { photoUploadId } : photoRemoved ? { photoUploadId: null } : {}),
         });
       } else {
         const input: ReviewInput = {
