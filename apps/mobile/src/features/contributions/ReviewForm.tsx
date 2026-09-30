@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AccessibilityInfo,
   ActivityIndicator,
   Pressable,
   ScrollView,
@@ -8,9 +9,19 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import type { Session } from "@supabase/supabase-js";
-import { createReview, updateReview, type OwnReview, type ReviewInput } from "./api";
-import { colors } from "@/theme";
+import {
+  createReview,
+  updateReview,
+  uploadReviewPhoto,
+  type OwnReview,
+  type ReviewInput,
+} from "./api";
+import { colors, spacing } from "@/theme";
+import { PhotoTile } from "@/components/PhotoTile";
+import { IconButton } from "@/components/IconButton";
+import { Button } from "@/components/Button";
 
 const ratingLabels = ["Tortilla", "Relleno", "Salsa", "Relación calidad-precio"] as const;
 type Props = {
@@ -35,7 +46,75 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
   const [body, setBody] = useState(existing?.body ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoUploadId, setPhotoUploadId] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoPicker, setPhotoPicker] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [photoChooserOpen, setPhotoChooserOpen] = useState(false);
   const keys = ["tortilla", "filling", "salsa", "value"] as const;
+
+  async function uploadAsset(asset: ImagePicker.ImagePickerAsset) {
+    setPhotoPicker(asset);
+    setPhotoUri(asset.uri);
+    setPhotoUploadId(null);
+    setPhotoUploading(true);
+    setPhotoError(null);
+    try {
+      const upload = await uploadReviewPhoto(session, {
+        uri: asset.uri,
+        fileName: asset.fileName,
+        mimeType: asset.mimeType,
+      });
+      setPhotoUploadId(upload.id);
+      AccessibilityInfo.announceForAccessibility("Foto lista para tu reseña.");
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "No pudimos subir la foto.";
+      setPhotoError(message);
+      AccessibilityInfo.announceForAccessibility(message);
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
+  async function pickFromLibrary() {
+    setPhotoChooserOpen(false);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setPhotoError("Necesitamos acceso a tus fotos para elegir una. Actívalo en Ajustes.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    await uploadAsset(result.assets[0]);
+  }
+
+  async function takePhoto() {
+    setPhotoChooserOpen(false);
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setPhotoError("Necesitamos acceso a tu cámara para tomar la foto. Actívalo en Ajustes.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (result.canceled || !result.assets[0]) return;
+    await uploadAsset(result.assets[0]);
+  }
+
+  function removePhoto() {
+    setPhotoUri(null);
+    setPhotoUploadId(null);
+    setPhotoPicker(null);
+    setPhotoError(null);
+    AccessibilityInfo.announceForAccessibility("Foto quitada.");
+  }
+
+  function retryUpload() {
+    if (photoPicker) void uploadAsset(photoPicker);
+  }
 
   async function save() {
     if (
@@ -50,6 +129,10 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
       setError("Escribe un precio válido en pesos.");
       return;
     }
+    if (photoUploading) {
+      setError("Espera a que termine de subirse la foto.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -58,6 +141,7 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
           ...ratings,
           pricePaidMxn: priceValue ?? null,
           body: body.trim() || null,
+          ...(photoUploadId ? { photoUploadId } : {}),
         });
       } else {
         const input: ReviewInput = {
@@ -65,6 +149,7 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
           ...ratings,
           ...(priceValue === undefined ? {} : { pricePaidMxn: priceValue }),
           ...(body.trim() ? { body: body.trim() } : {}),
+          ...(photoUploadId ? { photoUploadId } : {}),
         };
         await createReview(session, input);
       }
@@ -130,6 +215,80 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
         placeholderTextColor="#AD9D8E"
         style={[styles.input, styles.textarea]}
       />
+      <Text style={styles.label}>Foto (opcional)</Text>
+      <View style={styles.photoRow}>
+        <View>
+          <PhotoTile
+            photoUrl={photoUri ?? undefined}
+            dashed={!photoUri}
+            size={96}
+            accessibilityLabel={photoUri ? "Cambiar foto de la reseña" : "Agregar foto a la reseña"}
+            onPress={() => setPhotoChooserOpen((open) => !open)}
+          />
+          {photoUploading && (
+            <View
+              style={[StyleSheet.absoluteFill, styles.photoOverlay]}
+              accessibilityElementsHidden
+            >
+              <ActivityIndicator color={colors.paper} />
+            </View>
+          )}
+          {photoUri && !photoUploading && (
+            <View style={styles.photoRemove}>
+              <IconButton
+                icon="close"
+                label="Quitar foto"
+                size={28}
+                color={colors.paper}
+                elevated
+                onPress={removePhoto}
+              />
+            </View>
+          )}
+        </View>
+        <View style={styles.photoInfo}>
+          {photoUploading ? (
+            <Text style={styles.photoStatus}>Subiendo foto…</Text>
+          ) : photoUploadId ? (
+            <Text style={styles.photoStatus}>Foto lista para publicarse con tu reseña.</Text>
+          ) : (
+            <Text style={styles.photoStatus}>
+              Comparte cómo se ve tu taco. Un moderador la revisa antes de mostrarla.
+            </Text>
+          )}
+          {photoError && !photoUploading && (
+            <>
+              <Text style={styles.error}>{photoError}</Text>
+              {photoPicker && (
+                <Button
+                  label="Reintentar"
+                  variant="secondary"
+                  onPress={retryUpload}
+                  style={styles.retryButton}
+                />
+              )}
+            </>
+          )}
+        </View>
+      </View>
+      {photoChooserOpen && (
+        <View style={styles.photoChooser}>
+          <Button
+            label="Tomar foto"
+            variant="secondary"
+            icon="camera-outline"
+            onPress={() => void takePhoto()}
+            style={styles.photoChooserButton}
+          />
+          <Button
+            label="Elegir de galería"
+            variant="secondary"
+            icon="image-outline"
+            onPress={() => void pickFromLibrary()}
+            style={styles.photoChooserButton}
+          />
+        </View>
+      )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
         accessibilityRole="button"
@@ -179,6 +338,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   textarea: { minHeight: 110, paddingTop: 14, textAlignVertical: "top" },
+  photoRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    alignItems: "flex-start",
+  },
+  photoOverlay: {
+    borderRadius: 13,
+    backgroundColor: "rgba(48, 39, 35, 0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoRemove: { position: "absolute", top: -6, right: -6 },
+  photoInfo: { flex: 1, paddingTop: spacing.xs },
+  photoStatus: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  photoChooser: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  photoChooserButton: { flex: 1 },
+  retryButton: { marginTop: spacing.sm, alignSelf: "flex-start" },
   error: { color: "#A52218", lineHeight: 20, marginTop: 16 },
   primary: {
     minHeight: 52,

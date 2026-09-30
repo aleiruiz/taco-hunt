@@ -49,12 +49,47 @@ export type ReviewInput = {
   value: number;
   pricePaidMxn?: number;
   body?: string;
+  photoUploadId?: string;
 };
 
 export type ReviewPatch = Partial<Omit<ReviewInput, "spotTacoId" | "pricePaidMxn" | "body">> & {
   pricePaidMxn?: number | null;
   body?: string | null;
+  photoUploadId?: string | null;
 };
+
+export type ReviewPhotoUpload = {
+  id: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+export async function uploadReviewPhoto(
+  session: Session,
+  asset: { uri: string; fileName?: string | null; mimeType?: string | null },
+): Promise<ReviewPhotoUpload> {
+  const form = new FormData();
+  form.append("file", {
+    uri: asset.uri,
+    name: asset.fileName ?? "review-photo.jpg",
+    type: asset.mimeType ?? "image/jpeg",
+  } as unknown as Blob);
+  const response = await fetch(`${API}/review-photos`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body: form,
+  });
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = undefined;
+    }
+    throw new Error(messageFromResponse(payload));
+  }
+  return (await response.json()) as ReviewPhotoUpload;
+}
 
 function messageFromResponse(value: unknown) {
   if (typeof value === "object" && value !== null && "error" in value) {

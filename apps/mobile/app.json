@@ -13,6 +13,13 @@
         {
           "locationWhenInUsePermission": "Taco Hunt usa tu ubicación solo cuando tocas «Usar mi ubicación» para mostrar puestos cercanos."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Taco Hunt usa tus fotos solo cuando eliges una para tu reseña.",
+          "cameraPermission": "Taco Hunt usa la cámara solo cuando tomas una foto para tu reseña."
+        }
       ]
     ],
     "experiments": { "typedRoutes": true }
