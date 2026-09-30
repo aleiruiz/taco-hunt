@@ -373,12 +373,25 @@ export const spotPhotoSchema = z.object({
   uploaderName: z.string(),
   kind: spotPhotoKindSchema,
   status: spotPhotoStatusSchema,
-  rejectionReason: z.string().max(300).nullable(),
+  rejectionReason: z.string().max(500).nullable(),
   createdAt: isoTimestampSchema,
 });
 export type SpotPhoto = z.infer<typeof spotPhotoSchema>;
 
-export const spotPhotoListResponseSchema = z.object({ items: z.array(spotPhotoSchema) });
+// GET /v1/spots/:id/photos is public (no auth) and only ever lists approved
+// photos, so it must not expose uploaderId, status, or rejectionReason.
+// SpotPhoto (with those fields) is for the uploader's own view and the admin
+// moderation queue (AdminSpotPhoto below), not this public list.
+export const publicSpotPhotoSchema = spotPhotoSchema.pick({
+  id: true,
+  url: true,
+  uploaderName: true,
+  kind: true,
+  createdAt: true,
+});
+export type PublicSpotPhoto = z.infer<typeof publicSpotPhotoSchema>;
+
+export const spotPhotoListResponseSchema = z.object({ items: z.array(publicSpotPhotoSchema) });
 export type SpotPhotoListResponse = z.infer<typeof spotPhotoListResponseSchema>;
 
 export const spotPhotoCreateSchema = z
@@ -503,7 +516,9 @@ export const importCandidateApproveSchema = z
   .strict();
 export type ImportCandidateApprove = z.infer<typeof importCandidateApproveSchema>;
 
-export const importCandidateRejectSchema = z.object({ reason: z.string().max(500) }).strict();
+export const importCandidateRejectSchema = z
+  .object({ reason: z.string().trim().min(1).max(500) })
+  .strict();
 export type ImportCandidateReject = z.infer<typeof importCandidateRejectSchema>;
 
 export const importCandidateMergeSchema = z

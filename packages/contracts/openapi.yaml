@@ -1342,13 +1342,22 @@ components:
         uploaderName: { type: string }
         kind: { type: string, enum: [tacos, puesto, menu] }
         status: { type: string, enum: [pending, approved, rejected] }
-        rejectionReason: { type: [string, "null"], maxLength: 300 }
+        rejectionReason: { type: [string, "null"], maxLength: 500 }
+        createdAt: { type: string, format: date-time }
+    PublicSpotPhoto:
+      type: object
+      required: [id, url, uploaderName, kind, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        uploaderName: { type: string }
+        kind: { type: string, enum: [tacos, puesto, menu] }
         createdAt: { type: string, format: date-time }
     SpotPhotoListResponse:
       type: object
       required: [items]
       properties:
-        items: { type: array, items: { $ref: "#/components/schemas/SpotPhoto" } }
+        items: { type: array, items: { $ref: "#/components/schemas/PublicSpotPhoto" } }
     SpotPhotoCreate:
       type: object
       required: [photoUploadId]
@@ -1370,6 +1379,7 @@ components:
         avatarPhotoStatus: { type: [string, "null"], enum: [pending, approved, rejected] }
     ProfilePatch:
       type: object
+      minProperties: 1
       additionalProperties: false
       properties:
         displayName: { type: [string, "null"], minLength: 1, maxLength: 60 }
@@ -1462,7 +1472,7 @@ components:
       required: [reason]
       additionalProperties: false
       properties:
-        reason: { type: string, maxLength: 500 }
+        reason: { type: string, minLength: 1, maxLength: 500, pattern: '\S' }
     ImportCandidateMerge:
       type: object
       required: [canonicalSpotId]
