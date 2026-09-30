@@ -1,10 +1,11 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { Text, View } from "react-native";
 import { ReviewForm } from "@/features/contributions/ReviewForm";
 import { useAuth } from "@/auth/provider";
+import { ReviewSignInPrompt } from "@/auth/ReviewSignInPrompt";
+import { reviewReturnTo } from "@/auth/navigation";
 
 export default function NewReviewScreen() {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{
     spotTacoId?: string;
@@ -13,9 +14,7 @@ export default function NewReviewScreen() {
   }>();
   if (!session) {
     return (
-      <View>
-        <Text>Inicia sesión para escribir una reseña.</Text>
-      </View>
+      <ReviewSignInPrompt loading={loading} returnTo={reviewReturnTo("/review/new", params)} />
     );
   }
   return (

@@ -4,9 +4,11 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ReviewForm } from "@/features/contributions/ReviewForm";
 import { listOwnReviews, type OwnReview } from "@/features/contributions/api";
 import { useAuth } from "@/auth/provider";
+import { ReviewSignInPrompt } from "@/auth/ReviewSignInPrompt";
+import { reviewReturnTo } from "@/auth/navigation";
 
 export default function EditReviewScreen() {
-  const { session } = useAuth();
+  const { session, loading } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [review, setReview] = useState<OwnReview | null>(null);
@@ -21,9 +23,11 @@ export default function EditReviewScreen() {
   }, [id, session]);
   if (!session)
     return (
-      <View>
-        <Text>Inicia sesión para editar tu reseña.</Text>
-      </View>
+      <ReviewSignInPrompt
+        loading={loading}
+        editing
+        returnTo={reviewReturnTo("/review/edit", { id })}
+      />
     );
   if (error)
     return (
