@@ -52,7 +52,9 @@ export type ReviewInput = {
   photoUploadId?: string;
 };
 
-export type ReviewPatch = Partial<Omit<ReviewInput, "spotTacoId" | "pricePaidMxn" | "body">> & {
+export type ReviewPatch = Partial<
+  Omit<ReviewInput, "spotTacoId" | "pricePaidMxn" | "body" | "photoUploadId">
+> & {
   pricePaidMxn?: number | null;
   body?: string | null;
   photoUploadId?: string | null;

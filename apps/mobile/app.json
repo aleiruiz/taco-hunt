@@ -18,7 +18,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Taco Hunt usa tus fotos solo cuando eliges una para tu reseña.",
-          "cameraPermission": "Taco Hunt usa la cámara solo cuando tomas una foto para tu reseña."
+          "cameraPermission": "Taco Hunt usa la cámara solo cuando tomas una foto para tu reseña.",
+          "microphonePermission": false
         }
       ]
     ],

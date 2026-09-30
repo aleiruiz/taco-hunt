@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -53,8 +53,13 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
   const [photoPicker, setPhotoPicker] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [photoChooserOpen, setPhotoChooserOpen] = useState(false);
   const keys = ["tortilla", "filling", "salsa", "value"] as const;
+  // Bumped on every new pick/retry so a slow upload that finishes after the
+  // user moved on (picked another photo, or retried) can't clobber the
+  // photoUploadId/photoUri/photoError state of the one the user sees now.
+  const photoOpId = useRef(0);
 
   async function uploadAsset(asset: ImagePicker.ImagePickerAsset) {
+    const opId = ++photoOpId.current;
     setPhotoPicker(asset);
     setPhotoUri(asset.uri);
     setPhotoUploadId(null);
@@ -66,49 +71,66 @@ export function ReviewForm({ session, spotTacoId, spotName, tacoName, existing, 
         fileName: asset.fileName,
         mimeType: asset.mimeType,
       });
+      if (photoOpId.current !== opId) return;
       setPhotoUploadId(upload.id);
       AccessibilityInfo.announceForAccessibility("Foto lista para tu reseña.");
     } catch (cause) {
+      if (photoOpId.current !== opId) return;
       const message = cause instanceof Error ? cause.message : "No pudimos subir la foto.";
       setPhotoError(message);
       AccessibilityInfo.announceForAccessibility(message);
     } finally {
-      setPhotoUploading(false);
+      if (photoOpId.current === opId) setPhotoUploading(false);
     }
   }
 
   async function pickFromLibrary() {
     setPhotoChooserOpen(false);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setPhotoError("Necesitamos acceso a tus fotos para elegir una. Actívalo en Ajustes.");
-      return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoError("Necesitamos acceso a tus fotos para elegir una. Actívalo en Ajustes.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      await uploadAsset(result.assets[0]);
+    } catch (cause) {
+      const message =
+        cause instanceof Error ? cause.message : "No pudimos abrir tu galería de fotos.";
+      setPhotoError(message);
+      AccessibilityInfo.announceForAccessibility(message);
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    await uploadAsset(result.assets[0]);
   }
 
   async function takePhoto() {
     setPhotoChooserOpen(false);
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setPhotoError("Necesitamos acceso a tu cámara para tomar la foto. Actívalo en Ajustes.");
-      return;
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoError("Necesitamos acceso a tu cámara para tomar la foto. Actívalo en Ajustes.");
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+      if (result.canceled || !result.assets[0]) return;
+      await uploadAsset(result.assets[0]);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "No pudimos abrir la cámara.";
+      setPhotoError(message);
+      AccessibilityInfo.announceForAccessibility(message);
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
-    if (result.canceled || !result.assets[0]) return;
-    await uploadAsset(result.assets[0]);
   }
 
   function removePhoto() {
+    photoOpId.current += 1;
     setPhotoUri(null);
     setPhotoUploadId(null);
     setPhotoPicker(null);
     setPhotoError(null);
+    setPhotoUploading(false);
     AccessibilityInfo.announceForAccessibility("Foto quitada.");
   }
 
