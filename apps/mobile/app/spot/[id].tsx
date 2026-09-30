@@ -72,6 +72,7 @@ export default function SpotScreen() {
   const [reportError, setReportError] = useState("");
   const reportSubmissionId = useRef(0);
   const [tacoTypes, setTacoTypes] = useState<TacoType[]>([]);
+  const [tacoTypesLoading, setTacoTypesLoading] = useState(true);
   const [tacoTypesError, setTacoTypesError] = useState(false);
   const [myTacoProposals, setMyTacoProposals] = useState<TacoProposal[]>([]);
   const [tacoModalOpen, setTacoModalOpen] = useState(false);
@@ -84,10 +85,12 @@ export default function SpotScreen() {
   currentUserId.current = session?.user.id ?? null;
   const tacoSubmissionId = useRef(0);
   const loadTacoTypes = useCallback(() => {
+    setTacoTypesLoading(true);
     setTacoTypesError(false);
     void listTacoTypes()
       .then(setTacoTypes)
-      .catch(() => setTacoTypesError(true));
+      .catch(() => setTacoTypesError(true))
+      .finally(() => setTacoTypesLoading(false));
   }, []);
   const load = useCallback(async () => {
     setLoading(true);
@@ -513,7 +516,9 @@ export default function SpotScreen() {
                   onPress={() => setSelectedTacoTypeId(type.id)}
                 />
               ))}
-              {tacoTypesError ? (
+              {tacoTypesLoading ? (
+                <ActivityIndicator color={colors.red} />
+              ) : tacoTypesError ? (
                 <View>
                   <Text style={styles.body}>No pudimos cargar el catálogo de tacos.</Text>
                   <Button
@@ -523,12 +528,12 @@ export default function SpotScreen() {
                     style={{ marginTop: spacing.sm }}
                   />
                 </View>
-              ) : availableTacoTypes.length === 0 && tacoTypes.length > 0 ? (
-                <Text style={styles.body}>
-                  Ya hay una propuesta o tipo confirmado para cada tipo del catálogo.
-                </Text>
               ) : availableTacoTypes.length === 0 ? (
-                <ActivityIndicator color={colors.red} />
+                <Text style={styles.body}>
+                  {tacoTypes.length === 0
+                    ? "Aún no hay tipos de taco en el catálogo."
+                    : "Ya hay una propuesta o tipo confirmado para cada tipo del catálogo."}
+                </Text>
               ) : null}
             </View>
             <TextInput
