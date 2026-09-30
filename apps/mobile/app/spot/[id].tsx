@@ -112,6 +112,33 @@ export default function SpotScreen() {
   const [uploadError, setUploadError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const uploadTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingUploadCompletion = useRef<{
+    asset: ImagePicker.ImagePickerAsset;
+    uploaderId: string;
+    spot: Spot;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (uploadTimer.current) clearInterval(uploadTimer.current);
+    };
+  }, []);
+  // Guards against a session change (sign-out/sign-in) leaking the previous
+  // identity's in-flight upload into the new one: stop the progress timer,
+  // drop the pending completion, and clear local pending photos so
+  // visibleMyPhotos (already scoped by uploaderId) has nothing stale to
+  // filter through.
+  useEffect(() => {
+    if (uploadTimer.current) {
+      clearInterval(uploadTimer.current);
+      uploadTimer.current = null;
+    }
+    pendingUploadCompletion.current = null;
+    setUploadOpen(false);
+    setUploadBusy(false);
+    setMyPhotos([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.id]);
   const loadTacoTypes = useCallback(() => {
     setTacoTypesLoading(true);
     setTacoTypesError(false);
@@ -243,7 +270,11 @@ export default function SpotScreen() {
     setUploadOpen(true);
   }
   function closeUpload() {
-    if (uploadTimer.current) clearInterval(uploadTimer.current);
+    if (uploadTimer.current) {
+      clearInterval(uploadTimer.current);
+      uploadTimer.current = null;
+    }
+    pendingUploadCompletion.current = null;
     setUploadBusy(false);
     setUploadOpen(false);
   }
@@ -256,39 +287,46 @@ export default function SpotScreen() {
     setUploadAsset(result.assets[0]);
     setUploadError("");
   }
+  function finishUpload(asset: ImagePicker.ImagePickerAsset, uploaderId: string, targetSpot: Spot) {
+    const pending: Photo = {
+      id: `mine-${Date.now()}`,
+      url: asset.uri,
+      uploaderId,
+      uploaderName: "Tú",
+      spotId: targetSpot.id,
+      spotName: targetSpot.name,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+    setMyPhotos((current) => [pending, ...current]);
+    setUploadBusy(false);
+    setUploadOpen(false);
+    setToast("Foto enviada… un moderador la revisa antes de publicarla.");
+    AccessibilityInfo.announceForAccessibility(
+      "Foto enviada, un moderador la revisa antes de publicarla.",
+    );
+  }
   function submitUpload() {
     if (!uploadAsset || !spot || !session) return;
+    pendingUploadCompletion.current = { asset: uploadAsset, uploaderId: session.user.id, spot };
     setUploadBusy(true);
     setUploadError("");
     setUploadProgress(0);
     uploadTimer.current = setInterval(() => {
-      setUploadProgress((current) => {
-        const next = current + 20;
-        if (next >= 100) {
-          if (uploadTimer.current) clearInterval(uploadTimer.current);
-          const pending: Photo = {
-            id: `mine-${Date.now()}`,
-            url: uploadAsset.uri,
-            uploaderId: session.user.id,
-            uploaderName: "Tú",
-            spotId: spot.id,
-            spotName: spot.name,
-            status: "pending",
-            createdAt: new Date().toISOString(),
-          };
-          setMyPhotos((current) => [pending, ...current]);
-          setUploadBusy(false);
-          setUploadOpen(false);
-          setToast("Foto enviada… un moderador la revisa antes de publicarla.");
-          AccessibilityInfo.announceForAccessibility(
-            "Foto enviada, un moderador la revisa antes de publicarla.",
-          );
-          return 100;
-        }
-        return next;
-      });
+      setUploadProgress((current) => Math.min(100, current + 20));
     }, 200);
   }
+  useEffect(() => {
+    if (uploadProgress < 100 || !pendingUploadCompletion.current) return;
+    if (uploadTimer.current) {
+      clearInterval(uploadTimer.current);
+      uploadTimer.current = null;
+    }
+    const { asset, uploaderId, spot: targetSpot } = pendingUploadCompletion.current;
+    pendingUploadCompletion.current = null;
+    finishUpload(asset, uploaderId, targetSpot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadProgress]);
   function openTacoModal() {
     if (!session) {
       router.push("/sign-in");
@@ -371,6 +409,12 @@ export default function SpotScreen() {
     );
   };
 
+  // myPhotos is purely local device state (not scoped by any fetch), so a
+  // session change without unmounting this screen could otherwise leak the
+  // previous user's pending photos into the new user's view.
+  const visibleMyPhotos = myPhotos.filter(
+    (photo) => photo.spotId === spot?.id && photo.uploaderId === session?.user.id,
+  );
   const heroUrl = approvedPhotos[0]?.url;
   const totalScored = spot?.tacos.filter((taco) => taco.score !== null) ?? [];
   const ratingSummary =
@@ -504,7 +548,7 @@ export default function SpotScreen() {
                   accessibilityLabel="Agregar foto"
                   onPress={session ? openUpload : () => router.push("/sign-in")}
                 />
-                {myPhotos
+                {visibleMyPhotos
                   .filter((photo) => photo.status === "pending")
                   .map((photo) => (
                     <View key={photo.id} style={styles.photoStripItem}>
@@ -532,15 +576,15 @@ export default function SpotScreen() {
                   />
                 ))}
               </ScrollView>
-              {myPhotos.some((photo) => photo.status === "pending") && (
+              {visibleMyPhotos.some((photo) => photo.status === "pending") && (
                 <Text style={styles.body}>
                   Solo tú ves tu foto mientras la revisa un moderador.
                 </Text>
               )}
-              {myPhotos.length > 0 && (
+              {visibleMyPhotos.length > 0 && (
                 <View style={styles.myPhotosSection}>
                   <Text style={styles.myPhotosLabel}>MIS FOTOS</Text>
-                  {myPhotos.map((photo) => (
+                  {visibleMyPhotos.map((photo) => (
                     <View key={photo.id} style={styles.myPhotoRow}>
                       <PhotoTile photoUrl={photo.url} size={44} accessibilityLabel="Tu foto" />
                       <StatusBadge status={photo.status} reason={photo.rejectionReason} />
@@ -660,7 +704,7 @@ export default function SpotScreen() {
                 value={reportNote}
                 onChangeText={setReportNote}
                 placeholder="Detalles opcionales (máx. 500 caracteres)"
-                placeholderTextColor="#8A7A6E"
+                placeholderTextColor={colors.placeholder}
                 multiline
                 maxLength={500}
                 style={styles.reportNoteInput}
@@ -769,17 +813,15 @@ export default function SpotScreen() {
             onPress={() => setMoreOpen(false)}
           >
             <View style={styles.moreSheet}>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.moreRow}
+              <Button
+                label="Reportar este puesto"
+                variant="danger"
+                icon="flag-outline"
                 onPress={() => {
                   setMoreOpen(false);
                   openReport();
                 }}
-              >
-                <Ionicons name="flag-outline" size={18} color={colors.dangerText} />
-                <Text style={styles.moreRowText}>Reportar este puesto</Text>
-              </Pressable>
+              />
             </View>
           </Pressable>
         </Modal>
@@ -956,8 +998,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.xl,
     padding: spacing.lg,
   },
-  moreRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, minHeight: 44 },
-  moreRowText: { color: colors.dangerText, fontWeight: "800", fontSize: 15 },
   galleryScreen: { flex: 1, backgroundColor: colors.cream, paddingTop: 56 },
   galleryHeader: {
     flexDirection: "row",
