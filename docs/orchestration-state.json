@@ -19,7 +19,7 @@
       "worktree": "C:/Users/Alei Ruiz/.codex/worktrees/150a/taco-hunt",
       "branch": "codex/T32-auth-confirmation",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
-      "status": "active"
+      "status": "review"
     }
   ],
   "tasks": {
@@ -285,11 +285,11 @@
       "note": "Phase A. Design-system foundation (design §9): new theme.ts tokens (redStrong, greenSoft, goldSoft, pendingText, placeholder, scrim, avatar fills, sizes, elevation, typography display/button/badge, motion), Button/Chip/Card extensions, 11 new shared components, 8 avatar SVGs, src/data fixture-adapter pattern with auth/spots/reviews/proposals/progress/media modules. All components exported from index.ts. CodeRabbit found 7 actionable issues across two review passes (SVG avatars rendering blank, BottomSheet animation/measurement/pointerEvents bugs, Chip touch target, SearchBar/SuggestionRow accessibility+contrast) - all fixed; final head cc46dc4 was CI-green with no actionable findings left (the only change on that commit, pnpm-lock.yaml, is excluded from CodeRabbit review by its default path filters). Merged by the owner as 5b68e74."
     },
     "T32": {
-      "status": "active",
+      "status": "review",
       "dependsOn": ["T45"],
       "note": "Phase A. Sign-up confirmation + signed-in landing (design §1); fixture avatar/display name until T40. Draft PR #39 opened; auth/review flow implemented. Landing integration remains intentionally outside the shared index/theme/components files pending a later integration decision.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/39",
-      "headSha": "3502f1b121607b7d9588f619d5086f837fdf7e86",
+      "headSha": "bc9344b826c8241215d8062bdd457bac7519af03",
       "coderabbitReviewedSha": null
     },
     "T46": {
@@ -336,9 +336,9 @@
     "T44": {
       "status": "active",
       "dependsOn": ["T45", "T48"],
-      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8. Round 2 (e5246f8) found 1 more (empty-catalog indefinite spinner) - fixed as 5ec559b. Round 3 (5ec559b) found 1 actionable issue (proposal leak across a mid-request account switch, fixed as b2ee80f) plus a Medium/inferred architecture-review gap (cache only cleared after the replacement fetch resolved) addressed as ce148ef. Round 4 (ce148ef) found 1 more: the ce148ef fix cleared myTacoProposals from inside useFocusEffect's callback, which runs after render/paint, so a frame could still show the outgoing account's proposal rows (and use them to filter availableTacoTypes) between a session change and the effect running. Fixed as 82b2b03: added proposalsOwnerId render state and derive visibleMyTacoProposals from it, so stale rows can never reach render regardless of effect timing. CI green throughout. Typecheck/lint/format clean. Awaiting re-review of 82b2b03.",
+      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8. Round 2 (e5246f8) found 1 more (empty-catalog indefinite spinner) - fixed as 5ec559b. Round 3 (5ec559b) found 1 actionable issue (proposal leak across a mid-request account switch, fixed as b2ee80f) plus a Medium/inferred architecture-review gap addressed as ce148ef. Round 4 (ce148ef) found 1 more: the ce148ef clear ran inside useFocusEffect's post-render callback, so a frame could still leak stale proposal rows - fixed as 82b2b03 with a proposalsOwnerId render state. Requested a full-changeset review (@coderabbitai full review), which found 1 more real issue in admin.tsx: act()'s post-action reload didn't check whether the admin had switched tabs while the request was in flight, so a completed action for an abandoned tab could refetch and overwrite the tab the admin switched to, briefly showing stale items with no moderation controls. Fixed as 10e8ffd (capture the acting tab at click time, skip the reload if the current tab has since changed). CI green throughout. Typecheck/lint/format clean. Awaiting re-review of 10e8ffd.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/38",
-      "headSha": "82b2b03",
+      "headSha": "10e8ffd",
       "coderabbitReviewedSha": null
     },
     "T39": {
