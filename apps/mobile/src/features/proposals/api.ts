@@ -13,6 +13,16 @@ export type TacoProposal = {
   status: ProposalStatus;
   createdAt: string;
 };
+// Matches proposals.service.ts#createTaco's returning clause: it has no spotName
+// (the caller already has the spot in hand) and displayName, not name.
+export type CreatedTacoProposal = {
+  id: string;
+  spotId: string;
+  tacoTypeId: string;
+  displayName: string | null;
+  status: ProposalStatus;
+  createdAt: string;
+};
 
 export class TacoProposalConflictError extends Error {}
 
@@ -50,7 +60,7 @@ export async function listMyTacoProposals(session: Session): Promise<TacoProposa
 export async function createTacoProposal(
   session: Session,
   input: { spotId: string; tacoTypeId: string; displayName?: string },
-): Promise<TacoProposal> {
+): Promise<CreatedTacoProposal> {
   const response = await fetch(`${API}/taco-proposals`, {
     method: "POST",
     headers: {
@@ -70,5 +80,5 @@ export async function createTacoProposal(
     if (response.status === 409) throw new TacoProposalConflictError(messageFromResponse(payload));
     throw new Error(messageFromResponse(payload));
   }
-  return (await response.json()) as TacoProposal;
+  return (await response.json()) as CreatedTacoProposal;
 }
