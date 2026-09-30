@@ -37,6 +37,9 @@ export function EmailConfirmation({
     AccessibilityInfo.announceForAccessibility("Revisa tu correo para confirmar tu cuenta.");
   }, []);
   useEffect(() => {
+    if (error) AccessibilityInfo.announceForAccessibility(error);
+  }, [error]);
+  useEffect(() => {
     const update = () => setRemaining(Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)));
     update();
     const timer = setInterval(update, 1000);
@@ -69,6 +72,7 @@ export function EmailConfirmation({
   }
 
   async function openMail() {
+    setError("");
     try {
       await Linking.openURL(Platform.OS === "ios" ? "message://" : "mailto:");
     } catch {

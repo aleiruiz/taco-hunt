@@ -68,7 +68,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const router = useRouter();
   const params = useLocalSearchParams<{ returnTo?: string; email?: string }>();
   const destination = authDestination(params.returnTo);
-  const { session, loading, showAuthLanding } = useAuth();
+  const { session, loading } = useAuth();
   const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -81,6 +81,12 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   const [newProfile, setNewProfile] = useState<OnboardingProfile | null>(null);
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    if (busy) return;
+    if (error?.field === "email") emailRef.current?.focus();
+    if (error?.field === "password") passwordRef.current?.focus();
+  }, [error, busy]);
 
   useEffect(() => {
     // An auth event may precede signUp's response. Let the submitting call own
@@ -108,8 +114,6 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   function reportError(next: FormError) {
     setError(next);
     AccessibilityInfo.announceForAccessibility(next.message);
-    if (next.field === "email") emailRef.current?.focus();
-    if (next.field === "password") passwordRef.current?.focus();
   }
 
   function openAuth(pathname: "/sign-in" | "/sign-up" | "/reset-password") {
@@ -152,7 +156,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           data.session.user.id,
           data.session.user.user_metadata.display_name,
         );
-        showAuthLanding(profile, false);
+        AccessibilityInfo.announceForAccessibility(
+          `Sesión iniciada. ¡Bienvenido, ${profile.displayName}!`,
+        );
         navigated.current = true;
         router.replace(destination);
       } else if (mode === "sign-up") {
@@ -191,7 +197,6 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   function finishSignUp(personalize: boolean) {
     if (!newProfile || navigated.current) return;
     navigated.current = true;
-    showAuthLanding(newProfile, true);
     router.replace(personalize ? "/my-tacos" : destination);
   }
 

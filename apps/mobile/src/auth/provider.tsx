@@ -10,9 +10,6 @@ import {
 import { Linking } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./client";
-import type { OnboardingProfile } from "@/data/auth-onboarding";
-
-type AuthLanding = { profile: OnboardingProfile; isNewAccount: boolean };
 
 type AuthContextValue = {
   session: Session | null;
@@ -20,9 +17,6 @@ type AuthContextValue = {
   error: string | null;
   retrySession: () => Promise<void>;
   signOut: () => Promise<void>;
-  authLanding: AuthLanding | null;
-  showAuthLanding: (profile: OnboardingProfile, isNewAccount: boolean) => void;
-  dismissAuthLanding: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -59,11 +53,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [authLanding, setAuthLanding] = useState<AuthLanding | null>(null);
-  const showAuthLanding = useCallback((profile: OnboardingProfile, isNewAccount: boolean) => {
-    setAuthLanding({ profile, isNewAccount });
-  }, []);
-  const dismissAuthLanding = useCallback(() => setAuthLanding(null), []);
 
   const retrySession = useCallback(async () => {
     setLoading(true);
@@ -85,7 +74,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (active) {
         setSession(nextSession);
-        if (!nextSession) setAuthLanding(null);
         setError(null);
         setLoading(false);
       }
@@ -130,14 +118,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       loading,
       error,
       retrySession,
-      authLanding,
-      showAuthLanding,
-      dismissAuthLanding,
       signOut: async () => {
         await supabase.auth.signOut();
       },
     }),
-    [session, loading, error, retrySession, authLanding, showAuthLanding, dismissAuthLanding],
+    [session, loading, error, retrySession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

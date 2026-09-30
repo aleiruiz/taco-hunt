@@ -26,7 +26,9 @@ export function SignUpSuccess({
         accessibilityRole="image"
         accessibilityLabel={`Tu avatar: ${avatarNames[profile.avatarPreset]}`}
       >
-        <Avatar size={72} preset={profile.avatarPreset} />
+        <View style={styles.avatarScale}>
+          <Avatar size={72} preset={profile.avatarPreset} />
+        </View>
         <Ionicons name="sparkles" size={24} color={colors.redStrong} style={styles.sparkles} />
       </View>
       <Text style={styles.kicker}>CUENTA CREADA</Text>
@@ -79,6 +81,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarScale: { transform: [{ scale: 112 / 72 }] },
   sparkles: { position: "absolute", right: 0, top: 0 },
   kicker: { ...typography.kicker, color: colors.green },
   title: { ...typography.display, color: colors.ink },
