@@ -315,12 +315,12 @@
       "note": "Phase A. Near-empty states, stand page 'be the first', Retos screen (design §4); progress API in T49. Scoped to spot/[id].tsx + new retos.tsx + settings.tsx (plan-delegacion's file list for this task); the zone-with-no-stands map card belongs to index.tsx (T46's file) and isn't part of this PR. CodeRabbit round 1 (f536170) found 2 accessibility issues (report IconButton labeled 'Más opciones'; PhotoTile had no accessibilityLabel/role) - fixed as d30e9e3. Round 2 found the visible caption still didn't say the tile was a stand-in - fixed as dbb25ef, which came back clean (no new comments, CodeRabbit check passed). Merged as 55b1fa5."
     },
     "T36": {
-      "status": "review",
+      "status": "merged",
       "dependsOn": ["T45"],
-      "note": "Phase A. Review photo upload UI on existing T11 API (expo-image-picker); end-to-end check after T31 (merged). Implemented by the orchestrator in-session. PR opened.",
+      "note": "Phase A. Review photo upload UI on existing T11 API (expo-image-picker). Implemented by the orchestrator in-session. CodeRabbit rounds 1-3 (heads dd37733/d34863a/f4d8e45) found: microphonePermission not disabled, ReviewPatch photoUploadId strict-mode type conflict, unnecessary media-library permission gate, no client-side file-size check, upload-race guard, unhandled picker-launch rejections, and (round 3, post self-review) removing a picked photo before saving silently kept any existing photo server-side - all fixed except GPS-EXIF client-side stripping (server already strips metadata before persisting/serving; spun off as its own follow-up task) and hydrating/showing an existing photo when editing (GET /me/reviews has no photo field; flagged as an API-shape gap, out of this UI-only PR's scope, documented in a PR comment). Orchestrator's own low-effort self-review additionally caught and fixed an invisible remove-photo icon (color matched its own elevated background). CI green, no open threads. Merged as 7f53377.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/42",
-      "headSha": "5a71f61",
-      "coderabbitReviewedSha": null
+      "headSha": "7f53377",
+      "coderabbitReviewedSha": "3c33128"
     },
     "T44": {
       "status": "merged",
@@ -331,19 +331,19 @@
       "coderabbitReviewedSha": "10e8ffd"
     },
     "T39": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T36", "T44"],
       "waitingOnDesign": "photo gallery",
-      "note": "Phase A. Stand gallery + upload + uploader-only pending state with fixtures (design §6); API in T37.",
+      "note": "Phase A. Stand gallery + upload + uploader-only pending state with fixtures (design §6); API in T37. Free now that T36 and T44 are both merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     },
     "T41": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T45", "T36"],
       "waitingOnDesign": "profile screen and avatar art",
-      "note": "Phase A. Profile + avatars UI with fixtures (design §7); API in T40.",
+      "note": "Phase A. Profile + avatars UI with fixtures (design §7); API in T40. Free now that T36 is merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
