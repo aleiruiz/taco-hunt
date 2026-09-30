@@ -326,9 +326,9 @@
     "T44": {
       "status": "active",
       "dependsOn": ["T45", "T48"],
-      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8: queue/tab action-binding race in admin.tsx, taco proposals not cleared on sign-out/account change, no retry on catalog fetch failure, a reopen-modal submission race, and a create-response type mismatch that would have rendered a blank proposal label. Round 2 (e5246f8) found 1 more: a successful-but-empty taco-type catalog showed an indefinite spinner (loading state was inferred from an empty list instead of tracked) - fixed as 5ec559b with an explicit loading flag. CI green throughout. Typecheck/lint/format clean. Awaiting re-review of 5ec559b.",
+      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8: queue/tab action-binding race in admin.tsx, taco proposals not cleared on sign-out/account change, no retry on catalog fetch failure, a reopen-modal submission race, and a create-response type mismatch that would have rendered a blank proposal label. Round 2 (e5246f8) found 1 more (empty-catalog indefinite spinner) - fixed as 5ec559b. Round 3 (5ec559b) found 1 more: the account-switch guard added in round 1 covered the list-refresh response but not the just-completed proposal appended after a successful submit, so a proposal could still leak across an account switch mid-request - fixed as b2ee80f (capture request generation + user id before the request, check both before inserting). CI green throughout. Typecheck/lint/format clean. Awaiting re-review of b2ee80f.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/38",
-      "headSha": "5ec559b",
+      "headSha": "b2ee80f",
       "coderabbitReviewedSha": null
     },
     "T39": {
