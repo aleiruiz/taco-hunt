@@ -634,6 +634,241 @@ paths:
         "401": { $ref: "#/components/responses/ApiError" }
         "403": { $ref: "#/components/responses/ApiError" }
         "404": { $ref: "#/components/responses/ApiError" }
+  # --- T51: consolidated from Phase A Data needs, unimplemented until the
+  # noted Phase B task builds the handler. ---
+  /v1/spots/map:
+    get:
+      operationId: getSpotMapPins
+      summary: Pines compactos para el viewport visible del mapa (T33/T34)
+      description: Sin límite geográfico de dónde puede estar el viewport; un límite por solicitud (~300) devuelve clusters de cuadrícula en vez de truncar silenciosamente.
+      parameters:
+        - {
+            in: query,
+            name: north,
+            required: true,
+            schema: { type: number, minimum: -90, maximum: 90 },
+          }
+        - {
+            in: query,
+            name: south,
+            required: true,
+            schema: { type: number, minimum: -90, maximum: 90 },
+          }
+        - {
+            in: query,
+            name: east,
+            required: true,
+            schema: { type: number, minimum: -180, maximum: 180 },
+          }
+        - {
+            in: query,
+            name: west,
+            required: true,
+            schema: { type: number, minimum: -180, maximum: 180 },
+          }
+        - { in: query, name: tacoType, schema: { type: string, maxLength: 80 } }
+      responses:
+        "200":
+          description: Pines y/o clusters del viewport
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MapPinsResponse" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/search/suggest:
+    get:
+      operationId: searchSuggest
+      summary: Sugerencias de colonias y puestos para el buscador (T35/T52)
+      description: Sin límite de área; ordenado por proximidad cuando se da `near`. Mínimo 2 caracteres, límite ~8 por sección, sin llamadas a Google.
+      parameters:
+        - {
+            in: query,
+            name: q,
+            required: true,
+            schema: { type: string, minLength: 2, maxLength: 100 },
+          }
+        - { in: query, name: near, schema: { type: string, description: "'latitud,longitud'" } }
+      responses:
+        "200":
+          description: Colonias y puestos coincidentes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchSuggestResponse" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "429": { $ref: "#/components/responses/ApiError" }
+  /v1/spots/{id}/photos:
+    get:
+      operationId: listSpotPhotos
+      summary: Lista fotos aprobadas de un puesto (T37/T39)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Fotos aprobadas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpotPhotoListResponse" }
+        "404": { $ref: "#/components/responses/ApiError" }
+    post:
+      operationId: createSpotPhoto
+      summary: Asocia una foto ya subida (POST /v1/review-photos) a un puesto (T37/T39)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpotPhotoCreate" }
+      responses:
+        "201":
+          description: Foto pendiente de moderación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpotPhoto" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/spot-photos/{id}/approve:
+    post:
+      operationId: approveSpotPhoto
+      summary: Aprueba una foto de puesto pendiente (T37/T38)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Foto aprobada }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/spot-photos/{id}/reject:
+    post:
+      operationId: rejectSpotPhoto
+      summary: Rechaza una foto de puesto pendiente (T37/T38)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModerationReason" }
+      responses:
+        "200": { description: Foto rechazada }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/me:
+    get:
+      operationId: getMyProfile
+      summary: Perfil propio (T40, swaps T41/T32 fixtures)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Perfil
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "401": { $ref: "#/components/responses/ApiError" }
+    patch:
+      operationId: patchMyProfile
+      summary: Actualiza nombre visible y/o avatar (T40)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfilePatch" }
+      responses:
+        "200":
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+  /v1/me/progress:
+    get:
+      operationId: getMyProgress
+      summary: Progreso de retos e insignias propio (T49, swaps T48 fixture)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Progreso
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProgressResponse" }
+        "401": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/import-candidates:
+    get:
+      operationId: listImportCandidates
+      summary: Lista candidatos de importación pendientes (T42, swaps T50 fixture)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: state, schema: { type: string, enum: [pending, approved, rejected] } }
+      responses:
+        "200":
+          description: Candidatos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportCandidateListResponse" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/import-candidates/{id}/approve:
+    post:
+      operationId: approveImportCandidate
+      summary: Convierte un candidato en puesto publicado (T42)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportCandidateApprove" }
+      responses:
+        "200": { description: Candidato aprobado y publicado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/import-candidates/{id}/reject:
+    post:
+      operationId: rejectImportCandidate
+      summary: Rechaza un candidato de importación (T42)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportCandidateReject" }
+      responses:
+        "200": { description: Candidato rechazado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+  /v1/admin/import-candidates/{id}/merge:
+    post:
+      operationId: mergeImportCandidate
+      summary: Fusiona un candidato con un puesto existente (T42)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImportCandidateMerge" }
+      responses:
+        "200": { description: Candidato fusionado }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "403": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
 components:
   securitySchemes:
     bearerAuth:
@@ -1042,3 +1277,196 @@ components:
         action: { type: string }
         createdAt: { type: string, format: date-time }
         reason: { type: [string, "null"], maxLength: 500 }
+    # --- T51: consolidated from Phase A Data needs ---
+    MapPin:
+      type: object
+      required: [id, name, neighborhood, latitude, longitude, bestTaco]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        bestTaco: { type: [string, "null"] }
+    MapCluster:
+      type: object
+      required: [count, latitude, longitude, bounds]
+      properties:
+        count: { type: integer, minimum: 1 }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        bounds:
+          type: object
+          required: [north, south, east, west]
+          properties:
+            north: { type: number, minimum: -90, maximum: 90 }
+            south: { type: number, minimum: -90, maximum: 90 }
+            east: { type: number, minimum: -180, maximum: 180 }
+            west: { type: number, minimum: -180, maximum: 180 }
+    MapPinsResponse:
+      type: object
+      required: [pins, clusters]
+      properties:
+        pins: { type: array, items: { $ref: "#/components/schemas/MapPin" } }
+        clusters: { type: array, items: { $ref: "#/components/schemas/MapCluster" } }
+    SearchColoniaSuggestion:
+      type: object
+      required: [id, name, municipality, spotCount]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        municipality: { type: string }
+        spotCount: { type: integer, minimum: 0 }
+    SearchPuestoSuggestion:
+      type: object
+      required: [id, name, neighborhood, bestTaco, reviewCount]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        neighborhood: { type: string }
+        bestTaco: { type: [string, "null"] }
+        reviewCount: { type: integer, minimum: 0 }
+    SearchSuggestResponse:
+      type: object
+      required: [colonias, puestos]
+      properties:
+        colonias: { type: array, items: { $ref: "#/components/schemas/SearchColoniaSuggestion" } }
+        puestos: { type: array, items: { $ref: "#/components/schemas/SearchPuestoSuggestion" } }
+    SpotPhoto:
+      type: object
+      required: [id, url, uploaderId, uploaderName, kind, status, rejectionReason, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        uploaderId: { type: string, format: uuid }
+        uploaderName: { type: string }
+        kind: { type: string, enum: [tacos, puesto, menu] }
+        status: { type: string, enum: [pending, approved, rejected] }
+        rejectionReason: { type: [string, "null"], maxLength: 300 }
+        createdAt: { type: string, format: date-time }
+    SpotPhotoListResponse:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/SpotPhoto" } }
+    SpotPhotoCreate:
+      type: object
+      required: [photoUploadId]
+      additionalProperties: false
+      properties:
+        photoUploadId: { type: string, format: uuid }
+        kind: { type: string, enum: [tacos, puesto, menu], default: tacos }
+    AvatarPreset:
+      type: string
+      enum: [pastor, masa, cilantro, tortilla, salsa, comal, aguacate, horchata]
+    Profile:
+      type: object
+      required: [id, displayName, avatarPreset, avatarPhotoUrl, avatarPhotoStatus]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: [string, "null"], maxLength: 60 }
+        avatarPreset: { $ref: "#/components/schemas/AvatarPreset" }
+        avatarPhotoUrl: { type: [string, "null"], format: uri }
+        avatarPhotoStatus: { type: [string, "null"], enum: [pending, approved, rejected] }
+    ProfilePatch:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName: { type: [string, "null"], minLength: 1, maxLength: 60 }
+        avatarPreset: { $ref: "#/components/schemas/AvatarPreset" }
+        avatarPhotoUploadId: { type: [string, "null"], format: uuid }
+    ProgressBadge:
+      type: object
+      required: [id, earned, current, target]
+      properties:
+        id:
+          {
+            type: string,
+            enum: [recien-llegado, primera-mordida, pionero, explorador, cazador, fotografo],
+          }
+        earned: { type: boolean }
+        current: { type: integer, minimum: 0 }
+        target: { type: integer, minimum: 1 }
+    ProgressResponse:
+      type: object
+      required: [badges, nextChallenge]
+      properties:
+        badges: { type: array, items: { $ref: "#/components/schemas/ProgressBadge" } }
+        nextChallenge:
+          type: [object, "null"]
+          required: [badgeId, label, current, target]
+          properties:
+            badgeId:
+              {
+                type: string,
+                enum: [recien-llegado, primera-mordida, pionero, explorador, cazador, fotografo],
+              }
+            label: { type: string }
+            current: { type: integer, minimum: 0 }
+            target: { type: integer, minimum: 1 }
+    ImportCandidateMatch:
+      type: object
+      required: [spotId, spotName, distanceMeters]
+      properties:
+        spotId: { type: string, format: uuid }
+        spotName: { type: string }
+        distanceMeters: { type: number, minimum: 0 }
+    ImportCandidate:
+      type: object
+      required:
+        [
+          id,
+          normalizedName,
+          originalName,
+          address,
+          latitude,
+          longitude,
+          source,
+          sourceRef,
+          licenseRef,
+          importBatchId,
+          matches,
+          state,
+          reviewNotes,
+          createdAt,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        normalizedName: { type: string }
+        originalName: { type: string }
+        address: { type: string }
+        latitude: { type: number, minimum: 25, maximum: 27 }
+        longitude: { type: number, minimum: -101.5, maximum: -99 }
+        source: { type: string }
+        sourceRef: { type: string }
+        licenseRef: { type: string }
+        importBatchId: { type: string, format: uuid }
+        matches: { type: array, items: { $ref: "#/components/schemas/ImportCandidateMatch" } }
+        state: { type: string, enum: [pending, approved, rejected] }
+        reviewNotes: { type: [string, "null"], maxLength: 1000 }
+        createdAt: { type: string, format: date-time }
+    ImportCandidateListResponse:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ImportCandidate" } }
+    ImportCandidateApprove:
+      type: object
+      required: [latitude, longitude]
+      additionalProperties: false
+      properties:
+        latitude: { type: number, minimum: 25, maximum: 27 }
+        longitude: { type: number, minimum: -101.5, maximum: -99 }
+    ImportCandidateReject:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: { type: string, maxLength: 500 }
+    ImportCandidateMerge:
+      type: object
+      required: [canonicalSpotId]
+      additionalProperties: false
+      properties:
+        canonicalSpotId: { type: string, format: uuid }
+        reason: { type: string, maxLength: 500 }

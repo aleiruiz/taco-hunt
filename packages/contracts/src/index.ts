@@ -281,3 +281,242 @@ export const placeResolveResponseSchema = z.object({
   attribution: z.string().nullable(),
 });
 export type PlaceResolveResponse = z.infer<typeof placeResolveResponseSchema>;
+
+// --- T51: contract consolidation from Phase A's Data needs ---
+// These schemas are additive and unimplemented until their Phase B task
+// (noted per group) builds the endpoint and swaps the matching Phase A
+// fixture adapter. Nothing here changes an existing shape.
+
+// T33/T34 — GET /v1/spots/map viewport pins with server-side clustering.
+export const mapPinSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  neighborhood: z.string(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  bestTaco: z.string().nullable(),
+});
+export type MapPin = z.infer<typeof mapPinSchema>;
+
+export const mapClusterSchema = z.object({
+  count: z.number().int().positive(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  bounds: z.object({
+    north: z.number().min(-90).max(90),
+    south: z.number().min(-90).max(90),
+    east: z.number().min(-180).max(180),
+    west: z.number().min(-180).max(180),
+  }),
+});
+export type MapCluster = z.infer<typeof mapClusterSchema>;
+
+export const mapPinsQuerySchema = z.object({
+  north: z.coerce.number().min(-90).max(90),
+  south: z.coerce.number().min(-90).max(90),
+  east: z.coerce.number().min(-180).max(180),
+  west: z.coerce.number().min(-180).max(180),
+  tacoType: z.string().trim().max(80).optional(),
+});
+export type MapPinsQuery = z.infer<typeof mapPinsQuerySchema>;
+
+export const mapPinsResponseSchema = z.object({
+  pins: z.array(mapPinSchema),
+  clusters: z.array(mapClusterSchema),
+});
+export type MapPinsResponse = z.infer<typeof mapPinsResponseSchema>;
+
+// T52 — GET /v1/search/suggest, swaps T35's search fixture adapter.
+export const searchColoniaSuggestionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  municipality: z.string(),
+  spotCount: z.number().int().nonnegative(),
+});
+export type SearchColoniaSuggestion = z.infer<typeof searchColoniaSuggestionSchema>;
+
+export const searchPuestoSuggestionSchema = z.object({
+  id: uuidSchema,
+  name: z.string(),
+  neighborhood: z.string(),
+  bestTaco: z.string().nullable(),
+  reviewCount: z.number().int().nonnegative(),
+});
+export type SearchPuestoSuggestion = z.infer<typeof searchPuestoSuggestionSchema>;
+
+export const searchSuggestQuerySchema = z.object({
+  q: z.string().trim().min(2).max(100),
+  near: z
+    .string()
+    .regex(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/, "near debe ser 'latitud,longitud'")
+    .optional(),
+});
+export type SearchSuggestQuery = z.infer<typeof searchSuggestQuerySchema>;
+
+export const searchSuggestResponseSchema = z.object({
+  colonias: z.array(searchColoniaSuggestionSchema),
+  puestos: z.array(searchPuestoSuggestionSchema),
+});
+export type SearchSuggestResponse = z.infer<typeof searchSuggestResponseSchema>;
+
+// T37 — spot photo gallery, swaps T39's and T38's fixture adapters.
+export const spotPhotoStatusSchema = z.enum(["pending", "approved", "rejected"]);
+export type SpotPhotoStatus = z.infer<typeof spotPhotoStatusSchema>;
+
+export const spotPhotoKindSchema = z.enum(["tacos", "puesto", "menu"]);
+export type SpotPhotoKind = z.infer<typeof spotPhotoKindSchema>;
+
+export const spotPhotoSchema = z.object({
+  id: uuidSchema,
+  url: z.string().url(),
+  uploaderId: uuidSchema,
+  uploaderName: z.string(),
+  kind: spotPhotoKindSchema,
+  status: spotPhotoStatusSchema,
+  rejectionReason: z.string().max(300).nullable(),
+  createdAt: isoTimestampSchema,
+});
+export type SpotPhoto = z.infer<typeof spotPhotoSchema>;
+
+export const spotPhotoListResponseSchema = z.object({ items: z.array(spotPhotoSchema) });
+export type SpotPhotoListResponse = z.infer<typeof spotPhotoListResponseSchema>;
+
+export const spotPhotoCreateSchema = z
+  .object({
+    photoUploadId: uuidSchema,
+    kind: spotPhotoKindSchema.default("tacos"),
+  })
+  .strict();
+export type SpotPhotoCreate = z.infer<typeof spotPhotoCreateSchema>;
+
+// Admin moderation queue item for pending spot photos (extends SpotPhoto
+// with which stand it belongs to, since the admin queue spans all spots).
+export const adminSpotPhotoSchema = spotPhotoSchema.extend({
+  spotId: uuidSchema,
+  spotName: z.string(),
+});
+export type AdminSpotPhoto = z.infer<typeof adminSpotPhotoSchema>;
+
+// T40 — GET/PATCH /v1/me, swaps T41's and T32's fixture adapters.
+export const avatarPresetSchema = z.enum([
+  "pastor",
+  "masa",
+  "cilantro",
+  "tortilla",
+  "salsa",
+  "comal",
+  "aguacate",
+  "horchata",
+]);
+export type AvatarPreset = z.infer<typeof avatarPresetSchema>;
+
+export const profileSchema = z.object({
+  id: uuidSchema,
+  displayName: z.string().max(60).nullable(),
+  avatarPreset: avatarPresetSchema,
+  avatarPhotoUrl: z.string().url().nullable(),
+  avatarPhotoStatus: spotPhotoStatusSchema.nullable(),
+});
+export type Profile = z.infer<typeof profileSchema>;
+
+export const profilePatchSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(60).nullable().optional(),
+    avatarPreset: avatarPresetSchema.optional(),
+    avatarPhotoUploadId: uuidSchema.nullable().optional(),
+  })
+  .strict()
+  .refine((patch) => Object.keys(patch).length > 0, "Incluye al menos un campo para actualizar");
+export type ProfilePatch = z.infer<typeof profilePatchSchema>;
+
+// T49 — GET /v1/me/progress, swaps T48's progress fixture.
+export const badgeIdSchema = z.enum([
+  "recien-llegado",
+  "primera-mordida",
+  "pionero",
+  "explorador",
+  "cazador",
+  "fotografo",
+]);
+export type BadgeId = z.infer<typeof badgeIdSchema>;
+
+export const progressBadgeSchema = z.object({
+  id: badgeIdSchema,
+  earned: z.boolean(),
+  current: z.number().int().nonnegative(),
+  target: z.number().int().positive(),
+});
+export type ProgressBadge = z.infer<typeof progressBadgeSchema>;
+
+export const progressResponseSchema = z.object({
+  badges: z.array(progressBadgeSchema),
+  nextChallenge: z
+    .object({
+      badgeId: badgeIdSchema,
+      label: z.string(),
+      current: z.number().int().nonnegative(),
+      target: z.number().int().positive(),
+    })
+    .nullable(),
+});
+export type ProgressResponse = z.infer<typeof progressResponseSchema>;
+
+// T42 — import-candidate approval API, swaps T50's fixture adapter.
+export const importCandidateStateSchema = z.enum(["pending", "approved", "rejected"]);
+export type ImportCandidateState = z.infer<typeof importCandidateStateSchema>;
+
+export const importCandidateMatchSchema = z.object({
+  spotId: uuidSchema,
+  spotName: z.string(),
+  distanceMeters: z.number().nonnegative(),
+});
+export type ImportCandidateMatch = z.infer<typeof importCandidateMatchSchema>;
+
+export const importCandidateSchema = z.object({
+  id: uuidSchema,
+  normalizedName: z.string(),
+  originalName: z.string(),
+  address: z.string(),
+  latitude: z.number().min(25).max(27),
+  longitude: z.number().min(-101.5).max(-99),
+  source: z.string(),
+  sourceRef: z.string(),
+  licenseRef: z.string(),
+  importBatchId: uuidSchema,
+  matches: z.array(importCandidateMatchSchema),
+  state: importCandidateStateSchema,
+  reviewNotes: z.string().max(1000).nullable(),
+  createdAt: isoTimestampSchema,
+});
+export type ImportCandidate = z.infer<typeof importCandidateSchema>;
+
+export const importCandidateListResponseSchema = z.object({
+  items: z.array(importCandidateSchema),
+});
+export type ImportCandidateListResponse = z.infer<typeof importCandidateListResponseSchema>;
+
+export const importCandidateApproveSchema = z
+  .object({
+    latitude: z.number().min(25).max(27),
+    longitude: z.number().min(-101.5).max(-99),
+  })
+  .strict();
+export type ImportCandidateApprove = z.infer<typeof importCandidateApproveSchema>;
+
+export const importCandidateRejectSchema = z.object({ reason: z.string().max(500) }).strict();
+export type ImportCandidateReject = z.infer<typeof importCandidateRejectSchema>;
+
+export const importCandidateMergeSchema = z
+  .object({
+    canonicalSpotId: uuidSchema,
+    reason: z.string().max(500).optional(),
+  })
+  .strict();
+export type ImportCandidateMerge = z.infer<typeof importCandidateMergeSchema>;
+
+// T47 follow-up — opening-time chips on spot-proposals have no backing
+// field yet (flagged as UI-only local state in that PR's Data needs).
+// Adding it here, additive, so T51's consumers can adopt it once a
+// migration lands; not yet required by spotProposalSchema.
+export const openingTimeSchema = z.enum(["manana", "tarde", "noche"]);
+export type OpeningTime = z.infer<typeof openingTimeSchema>;
