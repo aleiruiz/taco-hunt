@@ -334,12 +334,12 @@
       "coderabbitReviewedSha": null
     },
     "T44": {
-      "status": "active",
+      "status": "merged",
       "dependsOn": ["T45", "T48"],
-      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). CodeRabbit round 1 (9670029) found 5 real issues, all fixed as e5246f8. Round 2 (e5246f8) found 1 more (empty-catalog indefinite spinner) - fixed as 5ec559b. Round 3 (5ec559b) found 1 actionable issue (proposal leak across a mid-request account switch, fixed as b2ee80f) plus a Medium/inferred architecture-review gap addressed as ce148ef. Round 4 (ce148ef) found 1 more: the ce148ef clear ran inside useFocusEffect's post-render callback, so a frame could still leak stale proposal rows - fixed as 82b2b03 with a proposalsOwnerId render state. Requested a full-changeset review (@coderabbitai full review), which found 1 more real issue in admin.tsx: act()'s post-action reload didn't check whether the admin had switched tabs while the request was in flight, so a completed action for an abandoned tab could refetch and overwrite the tab the admin switched to, briefly showing stale items with no moderation controls. Fixed as 10e8ffd (capture the acting tab at click time, skip the reload if the current tab has since changed). CI green throughout. Typecheck/lint/format clean. Awaiting re-review of 10e8ffd.",
+      "note": "Phase A. Implemented against the existing API (POST /v1/taco-proposals, GET /v1/me/proposals, GET /v1/taco-types, admin tacos queue/approve/reject). Went through 4 CodeRabbit review rounds, all real issues fixed: (1) 5 issues on 9670029 -> e5246f8 (queue/tab action-binding race, taco proposals not cleared on sign-out, no catalog-fetch retry, reopen-modal submission race, wrong create-response type); (2) empty-catalog indefinite spinner -> 5ec559b; (3) mid-request account-switch proposal leak + an architecture-review cache-clear-timing gap -> b2ee80f, ce148ef; (4) the ce148ef clear running post-render/paint inside useFocusEffect -> 82b2b03 (proposalsOwnerId render state); a requested full-changeset review then found admin.tsx's act() reloading a since-abandoned tab -> 10e8ffd. Final head 10e8ffd reviewed clean (no actionable comments). CI green. Merged 2026-09-30T07:48:14Z as 3c7b3b5.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/38",
-      "headSha": "10e8ffd",
-      "coderabbitReviewedSha": null
+      "headSha": "3c7b3b5",
+      "coderabbitReviewedSha": "10e8ffd"
     },
     "T39": {
       "status": "blocked",
