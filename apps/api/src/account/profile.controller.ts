@@ -71,6 +71,16 @@ export class ProfileController {
       );
       previousPhotoKey = current.rows[0]?.avatar_photo_key ?? null;
 
+      // Release the existing claim before claiming a replacement, otherwise the
+      // one-per-profile unique index on media_uploads.claimed_profile_id rejects
+      // the new claim while the old row still holds it.
+      if (previousPhotoKey && Object.hasOwn(patch, "avatarPhotoUploadId")) {
+        await client.query(
+          "update app_private.media_uploads set state='deleted',claimed_profile_id=null,created_at=now() where object_key=$1",
+          [previousPhotoKey],
+        );
+      }
+
       const updates: string[] = [];
       const values: unknown[] = [];
       if (Object.hasOwn(patch, "displayName")) {
@@ -102,18 +112,6 @@ export class ProfileController {
         await client.query(
           `update app_private.profiles set ${updates.join(",")}, updated_at=now() where id=$${values.length}`,
           values,
-        );
-      }
-      // Free the replaced/cleared upload's claim so media_uploads_one_per_profile_idx doesn't
-      // permanently block this profile from ever claiming another avatar photo upload.
-      if (
-        previousPhotoKey &&
-        previousPhotoKey !== claimedNewKey &&
-        Object.hasOwn(patch, "avatarPhotoUploadId")
-      ) {
-        await client.query(
-          "update app_private.media_uploads set state='deleted',claimed_profile_id=null,created_at=now() where object_key=$1",
-          [previousPhotoKey],
         );
       }
       await client.query("commit");
@@ -158,26 +156,45 @@ export class ProfileController {
       return;
     }
 
-    if (result.status === "approved") {
-      await this.pool.query(
-        "update app_private.profiles set avatar_photo_status='approved' where id=$1 and avatar_photo_key=$2",
-        [profileId, objectKey],
+    try {
+      if (result.status === "approved") {
+        await this.pool.query(
+          "update app_private.profiles set avatar_photo_status='approved' where id=$1 and avatar_photo_key=$2",
+          [profileId, objectKey],
+        );
+        return;
+      }
+
+      const client = await this.pool.connect();
+      try {
+        await client.query("begin");
+        await client.query(
+          "update app_private.profiles set avatar_photo_key=null, avatar_photo_status=null where id=$1 and avatar_photo_key=$2",
+          [profileId, objectKey],
+        );
+        await client.query(
+          "update app_private.media_uploads set state='deleted',claimed_profile_id=null,created_at=now() where object_key=$1",
+          [objectKey],
+        );
+        await client.query(
+          "insert into app_private.moderation_audit (moderator_id,target_type,target_id,action,internal_reason) values (null,'profile_avatar',$1,'auto_reject',$2)",
+          [profileId, result.reason ?? null],
+        );
+        await client.query("commit");
+      } catch (error) {
+        await this.rollback(client);
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      this.logger.error(
+        "Avatar automated review finalization failed",
+        error instanceof Error ? error.stack : undefined,
       );
       return;
     }
 
-    await this.pool.query(
-      "update app_private.profiles set avatar_photo_key=null, avatar_photo_status=null where id=$1 and avatar_photo_key=$2",
-      [profileId, objectKey],
-    );
-    await this.pool.query(
-      "update app_private.media_uploads set state='deleted',claimed_profile_id=null,created_at=now() where object_key=$1",
-      [objectKey],
-    );
-    await this.pool.query(
-      "insert into app_private.moderation_audit (moderator_id,target_type,target_id,action,internal_reason) values (null,'profile_avatar',$1,'auto_reject',$2)",
-      [profileId, result.reason ?? null],
-    );
     await this.deletePhotoObject(objectKey);
   }
 

@@ -19,8 +19,12 @@ alter table app_private.profiles
 
 -- Reuse the existing media_uploads one-use claim table (T11) for avatar photo
 -- uploads too, mirroring claimed_review_id's pattern instead of a parallel table.
+-- on delete cascade (not set null) to match owner_id's cascade: Postgres doesn't
+-- guarantee ordering between the two referential actions on profile deletion, so
+-- set null here could leave a 'claimed' row with both claim ids null, violating
+-- media_uploads_claim_consistency_check below and failing DELETE /v1/me.
 alter table app_private.media_uploads
-  add column claimed_profile_id uuid references app_private.profiles(id) on delete set null;
+  add column claimed_profile_id uuid references app_private.profiles(id) on delete cascade;
 
 create unique index media_uploads_one_per_profile_idx
   on app_private.media_uploads(claimed_profile_id)
