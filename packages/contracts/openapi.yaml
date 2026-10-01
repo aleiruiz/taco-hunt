@@ -676,6 +676,129 @@ paths:
               schema: { $ref: "#/components/schemas/MapPinsResponse" }
         "400": { $ref: "#/components/responses/ApiError" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/places/autocomplete:
+    get:
+      operationId: autocompleteGooglePlaces
+      summary: Busca lugares de Google para proponer un puesto
+      description: >-
+        El API consulta Google Places y devuelve datos de presentación
+        transitorios. Si el lugar ya está vinculado a Taco Hunt, registeredMatch
+        permite redirigir al puesto existente sin crear un duplicado.
+      parameters:
+        - {
+            in: query,
+            name: q,
+            required: true,
+            schema: { type: string, minLength: 2, maxLength: 100 },
+          }
+      responses:
+        "200":
+          description: Sugerencias de Google y, opcionalmente, un redireccionamiento local
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceAutocompleteResponseV2" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "429": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/places/viewport:
+    get:
+      operationId: discoverGooglePlacesInViewport
+      summary: Descubre lugares de Google en el viewport visible
+      description: >-
+        Los resultados de Google son de lectura transitoria y deben mostrarse
+        sobre Google Maps con la atribución incluida. localProposals contiene
+        únicamente datos propios de Taco Hunt autorizados para el usuario.
+      parameters:
+        - {
+            in: query,
+            name: north,
+            required: true,
+            schema: { type: number, minimum: -90, maximum: 90 },
+          }
+        - {
+            in: query,
+            name: south,
+            required: true,
+            schema: { type: number, minimum: -90, maximum: 90 },
+          }
+        - {
+            in: query,
+            name: east,
+            required: true,
+            schema: { type: number, minimum: -180, maximum: 180 },
+          }
+        - {
+            in: query,
+            name: west,
+            required: true,
+            schema: { type: number, minimum: -180, maximum: 180 },
+          }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 100, default: 50 },
+          }
+      responses:
+        "200":
+          description: Resultados actuales de Google y propuestas propias autorizadas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlacesViewportResponse" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "429": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/places/{placeId}/details:
+    get:
+      operationId: getGooglePlaceDetails
+      summary: Obtiene detalles y fotos de Google bajo demanda
+      description: >-
+        Los detalles y fotos se hidratan sólo para esta respuesta. No se
+        almacenan como datos de directorio de Taco Hunt; la atribución de
+        Google y el enlace a Google Maps deben permanecer visibles.
+      parameters:
+        - {
+            in: path,
+            name: placeId,
+            required: true,
+            schema: { $ref: "#/components/schemas/GooglePlaceId" },
+          }
+      responses:
+        "200":
+          description: Estado actual de los detalles y fotos de Google
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GooglePlaceDetailsResponse" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "429": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/place-proposals:
+    post:
+      operationId: createPlaceProposal
+      summary: Propone un lugar de Google o un puesto mediante pin
+      description: >-
+        La variante de Google acepta únicamente placeId. La variante local usa
+        el pin como ubicación primaria y deja nombre y nota opcionales; no
+        requiere una dirección escrita ni copia campos de Google.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlaceProposalCreate" }
+      responses:
+        "201":
+          description: Propuesta pendiente de moderación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceProposalResult" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "409":
+          description: El lugar ya está registrado; redirigir al puesto existente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlaceProposalConflict" }
+        "429": { $ref: "#/components/responses/ApiError" }
   /v1/search/suggest:
     get:
       operationId: searchSuggest
@@ -982,6 +1105,11 @@ components:
         neighborhood: { type: string }
         latitude: { type: number }
         longitude: { type: number }
+        googlePlaceId:
+          {
+            $ref: "#/components/schemas/GooglePlaceId",
+            description: Durable link only; Google display data is hydrated separately.,
+          }
         lastVerifiedAt: { type: [string, "null"], format: date-time }
         reviewCount: { type: integer, minimum: 0 }
         bestTaco: { oneOf: [{ $ref: "#/components/schemas/TacoSummary" }, { type: "null" }] }
@@ -995,6 +1123,11 @@ components:
         neighborhood: { type: string }
         latitude: { type: number }
         longitude: { type: number }
+        googlePlaceId:
+          {
+            $ref: "#/components/schemas/GooglePlaceId",
+            description: Durable link only; Google display data is hydrated separately.,
+          }
         lastVerifiedAt: { type: [string, "null"], format: date-time }
         reviewCount: { type: integer, minimum: 0 }
         tacos: { type: array, items: { $ref: "#/components/schemas/TacoSummary" } }
@@ -1278,6 +1411,192 @@ components:
         action: { type: string }
         createdAt: { type: string, format: date-time }
         reason: { type: [string, "null"], maxLength: 500 }
+    # --- T64: Google Places data is transient except for the place ID link. ---
+    GooglePlaceId:
+      type: string
+      minLength: 1
+      maxLength: 300
+      description: Durable Google place_id link; no Google display payload is persisted.
+    GoogleAttribution:
+      type: object
+      required: [label, sourceUrl]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 200 }
+        sourceUrl: { type: string, format: uri }
+    DurablePlaceLink:
+      type: object
+      required: [googlePlaceId]
+      properties:
+        googlePlaceId: { $ref: "#/components/schemas/GooglePlaceId" }
+    GoogleViewportResult:
+      type: object
+      required:
+        [source, placeId, name, neighborhood, latitude, longitude, googleMapsUrl, attribution]
+      description: >-
+        Transient Google Places display data. Do not persist this object; retain
+        only placeId as a durable Taco Hunt relationship.
+      properties:
+        source: { const: google }
+        placeId: { $ref: "#/components/schemas/GooglePlaceId" }
+        name: { type: string }
+        neighborhood: { type: [string, "null"] }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        googleMapsUrl: { type: string, format: uri }
+        attribution: { $ref: "#/components/schemas/GoogleAttribution" }
+    LocalProposalPin:
+      type: object
+      required: [source, id, name, neighborhood, latitude, longitude, status]
+      properties:
+        source: { const: taco-hunt }
+        id: { type: string, format: uuid }
+        name: { type: [string, "null"] }
+        neighborhood: { type: [string, "null"] }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        status: { type: string, enum: [pending, approved] }
+    PlacesViewportResponse:
+      type: object
+      required: [state, googleResults, localProposals, attribution]
+      properties:
+        state: { type: string, enum: [ready, empty, unavailable] }
+        googleResults:
+          type: array
+          items: { $ref: "#/components/schemas/GoogleViewportResult" }
+        localProposals:
+          type: array
+          items: { $ref: "#/components/schemas/LocalProposalPin" }
+        attribution: { $ref: "#/components/schemas/GoogleAttribution" }
+        message: { type: string }
+    GooglePlacePhoto:
+      type: object
+      required: [source, id, url, authorAttribution, sourceUrl]
+      description: Transient Google photo reference; Taco Hunt must not store the photo bytes.
+      properties:
+        source: { const: google }
+        id: { type: string, minLength: 1, maxLength: 300 }
+        url: { type: string, format: uri }
+        authorAttribution: { type: string, minLength: 1, maxLength: 500 }
+        sourceUrl: { type: string, format: uri }
+    GooglePlaceDetails:
+      type: object
+      required:
+        [source, placeId, name, formattedAddress, googleMapsUrl, attribution, photosState, photos]
+      description: Transient Google details hydrated on demand; not a persistent directory record.
+      properties:
+        source: { const: google }
+        placeId: { $ref: "#/components/schemas/GooglePlaceId" }
+        name: { type: string }
+        formattedAddress: { type: [string, "null"] }
+        googleMapsUrl: { type: string, format: uri }
+        attribution: { $ref: "#/components/schemas/GoogleAttribution" }
+        photosState: { type: string, enum: [available, unavailable] }
+        photos:
+          type: array
+          items: { $ref: "#/components/schemas/GooglePlacePhoto" }
+    GooglePlaceDetailsResponse:
+      type: object
+      required: [state]
+      properties:
+        state: { type: string, enum: [ready, unavailable, error] }
+        details: { $ref: "#/components/schemas/GooglePlaceDetails" }
+        message: { type: string }
+    RegisteredPlaceMatch:
+      type: object
+      required: [spotId, displayName, neighborhood]
+      properties:
+        spotId: { type: string, format: uuid }
+        displayName: { type: string }
+        neighborhood: { type: string }
+    PlaceSuggestion:
+      oneOf:
+        - type: object
+          required: [kind, id, name, neighborhood, latitude, longitude]
+          properties:
+            kind: { const: spot }
+            id: { type: string, format: uuid }
+            name: { type: string }
+            neighborhood: { type: string }
+            latitude: { type: number, minimum: -90, maximum: 90 }
+            longitude: { type: number, minimum: -180, maximum: 180 }
+        - type: object
+          required: [kind, placeId, text, secondaryText]
+          description: Transient Google suggestion; do not persist display fields.
+          properties:
+            kind: { const: google }
+            placeId: { $ref: "#/components/schemas/GooglePlaceId" }
+            text: { type: string }
+            secondaryText: { type: [string, "null"] }
+    PlaceAutocompleteResponse:
+      type: object
+      required: [items, attribution]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/PlaceSuggestion" } }
+        attribution: { type: [string, "null"] }
+    PlaceAutocompleteResponseV2:
+      allOf:
+        - $ref: "#/components/schemas/PlaceAutocompleteResponse"
+        - type: object
+          properties:
+            registeredMatch: { $ref: "#/components/schemas/RegisteredPlaceMatch" }
+    GooglePlaceProposal:
+      type: object
+      required: [source, placeId]
+      additionalProperties: false
+      properties:
+        source: { const: google }
+        placeId: { $ref: "#/components/schemas/GooglePlaceId" }
+    LocalPinProposal:
+      type: object
+      required: [source, latitude, longitude]
+      additionalProperties: false
+      properties:
+        source: { const: local }
+        latitude: { type: number, minimum: -90, maximum: 90 }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+        name: { type: string, minLength: 2, maxLength: 120 }
+        note: { type: string, maxLength: 500 }
+    PlaceProposalCreate:
+      oneOf:
+        - $ref: "#/components/schemas/GooglePlaceProposal"
+        - $ref: "#/components/schemas/LocalPinProposal"
+      description: >-
+        Google proposals submit only placeId. Local proposals use a map pin and
+        optional Taco Hunt-owned name/note; no copied Google address is accepted.
+    PlaceProposalResult:
+      type: object
+      required: [id, source, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        source: { type: string, enum: [google, local] }
+        status: { const: pending }
+        createdAt: { type: string, format: date-time }
+    PlaceDuplicateRedirect:
+      type: object
+      required: [spotId, path]
+      properties:
+        spotId: { type: string, format: uuid }
+        path: { type: string, pattern: "^/spot/[0-9a-f-]+$" }
+    PlaceProposalConflict:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId, details]
+          properties:
+            code: { const: CONFLICT }
+            message: { type: string }
+            requestId: { type: string, minLength: 1 }
+            details:
+              type: object
+              required: [reason, existingSpotId, redirect, displayName, neighborhood]
+              properties:
+                reason: { const: already_registered }
+                existingSpotId: { type: string, format: uuid }
+                redirect: { $ref: "#/components/schemas/PlaceDuplicateRedirect" }
+                displayName: { type: string }
+                neighborhood: { type: string }
     # --- T51: consolidated from Phase A Data needs ---
     MapPin:
       type: object
