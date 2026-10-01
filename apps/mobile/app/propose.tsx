@@ -1,81 +1,126 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import MapView, { Marker, type Region } from "react-native-maps";
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import MapView, { type Region } from "react-native-maps";
 import { useAuth } from "@/auth/provider";
-import { PlaceAutocomplete } from "@/features/discovery/PlaceAutocomplete";
-import { colors, spacing, radii, typography } from "@/theme";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { Chip } from "@/components/Chip";
 import { Stepper } from "@/components/Stepper";
-import { PhotoTile } from "@/components/PhotoTile";
+import {
+  getFixtureSpotProposals,
+  searchProposalPlaces,
+  submitProposalFixture,
+  type GoogleProposalSuggestion,
+  type RegisteredPlaceMatch,
+  type ProposalSource,
+} from "@/data/proposals";
+import { colors, radii, spacing, typography } from "@/theme";
 
-const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
-type Source = "manual" | "autocomplete";
-type Proposal = {
-  id: string;
-  name: string;
-  neighborhood: string;
-  status: "pending" | "approved" | "rejected";
-  createdAt: string;
-};
-type NearbyCandidate = { id: string; name: string; neighborhood: string; distanceMeters: number };
-type OpeningTime = "manana" | "tarde" | "noche";
-const OPENING_TIME_LABEL: Record<OpeningTime, string> = {
-  manana: "Mañana",
-  tarde: "Tarde",
-  noche: "Noche",
-};
+type Step = 1 | 2 | 3;
+type SearchStatus = "idle" | "loading" | "success" | "error";
+type SubmitStatus = "idle" | "loading" | "error";
+
+const DEFAULT_PIN = { latitude: 25.6866, longitude: -100.3161 };
 
 export default function ProposeScreen() {
   const { session } = useAuth();
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [submitted, setSubmitted] = useState<{ name: string } | null>(null);
-  const [source, setSource] = useState<Source>("autocomplete");
+  const [source, setSource] = useState<ProposalSource>("google");
+  const [step, setStep] = useState<Step>(1);
+  const [query, setQuery] = useState("");
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>("idle");
+  const [suggestions, setSuggestions] = useState<GoogleProposalSuggestion[]>([]);
+  const [duplicate, setDuplicate] = useState<RegisteredPlaceMatch>();
+  const [selectedGoogle, setSelectedGoogle] = useState<GoogleProposalSuggestion>();
+  const [latitude, setLatitude] = useState(DEFAULT_PIN.latitude);
+  const [longitude, setLongitude] = useState(DEFAULT_PIN.longitude);
   const [name, setName] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [latitude, setLatitude] = useState(25.6866);
-  const [longitude, setLongitude] = useState(-100.3161);
-  const [pinFromGoogle, setPinFromGoogle] = useState(false);
-  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [note, setNote] = useState("");
-  const [sourceRef, setSourceRef] = useState("");
-  const [openingTimes, setOpeningTimes] = useState<OpeningTime[]>([]);
-  const [nearbyCandidates, setNearbyCandidates] = useState<NearbyCandidate[]>([]);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [error, setError] = useState("");
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
+  const [submitError, setSubmitError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
-  const loadMine = useCallback(async () => {
-    if (!session?.access_token) return;
-    try {
-      const response = await fetch(`${API}/me/proposals`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!response.ok) return;
-      const data = (await response.json()) as { spotProposals: Proposal[] };
-      setProposals(data.spotProposals);
-    } catch {
-      // Submission remains available when the status list is temporarily unavailable.
-    }
-  }, [session?.access_token]);
+  const mapRegion = useMemo<Region>(
+    () => ({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }),
+    [latitude, longitude],
+  );
 
   useEffect(() => {
-    void loadMine();
-  }, [loadMine]);
+    if (source !== "google" || selectedGoogle || query.trim().length < 2) {
+      setSearchStatus("idle");
+      setSuggestions([]);
+      setDuplicate(undefined);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchStatus("loading");
+    const timer = setTimeout(() => {
+      void searchProposalPlaces(query)
+        .then((result) => {
+          if (cancelled) return;
+          setSuggestions(result.suggestions);
+          setDuplicate(result.registeredMatch);
+          setSearchStatus("success");
+        })
+        .catch((cause) => {
+          if (cancelled) return;
+          setSuggestions([]);
+          setDuplicate(undefined);
+          setSearchStatus("error");
+          announce(cause instanceof Error ? cause.message : "No pudimos buscar sugerencias.");
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, selectedGoogle, source]);
+
+  function announce(message: string) {
+    AccessibilityInfo.announceForAccessibility(message);
+  }
+
+  function resetSource(nextSource: ProposalSource) {
+    setSource(nextSource);
+    setStep(1);
+    setQuery("");
+    setSuggestions([]);
+    setDuplicate(undefined);
+    setSelectedGoogle(undefined);
+    setSearchStatus("idle");
+    setSubmitError("");
+    setSubmitStatus("idle");
+  }
+
+  function selectGoogleSuggestion(suggestion: GoogleProposalSuggestion) {
+    setSelectedGoogle(suggestion);
+    setQuery(suggestion.displayName);
+    setSuggestions([]);
+    setDuplicate(undefined);
+    setSearchStatus("success");
+    announce(`${suggestion.displayName} seleccionado. El envío usará únicamente su place_id.`);
+  }
 
   async function useLocation() {
     setLocating(true);
-    setError("");
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== "granted") {
-        setError("Sin permiso de ubicación. Arrastra el mapa para ajustar el pin.");
+        announce("Sin permiso de ubicación. Puedes arrastrar el mapa para ajustar el pin.");
         return;
       }
       const position = await Location.getCurrentPositionAsync({
@@ -83,136 +128,81 @@ export default function ProposeScreen() {
       });
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
-      setPinFromGoogle(false);
-      setLocationConfirmed(true);
+      announce("Pin colocado en tu ubicación.");
     } catch {
-      setError("No pudimos leer tu ubicación. Arrastra el mapa para ajustar el pin.");
+      announce("No pudimos leer tu ubicación. Arrastra el mapa para ajustar el pin.");
     } finally {
       setLocating(false);
     }
   }
 
-  function toggleOpeningTime(time: OpeningTime) {
-    setOpeningTimes((current) =>
-      current.includes(time) ? current.filter((item) => item !== time) : [...current, time],
-    );
-  }
-
   async function submit() {
-    if (!session?.access_token) {
+    if (!session) {
       router.push("/sign-in");
       return;
     }
-    setBusy(true);
-    setError("");
-    setNearbyCandidates([]);
+
+    setSubmitStatus("loading");
+    setSubmitError("");
     try {
-      const response = await fetch(`${API}/spot-proposals`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          name,
-          neighborhood,
-          latitude,
-          longitude,
-          note: note || undefined,
-          source,
-          sourceRef: sourceRef || undefined,
-        }),
-      });
-      const data = (await response.json().catch(() => null)) as {
-        nearbyCandidates?: NearbyCandidate[];
-        error?: { message?: string; details?: { candidates?: NearbyCandidate[] } };
-      } | null;
-      setNearbyCandidates(data?.nearbyCandidates ?? data?.error?.details?.candidates ?? []);
-      if (!response.ok) throw new Error(data?.error?.message ?? "No pudimos enviar la propuesta.");
-      setSubmitted({ name });
-      setName("");
-      setNeighborhood("");
-      setNote("");
-      setSourceRef("");
-      setOpeningTimes([]);
-      setLatitude(25.6866);
-      setLongitude(-100.3161);
-      setPinFromGoogle(false);
-      setLocationConfirmed(false);
-      setStep(1);
-      await loadMine();
+      const submission =
+        source === "google" && selectedGoogle
+          ? { source: "google" as const, placeId: selectedGoogle.placeId }
+          : {
+              source: "local" as const,
+              latitude,
+              longitude,
+              ...(name.trim() ? { name: name.trim() } : {}),
+              ...(note.trim() ? { note: note.trim() } : {}),
+            };
+      await submitProposalFixture(submission);
+      setSubmitted(true);
+      announce("Propuesta enviada. Está en revisión.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No pudimos enviar la propuesta.");
-    } finally {
-      setBusy(false);
+      const message = cause instanceof Error ? cause.message : "No se pudo enviar la propuesta.";
+      setSubmitError(message);
+      setSubmitStatus("error");
+      announce(message);
     }
   }
 
   function startOver() {
-    setSubmitted(null);
+    setSubmitted(false);
     setStep(1);
-    setLocationConfirmed(false);
-    setError("");
+    setSource("google");
+    setQuery("");
+    setSuggestions([]);
+    setDuplicate(undefined);
+    setSelectedGoogle(undefined);
+    setName("");
+    setNote("");
+    setLatitude(DEFAULT_PIN.latitude);
+    setLongitude(DEFAULT_PIN.longitude);
+    setSubmitError("");
+    setSubmitStatus("idle");
   }
 
-  const mapRegion: Region = {
-    latitude,
-    longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  };
-
   if (submitted) {
+    const submittedName = source === "google" ? selectedGoogle?.displayName : name.trim();
     return (
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={[styles.content, styles.reviewContent]}
-      >
-        <View style={styles.reviewCheck}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.reviewContent}>
+        <View style={styles.reviewIcon} accessibilityLabel="Propuesta pendiente de revisión">
           <Ionicons name="checkmark-circle" size={64} color={colors.green} />
         </View>
-        <Text style={styles.reviewTitle}>{submitted.name} está en revisión</Text>
+        <Text style={styles.kicker}>PROPUESTA ENVIADA</Text>
+        <Text style={styles.reviewTitle}>{submittedName || "Tu taquería"} está en revisión</Text>
         <Text style={styles.body}>
-          Un moderador revisará los datos antes de publicarla. Mientras tanto, solo tú la ves en el
-          mapa con un pin punteado. Te avisamos cuando se publique y ganas la insignia Cazador.
+          Un moderador revisará tu propuesta. Mientras tanto, solo tú la ves en el mapa con un pin
+          punteado.
         </Text>
-        <Card style={styles.timelineCard}>
-          <View style={styles.timelineRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.green} />
-            <Text style={styles.timelineLabel}>Enviada</Text>
-          </View>
-          <View style={styles.timelineRow}>
-            <Ionicons name="time" size={20} color={colors.gold} />
-            <Text style={styles.timelineLabel}>En revisión</Text>
-            <View style={styles.timelineBadge}>
-              <Text style={styles.timelineBadgeText}>AHORA</Text>
-            </View>
-          </View>
-          <View style={styles.timelineRow}>
-            <Ionicons name="ellipse-outline" size={20} color={colors.muted} />
-            <Text style={[styles.timelineLabel, styles.timelineLabelMuted]}>Publicada</Text>
-          </View>
+        <Card style={styles.timelineCard} accessibilityLabel="Estado de la propuesta">
+          <TimelineRow icon="checkmark-circle" label="Enviada" color={colors.green} />
+          <TimelineRow icon="time" label="En revisión" color={colors.gold} badge="AHORA" />
+          <TimelineRow icon="ellipse-outline" label="Publicada" color={colors.muted} muted />
         </Card>
-        <Button
-          label="Volver al mapa"
-          variant="primary"
-          onPress={() => router.push("/")}
-          style={{ marginTop: spacing.lg }}
-        />
-        <Button
-          label="Mis propuestas"
-          variant="secondary"
-          onPress={() => {
-            setSubmitted(null);
-          }}
-          style={{ marginTop: spacing.sm }}
-        />
-        <Button
-          label="Proponer otra"
-          variant="ghost"
-          onPress={startOver}
-          style={{ marginTop: spacing.sm }}
-        />
+        <Button label="Volver al mapa" variant="primary" onPress={() => router.push("/")} style={styles.topAction} />
+        <Button label="Mis propuestas" variant="secondary" onPress={() => router.push("/my-tacos")} style={styles.action} />
+        <Button label="Proponer otra" variant="ghost" onPress={startOver} style={styles.action} />
       </ScrollView>
     );
   }
@@ -224,391 +214,316 @@ export default function ProposeScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Link href="/" asChild>
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel="Volver a explorar"
-          style={styles.back}
-        >
-          <Ionicons name="chevron-back" size={16} color={colors.green} />
-          <Text style={styles.backText}>Volver a explorar</Text>
+        <Pressable accessibilityRole="link" accessibilityLabel="Volver al mapa" style={styles.back}>
+          <Ionicons name="chevron-back" size={18} color={colors.green} />
+          <Text style={styles.backText}>Volver al mapa</Text>
         </Pressable>
       </Link>
       <Text style={styles.kicker}>CONTRIBUYE A TACO HUNT</Text>
-      <Text style={styles.title}>Propón una taquería</Text>
+      <Text style={styles.title}>Agrega una taquería</Text>
+      <Text style={styles.intro}>
+        Primero cuidamos la ubicación. Después, alguien del equipo revisa la propuesta.
+      </Text>
+
+      <View style={styles.sourceSwitch} accessibilityRole="tablist">
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: source === "google" }}
+          accessibilityLabel="Buscar una taquería en Google"
+          onPress={() => resetSource("google")}
+          style={[styles.sourceTab, source === "google" && styles.sourceTabActive]}
+        >
+          <Ionicons name="search" size={16} color={source === "google" ? colors.green : colors.muted} />
+          <Text style={[styles.sourceTabText, source === "google" && styles.sourceTabTextActive]}>Buscar en Google</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: source === "local" }}
+          accessibilityLabel="Poner un pin en el mapa"
+          onPress={() => resetSource("local")}
+          style={[styles.sourceTab, source === "local" && styles.sourceTabActive]}
+        >
+          <Ionicons name="location" size={16} color={source === "local" ? colors.green : colors.muted} />
+          <Text style={[styles.sourceTabText, source === "local" && styles.sourceTabTextActive]}>Poner un pin</Text>
+        </Pressable>
+      </View>
+
       <Stepper currentStep={step} totalSteps={3} />
+
       {!session ? (
-        <Card style={{ marginBottom: spacing.lg }}>
+        <Card tone="highlight" style={styles.accountCard}>
           <Text style={styles.cardTitle}>Necesitas una cuenta para proponer</Text>
-          <Text style={styles.body}>
-            Tu propuesta será privada para ti mientras está pendiente.
-          </Text>
-          <Button
-            label="Iniciar sesión"
-            variant="primary"
-            onPress={() => router.push("/sign-in")}
-            style={{ marginTop: spacing.sm }}
-          />
+          <Text style={styles.bodyLeft}>Tu propuesta será privada para ti mientras está pendiente.</Text>
+          <Button label="Iniciar sesión" variant="primary" onPress={() => router.push("/sign-in")} style={styles.inlineAction} />
         </Card>
       ) : null}
 
-      {step === 1 && (
+      {source === "google" && step === 1 ? (
         <Card>
           <Text style={styles.stepTitle}>¿Cuál taquería es?</Text>
-          <View style={styles.segmented}>
-            {(["autocomplete", "manual"] as Source[]).map((option) => (
-              <Pressable
-                key={option}
-                onPress={() => {
-                  if (option === source) return;
-                  setSource(option);
-                  setName("");
-                  setNeighborhood("");
-                  setSourceRef("");
-                  setPinFromGoogle(false);
-                  setLocationConfirmed(false);
-                }}
-                style={[styles.segment, source === option && styles.segmentActive]}
-              >
-                <Text style={[styles.segmentText, source === option && styles.segmentTextActive]}>
-                  {option === "manual" ? "Escribirla a mano" : "Buscar en Google"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          {source === "autocomplete" ? (
-            session ? (
-              <>
-                <PlaceAutocomplete
-                  session={session}
-                  onSelectPlace={(place) => {
-                    setName(place.name);
-                    setNeighborhood(place.neighborhood);
-                    setLatitude(place.latitude);
-                    setLongitude(place.longitude);
-                    setSourceRef(place.placeId);
-                    setPinFromGoogle(true);
-                    setLocationConfirmed(true);
-                    setError("");
-                  }}
-                  onSelectExistingSpot={(spot) => router.push(`/spot/${spot.id}`)}
-                />
-                <Text style={styles.attribution}>Resultados de Google</Text>
-              </>
-            ) : (
-              <Text style={styles.body}>Inicia sesión para buscar sugerencias de Google.</Text>
-            )
-          ) : (
-            <>
-              <Text style={styles.label}>Nombre</Text>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Ej. Tacos El Cometa"
-                placeholderTextColor={colors.placeholder}
-                style={styles.input}
-                maxLength={120}
-              />
-            </>
-          )}
-          {name ? (
-            <Card tone="highlight" style={{ marginTop: spacing.md }}>
-              <Text style={styles.pickedName}>{name}</Text>
-              {neighborhood ? <Text style={styles.muted}>{neighborhood}</Text> : null}
-            </Card>
-          ) : null}
-          <View style={[styles.dashedRow, { marginTop: spacing.lg }]}>
-            <Ionicons name="create-outline" size={16} color={colors.redStrong} />
-            <Text style={styles.dashedRowText}>
-              ¿No aparece? Escríbela a mano con el botón de arriba.
-            </Text>
-          </View>
-          <Button
-            label="Siguiente"
-            variant="primary"
-            disabled={name.trim().length < 2}
-            onPress={() => setStep(2)}
-            style={{ marginTop: spacing.lg }}
-          />
-        </Card>
-      )}
-
-      {step === 2 && (
-        <Card>
-          <Text style={styles.stepTitle}>¿Dónde se pone?</Text>
-          <View style={styles.mapWrap}>
-            <MapView
-              style={StyleSheet.absoluteFill}
-              region={mapRegion}
-              onRegionChangeComplete={(region) => {
-                setLatitude(region.latitude);
-                setLongitude(region.longitude);
-                setPinFromGoogle(false);
-              }}
-            >
-              <Marker coordinate={{ latitude, longitude }} />
-            </MapView>
-            <View style={styles.mapCenterPinHint} pointerEvents="none">
-              <Ionicons name="location" size={32} color={colors.redStrong} />
-            </View>
-          </View>
-          <Text style={styles.mapHint}>Arrastra el mapa para ajustar</Text>
-          <Text style={styles.muted}>
-            {pinFromGoogle
-              ? "Pin tomado de Google · puedes corregirlo"
-              : "Pin ajustado manualmente"}
-          </Text>
-          <Button
-            label={locating ? "Buscando…" : "Estoy aquí"}
-            variant="secondary"
-            icon="navigate"
-            loading={locating}
-            onPress={() => void useLocation()}
-            style={{ marginTop: spacing.md }}
-          />
-          <Button
-            label={locationConfirmed ? "Ubicación confirmada" : "Confirmar ubicación"}
-            variant="secondary"
-            icon={locationConfirmed ? "checkmark" : undefined}
-            disabled={locationConfirmed}
-            onPress={() => setLocationConfirmed(true)}
-            style={{ marginTop: spacing.sm }}
-          />
-          <Text style={styles.label}>Colonia o municipio</Text>
+          <Text style={styles.bodyLeft}>Elige un resultado para vincularlo sin copiar datos de Google a Taco Hunt.</Text>
           <TextInput
-            value={neighborhood}
-            onChangeText={setNeighborhood}
-            placeholder="Ej. Mitras Centro"
+            value={query}
+            onChangeText={(value) => {
+              setQuery(value);
+              setSelectedGoogle(undefined);
+              setSubmitError("");
+            }}
+            placeholder="Busca una taquería o colonia"
             placeholderTextColor={colors.placeholder}
             style={styles.input}
-            maxLength={120}
+            maxLength={100}
+            accessibilityLabel="Buscar una taquería o colonia en Google"
           />
-          <Text style={styles.label}>Referencia (opcional)</Text>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder="Ej. Frente al parque, junto a la farmacia"
-            placeholderTextColor={colors.placeholder}
-            style={[styles.input, styles.note]}
-            multiline
-            maxLength={500}
-          />
-          <View style={styles.stepFooter}>
-            <Button label="Atrás" variant="ghost" onPress={() => setStep(1)} style={{ flex: 1 }} />
-            <Button
-              label="Siguiente"
-              variant="primary"
-              disabled={neighborhood.trim().length < 2 || !locationConfirmed}
-              onPress={() => setStep(3)}
-              style={{ flex: 2 }}
-            />
-          </View>
-        </Card>
-      )}
-
-      {step === 3 && (
-        <Card>
-          <Text style={styles.stepTitle}>Detalles que ayudan (opcional)</Text>
-          <Text style={styles.body}>
-            Los tipos de taco se agregan una vez que la taquería esté publicada.
-          </Text>
-          <Text style={styles.label}>Horario</Text>
-          <View style={styles.chipWrap}>
-            {(Object.keys(OPENING_TIME_LABEL) as OpeningTime[]).map((time) => (
-              <Chip
-                key={time}
-                label={OPENING_TIME_LABEL[time]}
-                selected={openingTimes.includes(time)}
-                onPress={() => toggleOpeningTime(time)}
-              />
-            ))}
-          </View>
-          <Text style={styles.label}>Foto del puesto</Text>
-          <PhotoTile dashed size={88} />
-          <Text style={styles.muted}>También pasa por revisión.</Text>
-          {error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {error} Lo que llenaste sigue aquí.
-            </Text>
+          {searchStatus === "loading" ? (
+            <View style={styles.statusRow} accessibilityLiveRegion="polite">
+              <ActivityIndicator color={colors.green} />
+              <Text style={styles.muted}>Buscando sugerencias…</Text>
+            </View>
           ) : null}
-          {nearbyCandidates.length > 0 ? (
-            <View style={styles.candidates}>
-              <Text style={styles.candidateTitle}>
-                ¿Quizá te refieres a un puesto que ya existe?
-              </Text>
-              {nearbyCandidates.map((candidate) => (
+          {searchStatus === "error" ? (
+            <View style={styles.errorBanner} accessibilityRole="alert" accessibilityLiveRegion="polite">
+              <Ionicons name="alert-circle" size={18} color={colors.dangerText} />
+              <Text style={styles.errorText}>No pudimos buscar. Puedes colocar un pin en el mapa.</Text>
+            </View>
+          ) : null}
+          {duplicate ? <DuplicateCard match={duplicate} onView={() => router.push(`/spot/${duplicate.spotId}`)} /> : null}
+          {suggestions.length > 0 ? (
+            <View style={styles.suggestionList} accessibilityLabel="Resultados de Google">
+              {suggestions.map((suggestion) => (
                 <Pressable
-                  key={candidate.id}
-                  onPress={() => router.push(`/spot/${candidate.id}`)}
-                  style={styles.candidateRow}
+                  key={suggestion.placeId}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Seleccionar ${suggestion.displayName}`}
+                  onPress={() => selectGoogleSuggestion(suggestion)}
+                  style={styles.suggestionRow}
                 >
-                  <View>
-                    <Text style={styles.pickedName}>{candidate.name}</Text>
-                    <Text style={styles.muted}>
-                      {candidate.neighborhood} · {candidate.distanceMeters} m
-                    </Text>
+                  <View style={styles.suggestionCopy}>
+                    <Text style={styles.suggestionTitle}>{suggestion.displayName}</Text>
+                    <Text style={styles.muted}>{suggestion.secondaryText}</Text>
                   </View>
-                  <Text style={styles.reviewLinkText}>Ver</Text>
+                  <Text style={styles.pickText}>Elegir</Text>
                 </Pressable>
               ))}
+              <Text style={styles.attribution}>Resultados de Google</Text>
+            </View>
+          ) : null}
+          {selectedGoogle ? (
+            <View style={styles.selectedCard} accessibilityLiveRegion="polite">
+              <Ionicons name="checkmark-circle" size={20} color={colors.green} />
+              <View style={styles.suggestionCopy}>
+                <Text style={styles.suggestionTitle}>{selectedGoogle.displayName}</Text>
+                <Text style={styles.muted}>Selección lista · se enviará solo el place_id</Text>
+              </View>
+            </View>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="No aparece. Poner un pin en el mapa"
+            onPress={() => resetSource("local")}
+            style={styles.manualCard}
+          >
+            <Ionicons name="location-outline" size={20} color={colors.redStrong} />
+            <View style={styles.suggestionCopy}>
+              <Text style={styles.manualTitle}>No aparece: poner un pin en el mapa</Text>
+              <Text style={styles.muted}>No necesitas escribir una dirección.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.redStrong} />
+          </Pressable>
+          <Button label="Siguiente" variant="primary" disabled={!selectedGoogle} onPress={() => setStep(2)} style={styles.topAction} />
+        </Card>
+      ) : null}
+
+      {source === "local" && step === 1 ? (
+        <Card>
+          <Text style={styles.stepTitle}>¿Dónde se pone?</Text>
+          <Text style={styles.bodyLeft}>Mueve el mapa hasta el punto exacto. El pin es lo único necesario.</Text>
+          <PinMap region={mapRegion} onRegionChange={(region) => { setLatitude(region.latitude); setLongitude(region.longitude); }} />
+          <Button label={locating ? "Buscando…" : "Estoy aquí"} variant="secondary" icon="navigate" loading={locating} onPress={() => void useLocation()} style={styles.inlineAction} />
+          <Text style={styles.mapHint}>Arrastra el mapa para ajustar el pin.</Text>
+          <Button label="Siguiente" variant="primary" onPress={() => setStep(2)} style={styles.topAction} />
+        </Card>
+      ) : null}
+
+      {step === 2 ? (
+        <Card>
+          <Text style={styles.stepTitle}>{source === "google" ? "¿Dónde se pone?" : "Detalles que ayudan"}</Text>
+          {source === "google" ? (
+            <>
+              <PinMap region={mapRegion} onRegionChange={(region) => { setLatitude(region.latitude); setLongitude(region.longitude); }} />
+              <Text style={styles.mapHint}>Pin tomado de Google · puedes corregirlo.</Text>
+              <Button label={locating ? "Buscando…" : "Estoy aquí"} variant="secondary" icon="navigate" loading={locating} onPress={() => void useLocation()} style={styles.inlineAction} />
+            </>
+          ) : (
+            <Text style={styles.bodyLeft}>Estos datos son opcionales y se quedan con tu propuesta.</Text>
+          )}
+          {source === "local" ? (
+            <>
+              <Text style={styles.label}>Nombre (opcional)</Text>
+              <TextInput value={name} onChangeText={setName} placeholder="Ej. Tacos de la esquina" placeholderTextColor={colors.placeholder} style={styles.input} maxLength={120} accessibilityLabel="Nombre opcional de la taquería" />
+              <Text style={styles.label}>Nota o referencia (opcional)</Text>
+              <TextInput value={note} onChangeText={setNote} placeholder="Ej. Frente al parque, junto a la farmacia" placeholderTextColor={colors.placeholder} style={[styles.input, styles.note]} multiline maxLength={500} accessibilityLabel="Nota o referencia opcional" />
+            </>
+          ) : (
+            <Card tone="highlight" style={styles.googlePrivacyCard}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.green} />
+              <Text style={styles.bodyLeft}>Google se usa solo para encontrar el lugar. Taco Hunt guardará únicamente el place_id.</Text>
+            </Card>
+          )}
+          <View style={styles.stepFooter}>
+            <Button label="Atrás" variant="ghost" onPress={() => setStep(1)} style={styles.backAction} />
+            <Button label="Siguiente" variant="primary" onPress={() => setStep(3)} style={styles.nextAction} />
+          </View>
+        </Card>
+      ) : null}
+
+      {step === 3 ? (
+        <Card>
+          <Text style={styles.stepTitle}>Revisa antes de enviar</Text>
+          <View style={styles.reviewRow}>
+            <Ionicons name={source === "google" ? "logo-google" : "location"} size={20} color={colors.green} />
+            <View style={styles.suggestionCopy}>
+              <Text style={styles.reviewLabel}>{source === "google" ? "Lugar de Google" : "Pin de Taco Hunt"}</Text>
+              <Text style={styles.reviewValue}>{source === "google" ? selectedGoogle?.displayName : name.trim() || "Sin nombre"}</Text>
+            </View>
+          </View>
+          <Text style={styles.bodyLeft}>
+            {source === "google"
+              ? "La propuesta se enviará con el place_id seleccionado. Los datos de Google no se guardan como información de Taco Hunt."
+              : "La ubicación está lista. El nombre y la nota son opcionales; puedes enviar solo el pin."}
+          </Text>
+          {submitError ? (
+            <View style={styles.errorBanner} accessibilityRole="alert" accessibilityLiveRegion="polite">
+              <Ionicons name="alert-circle" size={18} color={colors.dangerText} />
+              <Text style={styles.errorText}>{submitError}</Text>
             </View>
           ) : null}
           <View style={styles.stepFooter}>
-            <Button label="Atrás" variant="ghost" onPress={() => setStep(2)} style={{ flex: 1 }} />
-            <Button
-              label={busy ? "Enviando…" : error ? "Reintentar envío" : "Enviar para revisión"}
-              variant="accent"
-              loading={busy}
-              onPress={() => void submit()}
-              style={{ flex: 2 }}
-            />
+            <Button label="Atrás" variant="ghost" onPress={() => setStep(2)} style={styles.backAction} />
+            <Button label={submitStatus === "error" ? "Reintentar envío" : "Enviar para revisión"} variant="accent" loading={submitStatus === "loading"} onPress={() => void submit()} style={styles.nextAction} />
           </View>
         </Card>
-      )}
-
-      {session ? (
-        <Card style={{ marginTop: spacing.lg }}>
-          <Text style={styles.cardTitle}>Mis propuestas</Text>
-          <Text style={styles.body}>Solo tú puedes verlas mientras esperan revisión.</Text>
-          {proposals.length === 0 ? (
-            <Text style={styles.empty}>Todavía no has enviado una propuesta.</Text>
-          ) : (
-            proposals.map((proposal) => (
-              <View key={proposal.id} style={styles.proposalRow}>
-                <View style={styles.proposalCopy}>
-                  <Text style={styles.pickedName}>{proposal.name}</Text>
-                  <Text style={styles.muted}>{proposal.neighborhood}</Text>
-                </View>
-                <Text style={styles.status}>
-                  {proposal.status === "pending"
-                    ? "Pendiente"
-                    : proposal.status === "approved"
-                      ? "Aprobada"
-                      : "Rechazada"}
-                </Text>
-              </View>
-            ))
-          )}
-        </Card>
       ) : null}
+
+      {session ? <MyProposals /> : null}
     </ScrollView>
+  );
+}
+
+function PinMap({ region, onRegionChange }: { region: Region; onRegionChange: (region: Region) => void }) {
+  return (
+    <View style={styles.mapWrap} accessibilityLabel="Mapa para elegir la ubicación">
+      <MapView style={StyleSheet.absoluteFill} region={region} onRegionChangeComplete={onRegionChange} />
+      <View style={styles.centerPin} pointerEvents="none">
+        <Ionicons name="location" size={36} color={colors.redStrong} />
+      </View>
+    </View>
+  );
+}
+
+function DuplicateCard({ match, onView }: { match: RegisteredPlaceMatch; onView: () => void }) {
+  return (
+    <Card tone="highlight" style={styles.duplicateCard} accessibilityLiveRegion="polite">
+      <View style={styles.duplicateHeading}>
+        <Ionicons name="sparkles" size={18} color={colors.pendingText} />
+        <Text style={styles.duplicateKicker}>¿ES ESTE? YA ESTÁ EN TACO HUNT</Text>
+      </View>
+      <Text style={styles.duplicateTitle}>{match.displayName}</Text>
+      <Text style={styles.muted}>{match.neighborhood}</Text>
+      <Button label="Ver puesto" variant="secondary" onPress={onView} style={styles.inlineAction} />
+    </Card>
+  );
+}
+
+function TimelineRow({ icon, label, color, badge, muted = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; color: string; badge?: string; muted?: boolean }) {
+  return (
+    <View style={styles.timelineRow}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={[styles.timelineLabel, muted && styles.timelineMuted]}>{label}</Text>
+      {badge ? <Text style={styles.timelineBadge}>{badge}</Text> : null}
+    </View>
+  );
+}
+
+function MyProposals() {
+  const proposals = getFixtureSpotProposals();
+  return (
+    <Card style={styles.proposalsCard}>
+      <Text style={styles.cardTitle}>Mis propuestas</Text>
+      <Text style={styles.bodyLeft}>Son propuestas de Taco Hunt; los resultados de Google no se guardan aquí.</Text>
+      {proposals.map((proposal) => (
+        <View key={proposal.id} style={styles.proposalRow}>
+          <View style={styles.suggestionCopy}>
+            <Text style={styles.suggestionTitle}>{proposal.name || "Pin sin nombre"}</Text>
+            <Text style={styles.muted}>Pin local · solo tú la ves por ahora</Text>
+          </View>
+          <Text style={styles.pendingStatus}>Pendiente</Text>
+        </View>
+      ))}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
-  content: { paddingHorizontal: 22, paddingTop: 56, paddingBottom: 44 },
-  reviewContent: { alignItems: "center", textAlign: "center" },
-  back: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, marginBottom: 24 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: 44 },
+  reviewContent: { flexGrow: 1, alignItems: "center", paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: 44 },
+  back: { flexDirection: "row", alignItems: "center", minHeight: 44, gap: spacing.xs, marginBottom: spacing.lg },
   backText: { color: colors.green, fontSize: 15, fontWeight: "800" },
   kicker: { ...typography.kicker, color: colors.green },
-  title: { color: colors.ink, fontSize: 32, fontWeight: "900", marginTop: 10 },
-  body: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 6, textAlign: "center" },
-  cardTitle: {
-    color: colors.ink,
-    fontSize: 17,
-    lineHeight: 23,
-    fontWeight: "900",
-    marginBottom: 5,
-  },
-  stepTitle: { ...typography.sectionTitle, color: colors.ink, marginBottom: spacing.md },
-  label: { color: colors.muted, fontSize: 13, fontWeight: "800", marginTop: 14, marginBottom: 7 },
-  segmented: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
-  segment: {
-    flex: 1,
-    minHeight: 44,
-    paddingHorizontal: 8,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  segmentActive: { backgroundColor: colors.greenSoft, borderColor: colors.green },
-  segmentText: { color: colors.muted, fontSize: 12, fontWeight: "800", textAlign: "center" },
-  segmentTextActive: { color: colors.green },
-  attribution: { color: colors.muted, fontSize: 11, marginTop: spacing.xs },
-  input: {
-    minHeight: 48,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    backgroundColor: colors.paper,
-    paddingHorizontal: 13,
-    color: colors.ink,
-    fontSize: 15,
-  },
-  note: { minHeight: 88, paddingTop: 13, textAlignVertical: "top" },
-  pickedName: { color: colors.ink, fontWeight: "900", fontSize: 15 },
-  dashedRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  dashedRowText: { color: colors.redStrong, fontSize: 12, fontWeight: "700", flex: 1 },
-  mapWrap: {
-    height: 180,
-    borderRadius: radii.lg,
-    overflow: "hidden",
-    marginTop: spacing.sm,
-  },
-  mapCenterPinHint: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
+  title: { color: colors.ink, ...typography.title, marginTop: spacing.sm },
+  intro: { color: colors.muted, ...typography.body, lineHeight: 21, marginTop: spacing.sm },
+  sourceSwitch: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg, padding: spacing.xs, borderRadius: radii.lg, backgroundColor: colors.segmentTrack },
+  sourceTab: { flex: 1, minHeight: 44, borderRadius: radii.md, justifyContent: "center", alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  sourceTabActive: { backgroundColor: colors.paper },
+  sourceTabText: { color: colors.muted, fontSize: 12, fontWeight: "800" },
+  sourceTabTextActive: { color: colors.green },
+  accountCard: { marginBottom: spacing.lg },
+  cardTitle: { color: colors.ink, ...typography.sectionTitle },
+  stepTitle: { color: colors.ink, ...typography.sectionTitle, marginBottom: spacing.sm },
+  body: { color: colors.muted, ...typography.body, lineHeight: 21, textAlign: "center", marginTop: spacing.sm },
+  bodyLeft: { color: colors.muted, ...typography.body, lineHeight: 21, marginTop: spacing.sm },
+  inlineAction: { marginTop: spacing.md },
+  topAction: { marginTop: spacing.lg },
+  action: { marginTop: spacing.sm },
+  input: { minHeight: 48, borderRadius: radii.md, borderWidth: 1, borderColor: colors.lineSoft, backgroundColor: colors.paper, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 15, marginTop: spacing.md },
+  note: { minHeight: 92, paddingTop: spacing.md, textAlignVertical: "top" },
+  statusRow: { minHeight: 44, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: spacing.sm },
+  muted: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
+  suggestionList: { marginTop: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.lineSoft, backgroundColor: colors.paper, overflow: "hidden" },
+  suggestionRow: { minHeight: 60, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  suggestionCopy: { flex: 1 },
+  suggestionTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  pickText: { color: colors.green, fontSize: 12, fontWeight: "900" },
+  attribution: { color: colors.muted, fontSize: 10, fontWeight: "700", textAlign: "right", padding: spacing.sm },
+  selectedCard: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.greenSoft, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  manualCard: { marginTop: spacing.lg, minHeight: 66, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.redStrong, backgroundColor: colors.cream, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  manualTitle: { flex: 1, color: colors.redStrong, fontSize: 13, fontWeight: "800" },
+  errorBanner: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.dangerBg, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  errorText: { flex: 1, color: colors.dangerText, fontSize: 13, lineHeight: 19, fontWeight: "700" },
+  duplicateCard: { marginTop: spacing.md },
+  duplicateHeading: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  duplicateKicker: { color: colors.pendingText, ...typography.kicker, fontSize: 10 },
+  duplicateTitle: { color: colors.ink, fontSize: 16, fontWeight: "900", marginTop: spacing.sm },
+  mapWrap: { height: 210, marginTop: spacing.md, borderRadius: radii.lg, overflow: "hidden" },
+  centerPin: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", paddingBottom: spacing.lg },
   mapHint: { color: colors.muted, fontSize: 12, marginTop: spacing.sm },
-  stepFooter: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  error: {
-    color: colors.dangerText,
-    backgroundColor: colors.dangerBg,
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 12,
-    lineHeight: 20,
-  },
-  empty: { color: colors.muted, fontSize: 14, marginTop: 12 },
-  proposalRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 13,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-  },
-  proposalCopy: { flex: 1, paddingRight: 10 },
-  muted: { color: colors.muted, marginTop: 3, fontSize: 13 },
-  status: { color: colors.green, fontSize: 12, fontWeight: "900" },
-  candidates: { marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: colors.goldSoft },
-  candidateTitle: { color: colors.ink, fontWeight: "900", lineHeight: 20 },
-  candidateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    marginTop: 8,
-  },
-  reviewLinkText: { color: colors.green, fontWeight: "900" },
-  reviewCheck: { marginTop: spacing.xxl, marginBottom: spacing.lg },
-  reviewTitle: { ...typography.title, fontSize: 24, color: colors.ink, textAlign: "center" },
-  timelineCard: { marginTop: spacing.xl, width: "100%" },
-  timelineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  timelineLabel: { color: colors.ink, fontWeight: "700", fontSize: 14 },
-  timelineLabelMuted: { color: colors.muted },
-  timelineBadge: {
-    marginLeft: "auto",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radii.pill,
-    backgroundColor: colors.goldSoft,
-  },
-  timelineBadgeText: { color: colors.pendingText, fontWeight: "800", fontSize: 10 },
+  googlePrivacyCard: { marginTop: spacing.lg, flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
+  label: { color: colors.muted, ...typography.label, marginTop: spacing.lg, marginBottom: spacing.xs },
+  stepFooter: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xl },
+  backAction: { flex: 1 },
+  nextAction: { flex: 2 },
+  reviewRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+  reviewLabel: { color: colors.muted, fontSize: 12, fontWeight: "800" },
+  reviewValue: { color: colors.ink, fontSize: 15, fontWeight: "900", marginTop: spacing.xs },
+  reviewIcon: { marginTop: spacing.xxl },
+  reviewTitle: { color: colors.ink, ...typography.title, fontSize: 26, textAlign: "center", marginTop: spacing.sm },
+  timelineCard: { width: "100%", marginTop: spacing.xl },
+  timelineRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+  timelineLabel: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  timelineMuted: { color: colors.muted },
+  timelineBadge: { marginLeft: "auto", color: colors.pendingText, ...typography.badge, backgroundColor: colors.goldSoft, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.pill },
+  proposalsCard: { marginTop: spacing.xl },
+  proposalRow: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: spacing.md, marginTop: spacing.md },
+  pendingStatus: { color: colors.pendingText, ...typography.caption },
 });
