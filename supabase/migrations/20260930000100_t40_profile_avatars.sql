@@ -11,6 +11,29 @@ alter table app_private.profiles
   add column avatar_photo_status text
     check (avatar_photo_status in ('pending','approved','rejected'));
 
+-- Existing profiles were created before avatar_preset existed, so the column
+-- defaulted them all to pastor. Recompute the same 31-based unsigned hash used
+-- by derivePresetForUser() for each existing id instead of using a fixture id.
+do $$
+declare
+  profile record;
+  hash bigint;
+  preset_index integer;
+  character_index integer;
+begin
+  for profile in select id from app_private.profiles loop
+    hash := 0;
+    for character_index in 1..length(profile.id::text) loop
+      hash := (hash * 31 + ascii(substr(profile.id::text, character_index, 1))) % 4294967296;
+    end loop;
+    preset_index := (hash % 8) + 1;
+    update app_private.profiles
+      set avatar_preset = (array['pastor','masa','cilantro','tortilla','salsa','comal','aguacate','horchata'])[preset_index]
+      where id = profile.id;
+  end loop;
+end;
+$$;
+
 -- A photo and its review status always travel together: both set, or both null
 -- (null means "no own photo, show the preset").
 alter table app_private.profiles
@@ -44,5 +67,5 @@ alter table app_private.media_uploads
 -- for the new self-service avatar fields and for persisting the sign-up display
 -- name at profile-creation time (previously insert-only on "id").
 grant insert (display_name, avatar_preset) on table app_private.profiles to taco_hunt_api;
-grant update (display_name, avatar_preset, avatar_photo_key, avatar_photo_status)
+grant update (display_name, avatar_preset, avatar_photo_key, avatar_photo_status, updated_at)
   on table app_private.profiles to taco_hunt_api;
