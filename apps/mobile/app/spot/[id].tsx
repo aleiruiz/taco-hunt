@@ -117,6 +117,7 @@ export default function SpotScreen() {
   >("idle");
   const [googleDetailsMessage, setGoogleDetailsMessage] = useState("");
   const googleRequestId = useRef(0);
+  const loadRequestId = useRef(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadAsset, setUploadAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -153,28 +154,33 @@ export default function SpotScreen() {
       .finally(() => setTacoTypesLoading(false));
   }, []);
   const load = useCallback(async () => {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API}/spots/${encodeURIComponent(id)}`);
+      if (loadRequestId.current !== requestId) return;
       if (response.status === 404) {
         setError("missing");
         return;
       }
       if (!response.ok) throw new Error("Request failed");
       const data = (await response.json()) as Spot;
+      if (loadRequestId.current !== requestId) return;
       setSpot(data);
       const fixture = await getFixtureTacoHuntPhotoGallery(
         data.id,
         data.name,
         session?.user.id ?? "user-123",
       );
+      if (loadRequestId.current !== requestId) return;
       setApprovedPhotos(fixture.approved);
       setMyPhotos(fixture.mine);
     } catch {
+      if (loadRequestId.current !== requestId) return;
       setError("offline");
     } finally {
-      setLoading(false);
+      if (loadRequestId.current === requestId) setLoading(false);
     }
   }, [id, session?.user.id]);
 
@@ -618,15 +624,15 @@ export default function SpotScreen() {
                   <View style={styles.googleReady}>
                     <Text style={styles.googlePlaceName}>{googleDetails.name}</Text>
                     <Text style={styles.googleAddress}>{googleDetails.address}</Text>
-                    <Pressable
+                    <Button
+                      label="Abrir en Google Maps"
+                      variant="ghost"
+                      icon="open-outline"
                       accessibilityRole="link"
                       accessibilityLabel="Abrir este puesto en Google Maps"
                       onPress={() => openGoogleSource(googleDetails.googleMapsUrl)}
                       style={styles.googleSourceLink}
-                    >
-                      <Ionicons name="open-outline" size={17} color={colors.green} />
-                      <Text style={styles.googleSourceLinkText}>Abrir en Google Maps</Text>
-                    </Pressable>
+                    />
                     <Text style={styles.googleAttribution}>
                       Fuente: {googleDetails.attributionLabel}. Datos mostrados bajo sus términos.
                     </Text>
@@ -657,15 +663,15 @@ export default function SpotScreen() {
                       <Text style={styles.googleAttribution}>
                         Fotos de Google · {googleDetails.photos[0].authorAttribution}.
                       </Text>
-                      <Pressable
+                      <Button
+                        label="Ver fuente en Google Maps"
+                        variant="ghost"
+                        icon="open-outline"
                         accessibilityRole="link"
                         accessibilityLabel="Ver la fuente de las fotos de Google en Google Maps"
                         onPress={() => openGoogleSource(googleDetails.photos[0].sourceUrl)}
                         style={styles.googleSourceLink}
-                      >
-                        <Ionicons name="open-outline" size={17} color={colors.green} />
-                        <Text style={styles.googleSourceLinkText}>Ver fuente en Google Maps</Text>
-                      </Pressable>
+                      />
                     </>
                   ) : (
                     <Card tone="dashed" style={styles.googlePhotoUnavailable}>
@@ -1034,15 +1040,15 @@ export default function SpotScreen() {
                 </View>
               ))}
               {googleDetails?.photos[0] && (
-                <Pressable
+                <Button
+                  label="Abrir fuente en Google Maps"
+                  variant="ghost"
+                  icon="open-outline"
                   accessibilityRole="link"
                   accessibilityLabel="Abrir la fuente de estas fotos en Google Maps"
                   onPress={() => openGoogleSource(googleDetails.photos[0].sourceUrl)}
                   style={styles.googleSourceLink}
-                >
-                  <Ionicons name="open-outline" size={17} color={colors.green} />
-                  <Text style={styles.googleSourceLinkText}>Abrir fuente en Google Maps</Text>
-                </Pressable>
+                />
               )}
             </ScrollView>
           </View>
