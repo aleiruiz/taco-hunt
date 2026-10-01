@@ -50,6 +50,7 @@ export default function AdminScreen() {
   const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(null);
+  const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
   const [candidatePins, setCandidatePins] = useState<
     Record<string, { latitude: number; longitude: number }>
   >({});
@@ -101,7 +102,8 @@ export default function AdminScreen() {
     decision: "approved" | "rejected" | "merged",
   ) {
     const candidate = importCandidates.find((item) => item.id === candidateId);
-    if (!candidate) return;
+    if (!candidate || pendingCandidateId) return;
+    setPendingCandidateId(candidateId);
     try {
       setMessage(null);
       if (decision === "approved") {
@@ -129,6 +131,8 @@ export default function AdminScreen() {
       AccessibilityInfo.announceForAccessibility(message);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "La acción no pudo completarse.");
+    } finally {
+      setPendingCandidateId(null);
     }
   }
 
@@ -328,17 +332,20 @@ export default function AdminScreen() {
                           label="Aprobar"
                           onPress={() => moderateImportCandidate(candidate.id, "approved")}
                           primary
+                          disabled={pendingCandidateId === candidate.id}
                         />
                         {candidate.matches.length > 0 ? (
                           <Action
                             label="Fusionar con existente"
                             onPress={() => moderateImportCandidate(candidate.id, "merged")}
+                            disabled={pendingCandidateId === candidate.id}
                           />
                         ) : null}
                         <Action
                           label="Rechazar"
                           onPress={() => moderateImportCandidate(candidate.id, "rejected")}
                           danger
+                          disabled={pendingCandidateId === candidate.id}
                         />
                       </View>
                     </View>
@@ -507,17 +514,26 @@ function Action({
   onPress,
   primary,
   danger,
+  disabled,
 }: {
   label: string;
   onPress: () => void;
   primary?: boolean;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={disabled ? { disabled: true } : undefined}
       onPress={onPress}
-      style={[styles.action, primary && styles.primary, danger && styles.danger]}
+      disabled={disabled}
+      style={[
+        styles.action,
+        primary && styles.primary,
+        danger && styles.danger,
+        disabled && styles.actionDisabled,
+      ]}
     >
       <Text style={[styles.actionText, (primary || danger) && styles.inverse]}>{label}</Text>
     </Pressable>
@@ -620,6 +636,7 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: colors.green, borderColor: colors.green },
   danger: { backgroundColor: colors.red, borderColor: colors.red },
+  actionDisabled: { opacity: 0.5 },
   actionText: { color: colors.ink, fontWeight: "800", fontSize: 12 },
   inverse: { color: colors.paper },
 });
