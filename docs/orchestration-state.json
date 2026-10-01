@@ -447,6 +447,46 @@
       "headSha": "065feae1fa7fec0f062bec809139902f79b9143d",
       "coderabbitReviewedSha": "065feae1fa7fec0f062bec809139902f79b9143d"
     },
+    "T64": {
+      "status": "merged",
+      "dependsOn": ["T62", "T63"],
+      "note": "P2.8 contract gate. PR #58 merged as 1cc0e42 after exact-head CodeRabbit reported no actionable comments and CI/GitGuardian passed.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/58",
+      "headSha": "78e8a59e7ac118fb104d6867d61576eb81147032",
+      "coderabbitReviewedSha": "78e8a59e7ac118fb104d6867d61576eb81147032"
+    },
+    "T65": {
+      "status": "merged",
+      "dependsOn": ["T64"],
+      "note": "P2.8 schema gate. PR #59 merged as 901f4d4 after exact-head CodeRabbit completed on 9ee942e and CI/GitGuardian passed.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/59",
+      "headSha": "9ee942ea48f10c0801c825bfa6f12eaed956af18",
+      "coderabbitReviewedSha": "9ee942ea48f10c0801c825bfa6f12eaed956af18"
+    },
+    "T66": {
+      "status": "ready",
+      "dependsOn": ["T64", "T65"],
+      "note": "P2.8 Phase B. Server-side live viewport discovery, on-demand details/photos, attribution-safe responses, budget/kill-switch enforcement, and T61/T63 fixture swaps.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T67": {
+      "status": "ready",
+      "dependsOn": ["T64", "T65"],
+      "note": "P2.8 Phase B. Place-ID duplicate detection and redirect, map-pin-first local proposals, moderation-safe linking, and T62 fixture swap.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T68": {
+      "status": "blocked",
+      "dependsOn": ["T66", "T67"],
+      "note": "P2.8 closeout. Retire or explicitly fence normal import_candidates Google payload ingestion and update admin/scripts/docs so no public path copies Google records.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
     "T43": {
       "status": "blocked",
       "dependsOn": ["T42"],

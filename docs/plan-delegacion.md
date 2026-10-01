@@ -139,6 +139,20 @@ Phase A order: T45 first; it blocks the rest. Then three lanes can run in parall
 
 Phase B order: T51 first. Then, in parallel where hot files allow: T33 → T34; T52; T37; T40; T49; T42 → T43. Contract changes beyond T51 go through the orchestrator one at a time.
 
+## P2.8: Google Places architecture reset (added 2026-10-01)
+
+The Google Places architecture keeps Google display payloads transient and stores
+only Taco Hunt-owned relationships such as `google_place_id`. T64 and T65 are
+merged. T66 and T67 are ready in parallel; T68 waits for both.
+
+| ID | Task and expected outcome | Blocked by | Main area / hot files | Size | Status |
+| --- | --- | --- | --- | --- | --- |
+| T64 | Contract consolidation for T61–T63: minimal schemas/OpenAPI paths for live viewport results, place details/photos with attribution, durable place links, duplicate redirects, and pin-first proposals. | T62, T63 | packages/contracts/ | M | Merged (PR #58) |
+| T65 | Durable place-link migration: Taco Hunt-owned `google_place_id`, unique when present, proposal/link invariants, grants, and account/moderation implications without copying Google display fields. | T64 | supabase/migrations/, apps/api data access | M | Merged (PR #59) |
+| T66 | Live discovery/details/photo API: server-side viewport discovery, on-demand details/photos, bounded budgets/kill switch, attribution-safe responses, and T61/T63 fixture swaps without persisting Google payloads. | T64, T65 | apps/api/src/places/, spots/, media/, mobile data adapters | L | Ready |
+| T67 | Proposal/link API: place-ID duplicate detection and redirect, map-pin-first local proposals, moderation-safe linking, and T62 fixture swap. | T64, T65 | apps/api/src/proposals/, mobile proposal data | M | Ready |
+| T68 | Retire or fence normal `import_candidates` Google payload ingestion and update admin/scripts/docs so no public route copies Google records. | T66, T67 | apps/api/src/admin/, supabase/scripts/, mobile admin, docs | M | Blocked |
+
 ## P3: deliberately blocked until the end
 
 | ID  | Task and expected outcome                                                                                                                                                                                        | Blocked by                                                                              | Status        |
