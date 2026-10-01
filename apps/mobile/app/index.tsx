@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   FlatList,
-  Platform,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -24,6 +24,13 @@ import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { Avatar } from "@/components/Avatar";
 import { getProfile, type AvatarPreset } from "@/data/profile-api";
+import {
+  getFixtureMapDiscovery,
+  MAP_DISCOVERY_ATTRIBUTION,
+  type GoogleDiscoveryResult,
+  type MapDiscoverySnapshot,
+  type TacoHuntProposalPin,
+} from "@/data/map-discovery";
 
 type TacoType = { id: string; slug: string; nameEs: string };
 type Taco = {
@@ -79,6 +86,13 @@ type MapCluster = {
 type MapPinsResponse = { pins: MapPin[]; clusters: MapCluster[] };
 const API_COVERAGE = { north: 27, south: 25, east: -99, west: -101.5 };
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+// Native builds receive both Google SDK keys through app.config.js. The
+// provider remains environment-selectable so an iOS build can opt into Apple
+// Maps while a key is being provisioned; Google is the default foundation.
+const MAP_PROVIDER =
+  process.env.EXPO_PUBLIC_MAPS_PROVIDER?.trim().toLowerCase() === "apple"
+    ? undefined
+    : PROVIDER_GOOGLE;
 const AREAS: Area[] = [
   { label: "Monterrey", north: 25.78, south: 25.6, east: -100.2, west: -100.4 },
   { label: "San Pedro", north: 25.72, south: 25.62, east: -100.3, west: -100.45 },
@@ -165,11 +179,20 @@ export default function ExploreScreen() {
   const [mapClusters, setMapClusters] = useState<MapCluster[]>([]);
   const [mapPinsLoading, setMapPinsLoading] = useState(true);
   const [mapPinsError, setMapPinsError] = useState("");
+  const [mapDiscovery, setMapDiscovery] = useState<MapDiscoverySnapshot>({
+    state: "empty",
+    googleResults: [],
+    localProposals: [],
+    attribution: MAP_DISCOVERY_ATTRIBUTION,
+  });
+  const [mapDiscoveryLoading, setMapDiscoveryLoading] = useState(true);
+  const [selectedProposal, setSelectedProposal] = useState<TacoHuntProposalPin | null>(null);
   const mapPinsCacheRef = useRef<Map<string, MapPin>>(new Map());
   const mapRef = useRef<MapView>(null);
   const currentRegionRef = useRef<Region | null>(null);
   const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapFetchSeqRef = useRef(0);
+  const mapDiscoveryFetchSeqRef = useRef(0);
   const activeTypeRef = useRef<TacoType | null>(null);
 
   // Keep refs synchronized with current state to avoid closure issues in async callbacks
@@ -346,15 +369,59 @@ export default function ExploreScreen() {
     }
   }, []);
 
+  const fetchMapDiscovery = useCallback(async (region: Region) => {
+    const bounds = regionToViewportBounds(region);
+    const seq = ++mapDiscoveryFetchSeqRef.current;
+    if (!bounds) {
+      setMapDiscoveryLoading(false);
+      setMapDiscovery({
+        state: "unavailable",
+        googleResults: [],
+        localProposals: [],
+        attribution: MAP_DISCOVERY_ATTRIBUTION,
+        message: "La búsqueda de Google no está disponible en esta zona.",
+      });
+      return;
+    }
+    setMapDiscoveryLoading(true);
+    setSelectedProposal(null);
+    setMapDiscovery((current) => ({
+      ...current,
+      state: "empty",
+      googleResults: [],
+      localProposals: [],
+      message: "Buscando lugares cercanos…",
+    }));
+    try {
+      const snapshot = await getFixtureMapDiscovery(bounds);
+      if (seq === mapDiscoveryFetchSeqRef.current) {
+        setMapDiscovery(snapshot);
+        setMapDiscoveryLoading(false);
+      }
+    } catch {
+      if (seq === mapDiscoveryFetchSeqRef.current) {
+        setMapDiscoveryLoading(false);
+        setMapDiscovery({
+          state: "error",
+          googleResults: [],
+          localProposals: [],
+          attribution: MAP_DISCOVERY_ATTRIBUTION,
+          message: "No pudimos actualizar los resultados de Google.",
+        });
+      }
+    }
+  }, []);
+
   const handleRegionChangeComplete = useCallback(
     (region: Region) => {
       currentRegionRef.current = region;
       if (regionDebounceRef.current) clearTimeout(regionDebounceRef.current);
       regionDebounceRef.current = setTimeout(() => {
         void fetchMapPins(region);
+        void fetchMapDiscovery(region);
       }, 300);
     },
-    [fetchMapPins],
+    [fetchMapDiscovery, fetchMapPins],
   );
 
   useEffect(() => {
@@ -372,10 +439,11 @@ export default function ExploreScreen() {
     setMapPins([]);
     setMapClusters([]);
     void fetchMapPins(currentRegionRef.current ?? mapRegion);
+    void fetchMapDiscovery(currentRegionRef.current ?? mapRegion);
     // mapRegion intentionally excluded: it should only seed the very first fetch,
     // not re-trigger when `area` changes list-mode state while map mode is active.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, activeType, fetchMapPins]);
+  }, [mode, activeType, fetchMapDiscovery, fetchMapPins]);
 
   // Neighborhood/area chips are camera shortcuts only in map mode — they move the
   // camera and let onRegionChangeComplete load pins for the new viewport, they
@@ -506,6 +574,30 @@ export default function ExploreScreen() {
     </View>
   );
 
+  const openSourceLink = useCallback(async (url: string) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      setMapDiscovery((current) => ({
+        ...current,
+        state: "error",
+        message: "No pudimos abrir Google Maps. Puedes intentarlo de nuevo.",
+      }));
+    }
+  }, []);
+
+  const googleMarkerContent = ({ result }: { result: GoogleDiscoveryResult }) => (
+    <View style={styles.googleMarker} accessibilityLabel={`${result.attributionLabel}: ${result.name}`}>
+      <Ionicons name="search" size={16} color={colors.paper} />
+    </View>
+  );
+
+  const proposalMarkerContent = ({ proposal }: { proposal: TacoHuntProposalPin }) => (
+    <View style={styles.proposalMarker} accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}`}>
+      <Ionicons name="time-outline" size={17} color={colors.ink} />
+    </View>
+  );
+
   const modeToggle = (
     <View style={styles.modeRow}>
       <Pressable
@@ -615,6 +707,95 @@ export default function ExploreScreen() {
     </View>
   );
   const mapPinTotal = mapPins.length + mapClusters.reduce((total, c) => total + c.count, 0);
+  const discoveryTitle = mapDiscoveryLoading
+    ? "Buscando lugares cercanos…"
+    : mapDiscovery.state === "ready"
+      ? `${mapDiscovery.googleResults.length} resultado${mapDiscovery.googleResults.length === 1 ? "" : "s"} de Google`
+      : mapDiscovery.state === "empty"
+        ? "Sin resultados de Google"
+        : mapDiscovery.state === "unavailable"
+          ? "Google no disponible"
+          : mapDiscovery.state === "offline"
+            ? "Google sin conexión"
+            : "No se pudo actualizar Google";
+  const discoveryMessage = mapDiscoveryLoading
+    ? "Los puestos y propuestas de Taco Hunt siguen cargando por separado."
+    : mapDiscovery.message;
+  const discoveryCard = (
+    <View
+      style={styles.discoveryCard}
+      accessibilityLabel={`Descubrimiento externo. ${discoveryTitle}. ${discoveryMessage ?? ""}`}
+      accessibilityLiveRegion="polite"
+    >
+      <View style={styles.discoveryHeader}>
+        <View style={styles.discoveryHeadingIcon}>
+          {mapDiscoveryLoading ? (
+            <ActivityIndicator size="small" color={colors.green} />
+          ) : (
+            <Ionicons name="globe-outline" size={16} color={colors.green} />
+          )}
+        </View>
+        <Text style={styles.discoveryTitle}>{discoveryTitle}</Text>
+      </View>
+      {discoveryMessage ? <Text style={styles.discoveryMessage}>{discoveryMessage}</Text> : null}
+      <View style={styles.discoveryLegendRow}>
+        <View style={[styles.discoveryLegendDot, styles.googleLegendDot]} />
+        <Text style={styles.discoveryLegendText}>Resultados de Google</Text>
+        <Text style={styles.discoveryLegendCount}>{mapDiscovery.googleResults.length}</Text>
+      </View>
+      {mapDiscovery.localProposals.length > 0 ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${mapDiscovery.localProposals.length} propuesta${mapDiscovery.localProposals.length === 1 ? "" : "s"} de Taco Hunt en revisión`}
+          onPress={() => setSelectedProposal(mapDiscovery.localProposals[0])}
+          style={styles.discoveryLegendRow}
+        >
+          <View style={[styles.discoveryLegendDot, styles.proposalLegendDot]} />
+          <Text style={styles.discoveryLegendText}>Propuestas de Taco Hunt · en revisión</Text>
+          <Text style={styles.discoveryLegendCount}>{mapDiscovery.localProposals.length}</Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Abrir fuente de Google Maps"
+        onPress={() => void openSourceLink(mapDiscovery.attribution.sourceUrl)}
+        style={styles.discoverySourceLink}
+      >
+        <Ionicons name="open-outline" size={14} color={colors.green} />
+        <Text style={styles.discoverySourceLinkText}>Ver fuente en Google Maps</Text>
+      </Pressable>
+      {!mapDiscoveryLoading &&
+      (mapDiscovery.state === "unavailable" ||
+        mapDiscovery.state === "offline" ||
+        mapDiscovery.state === "error") ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Reintentar búsqueda de Google"
+          onPress={() => void fetchMapDiscovery(currentRegionRef.current ?? mapRegion)}
+          style={styles.discoveryRetry}
+        >
+          <Ionicons name="refresh" size={14} color={colors.green} />
+          <Text style={styles.discoverySourceLinkText}>Reintentar</Text>
+        </Pressable>
+      ) : null}
+      {selectedProposal ? (
+        <View style={styles.proposalDetail}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.proposalDetailTitle}>{selectedProposal.name}</Text>
+            <Text style={styles.proposalDetailText}>
+              {selectedProposal.neighborhood} · En revisión por Taco Hunt
+            </Text>
+          </View>
+          <IconButton
+            icon="close"
+            label="Cerrar propuesta seleccionada"
+            size={32}
+            onPress={() => setSelectedProposal(null)}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
 
   const filterPanel = panelOpen && (
     <>
@@ -699,7 +880,7 @@ export default function ExploreScreen() {
       <View style={styles.screen}>
         <MapView
           ref={mapRef}
-          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          provider={MAP_PROVIDER}
           style={StyleSheet.absoluteFill}
           initialRegion={mapRegion}
           onRegionChangeComplete={handleRegionChangeComplete}
@@ -729,6 +910,26 @@ export default function ExploreScreen() {
               <View style={styles.clusterBubble}>
                 <Text style={styles.clusterBubbleText}>{cluster.count}</Text>
               </View>
+            </Marker>
+          ))}
+          {mapDiscovery.googleResults.map((result) => (
+            <Marker
+              key={result.id}
+              coordinate={{ latitude: result.latitude, longitude: result.longitude }}
+              accessibilityLabel={`${result.attributionLabel}: ${result.name}, ${result.neighborhood}`}
+              onPress={() => void openSourceLink(result.sourceUrl)}
+            >
+              {googleMarkerContent({ result })}
+            </Marker>
+          ))}
+          {mapDiscovery.localProposals.map((proposal) => (
+            <Marker
+              key={proposal.id}
+              coordinate={{ latitude: proposal.latitude, longitude: proposal.longitude }}
+              accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}, ${proposal.neighborhood}, en revisión`}
+              onPress={() => setSelectedProposal(proposal)}
+            >
+              {proposalMarkerContent({ proposal })}
             </Marker>
           ))}
         </MapView>
@@ -772,6 +973,7 @@ export default function ExploreScreen() {
             <ActivityIndicator color={colors.red} />
           </View>
         )}
+        {discoveryCard}
         {!mapPinsLoading && mapPinsError ? (
           <Pressable
             accessibilityRole="button"
@@ -782,7 +984,7 @@ export default function ExploreScreen() {
             <Text style={styles.muted}>{mapPinsError} Toca para reintentar.</Text>
           </Pressable>
         ) : null}
-        {!mapPinsLoading && !mapPinsError && mapPinTotal === 0 && (
+        {!mapPinsLoading && !mapPinsError && mapPinTotal === 0 && mapDiscovery.localProposals.length === 0 && (
           <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}>
             <Ionicons name="location-outline" size={42} color={colors.red} />
             <Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text>
@@ -1163,6 +1365,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addButtonText: { color: colors.paper, fontWeight: "800", fontSize: 13 },
+  googleMarker: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.green,
+    borderWidth: 2,
+    borderColor: colors.paper,
+    alignItems: "center",
+    justifyContent: "center",
+    ...elevation.float,
+  },
+  proposalMarker: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.goldSoft,
+    borderWidth: 2,
+    borderColor: colors.pendingText,
+    alignItems: "center",
+    justifyContent: "center",
+    ...elevation.float,
+  },
   markerWrap: { width: 44, height: 44 },
   marker: {
     width: 44,
@@ -1283,11 +1507,110 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  discoveryCard: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: 96,
+    borderRadius: radii.xl,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.md,
+    ...elevation.float,
+  },
+  discoveryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  discoveryHeadingIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.greenSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  discoveryTitle: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  discoveryMessage: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: spacing.xs,
+  },
+  discoveryLegendRow: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  discoveryLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  googleLegendDot: { backgroundColor: colors.green },
+  proposalLegendDot: { backgroundColor: colors.gold, borderWidth: 1, borderColor: colors.pendingText },
+  discoveryLegendText: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  discoveryLegendCount: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  discoverySourceLink: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  discoverySourceLinkText: {
+    color: colors.green,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  discoveryRetry: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  proposalDetail: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  proposalDetailTitle: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  proposalDetailText: {
+    color: colors.pendingText,
+    fontSize: 11,
+    marginTop: 2,
+  },
   mapErrorCard: {
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 100,
+    bottom: 260,
     borderRadius: 18,
     backgroundColor: colors.paper,
     padding: 20,
@@ -1297,7 +1620,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 100,
+    bottom: 260,
     padding: 24,
     borderRadius: 18,
     backgroundColor: colors.paper,
