@@ -306,7 +306,18 @@ export default function ExploreScreen() {
       if (seq !== mapFetchSeqRef.current) return;
       const cache = mapPinsCacheRef.current;
       for (const pin of data.pins) cache.set(pin.id, pin);
-      setMapPins(Array.from(cache.values()));
+      // A pin cached from an earlier, more zoomed-in fetch can fall inside a
+      // cluster returned by a later, zoomed-out one; exclude it so it isn't
+      // rendered (and counted) alongside its cluster.
+      const inCluster = (pin: MapPin) =>
+        data.clusters.some(
+          ({ bounds }) =>
+            pin.latitude <= bounds.north &&
+            pin.latitude >= bounds.south &&
+            pin.longitude <= bounds.east &&
+            pin.longitude >= bounds.west,
+        );
+      setMapPins(Array.from(cache.values()).filter((pin) => !inCluster(pin)));
       setMapClusters(data.clusters);
     } catch {
       if (seq === mapFetchSeqRef.current) {
@@ -1154,7 +1165,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: colors.paper,
-    shadowColor: "#000",
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
