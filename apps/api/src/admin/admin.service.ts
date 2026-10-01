@@ -11,15 +11,25 @@ import type { Pool, PoolClient } from "pg";
 import { uuidSchema } from "@taco-hunt/contracts";
 import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
+import { MediaStorageService } from "../media/storage.service.js";
 import {
   classifyDuplicate,
   duplicateCandidateSql,
   type DuplicateCandidate,
 } from "../proposals/duplicate-detector.js";
 
-export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates";
+export type QueueKind = "spots" | "tacos" | "reports" | "photos" | "duplicates" | "spot-photos";
 type ModerationAction =
-  "approve" | "reject" | "request_changes" | "hide" | "unhide" | "hide_photo" | "close" | "merge";
+  | "approve"
+  | "reject"
+  | "request_changes"
+  | "hide"
+  | "unhide"
+  | "hide_photo"
+  | "close"
+  | "merge"
+  | "approve_spot_photo"
+  | "reject_spot_photo";
 type SpotApproval = {
   confirmOwnFields?: boolean;
   name?: string;
@@ -36,7 +46,10 @@ type SpotApproval = {
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(DATABASE_POOL) private readonly pool: Pool,
+    private readonly media: MediaStorageService,
+  ) {}
 
   /** Returns up to 100 moderation items; report items omit the reporter's identity. */
   async queue(kind: QueueKind) {
@@ -85,6 +98,24 @@ export class AdminService {
            order by r.created_at asc limit 100`,
         );
         return { items: rows };
+      }
+      if (kind === "spot-photos") {
+        const { rows } = await this.pool.query(
+          `select sp.id,sp.spot_id as "spotId",s.name as "spotName",sp.uploader_id as "uploaderId",
+             coalesce(p.display_name,'Vecino de la comunidad') as "uploaderName",sp.object_key as "objectKey",
+             sp.kind,sp.status,sp.rejection_reason as "rejectionReason",sp.created_at as "createdAt"
+           from app_private.spot_photos sp
+           join app_private.spots s on s.id=sp.spot_id
+           join app_private.profiles p on p.id=sp.uploader_id
+           where sp.status='pending' order by sp.created_at asc limit 100`,
+        );
+        const items = [];
+        for (const row of rows) {
+          const { objectKey, ...rest } = row as typeof row & { objectKey: string };
+          const url = this.media.enabled ? await this.media.createSignedUrl(objectKey) : null;
+          items.push({ ...rest, url: url ?? "", urlError: this.media.enabled && url === null });
+        }
+        return { items };
       }
       if (kind === "duplicates") {
         const { rows } = await this.pool.query(
@@ -436,8 +467,16 @@ export class AdminService {
     return this.mutate("spot", id, moderator, "merge", reason, canonicalId);
   }
 
+  approveSpotPhoto(id: string, moderator: string) {
+    return this.mutate("spot_photo", id, moderator, "approve_spot_photo", null);
+  }
+
+  rejectSpotPhoto(id: string, moderator: string, reason: string) {
+    return this.mutate("spot_photo", id, moderator, "reject_spot_photo", reason);
+  }
+
   private async mutate(
-    targetType: "spot" | "taco" | "review" | "report",
+    targetType: "spot" | "taco" | "review" | "report" | "spot_photo",
     id: string,
     moderator: string,
     action: ModerationAction,
@@ -457,6 +496,7 @@ export class AdminService {
         canonicalId,
         moderator,
         approval,
+        reason,
       );
       if (!updated.rowCount) throw new NotFoundException("Elemento pendiente no encontrado");
       await client.query(
@@ -483,6 +523,7 @@ export class AdminService {
     canonicalId?: string,
     moderator?: string,
     approval?: SpotApproval,
+    reason?: string | null,
   ) {
     if (type === "spot" && action === "approve") {
       const canonicalFields = approval?.name !== undefined;
@@ -571,6 +612,18 @@ export class AdminService {
         [id],
       );
     }
+    if (type === "spot_photo" && action === "approve_spot_photo") {
+      return client.query(
+        "update app_private.spot_photos set status='approved',rejection_reason=null where id=$1 and status='pending'",
+        [id],
+      );
+    }
+    if (type === "spot_photo" && action === "reject_spot_photo") {
+      return client.query(
+        "update app_private.spot_photos set status='rejected',rejection_reason=$2 where id=$1 and status='pending'",
+        [id, reason],
+      );
+    }
     if (type === "report" && action === "close") {
       return client.query(
         "update app_private.reports set status='closed',updated_at=now() where id=$1 and status='open'",
@@ -623,6 +676,10 @@ function statusFor(action: ModerationAction): string {
       return "photo_hidden";
     case "merge":
       return "merged";
+    case "approve_spot_photo":
+      return "approved";
+    case "reject_spot_photo":
+      return "rejected";
   }
 }
 

@@ -3,6 +3,7 @@ import { MediaStorageService, REVIEW_PHOTO_BUCKET } from "./storage.service.js";
 import { ReviewPhotoProcessor } from "./review-photo.processor.js";
 import { ReviewPhotosController } from "./review-photos.controller.js";
 import { ReviewMediaController } from "./review-media.controller.js";
+import { SpotPhotosController } from "./spot-photos.controller.js";
 
 const MEDIA_STORAGE_CONFIG = "MEDIA_STORAGE_CONFIG";
 
@@ -39,7 +40,7 @@ function required(name: string): string {
     MediaStorageService,
     ReviewPhotoProcessor,
   ],
-  controllers: [ReviewPhotosController, ReviewMediaController],
+  controllers: [ReviewPhotosController, ReviewMediaController, SpotPhotosController],
   exports: [MediaStorageService],
 })
 export class MediaModule {}

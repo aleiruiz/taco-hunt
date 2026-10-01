@@ -84,11 +84,9 @@ export class AdminController {
 
   @Get("/queue")
   queue(@Query("kind") kindValue: string) {
-    if (["photos", "duplicates"].includes(kindValue)) {
-      return this.admin.queue(kindValue as QueueKind);
-    }
-    if (!(["spots", "tacos", "reports"] as string[]).includes(kindValue)) {
-      throw new BadRequestException("kind debe ser spots, tacos, reports, photos o duplicates");
+    const kinds: QueueKind[] = ["spots", "tacos", "reports", "photos", "duplicates", "spot-photos"];
+    if (!(kinds as string[]).includes(kindValue)) {
+      throw new BadRequestException(`kind debe ser uno de: ${kinds.join(", ")}`);
     }
     return this.admin.queue(kindValue as QueueKind);
   }
@@ -276,6 +274,20 @@ export class AdminController {
     @Body() body: unknown,
   ) {
     return this.admin.hidePhoto(this.parseId(id), moderator.id, this.reason(body));
+  }
+
+  @Post("/spot-photos/:id/approve")
+  approveSpotPhoto(@Param("id") id: string, @CurrentProfile() moderator: AuthenticatedProfile) {
+    return this.admin.approveSpotPhoto(this.parseId(id), moderator.id);
+  }
+
+  @Post("/spot-photos/:id/reject")
+  async rejectSpotPhoto(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    return this.admin.rejectSpotPhoto(this.parseId(id), moderator.id, this.reason(body, true));
   }
 
   @Post("/reports/:id/close")
