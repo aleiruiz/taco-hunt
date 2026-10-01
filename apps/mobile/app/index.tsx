@@ -15,8 +15,7 @@ import {
 import { Link, type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
-import ClusteredMapView from "react-native-map-clustering";
-import { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, spacing, radii, sizes, elevation, typography } from "@/theme";
 import { Chip } from "@/components/Chip";
@@ -60,6 +59,24 @@ type SpotDetail = {
 };
 type Page = { items: Spot[]; nextCursor: string | null };
 type Area = { label: string; north: number; south: number; east: number; west: number };
+// Mirrors packages/contracts/src/index.ts's mapPinSchema/mapClusterSchema (T33's
+// GET /v1/spots/map), duplicated locally the same way Spot/Taco/Review are above —
+// this app doesn't import @taco-hunt/contracts.
+type MapPin = {
+  id: string;
+  name: string;
+  neighborhood: string;
+  latitude: number;
+  longitude: number;
+  bestTaco: string | null;
+};
+type MapCluster = {
+  count: number;
+  latitude: number;
+  longitude: number;
+  bounds: { north: number; south: number; east: number; west: number };
+};
+type MapPinsResponse = { pins: MapPin[]; clusters: MapCluster[] };
 const API_COVERAGE = { north: 27, south: 25, east: -99, west: -101.5 };
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const AREAS: Area[] = [
@@ -76,6 +93,27 @@ function clipAreaToApiCoverage(area: Area): Area | null {
   const west = Math.max(API_COVERAGE.west, area.west);
   if (south >= north || west >= east) return null;
   return { ...area, north, south, east, west };
+}
+function areaToRegion(area: Area): Region {
+  return {
+    latitude: (area.north + area.south) / 2,
+    longitude: (area.east + area.west) / 2,
+    latitudeDelta: Math.max(0.045, area.north - area.south),
+    longitudeDelta: Math.max(0.05, area.east - area.west),
+  };
+}
+// Fetches a bit more than the visible viewport so panning slightly doesn't
+// immediately reveal an edge with no pins loaded yet.
+function regionToViewportBounds(region: Region, marginFactor = 0.25): Area | null {
+  const latMargin = region.latitudeDelta * marginFactor;
+  const lonMargin = region.longitudeDelta * marginFactor;
+  return clipAreaToApiCoverage({
+    label: "",
+    north: region.latitude + region.latitudeDelta / 2 + latMargin,
+    south: region.latitude - region.latitudeDelta / 2 - latMargin,
+    east: region.longitude + region.longitudeDelta / 2 + lonMargin,
+    west: region.longitude - region.longitudeDelta / 2 - lonMargin,
+  });
 }
 
 export default function ExploreScreen() {
@@ -103,10 +141,26 @@ export default function ExploreScreen() {
   const selectedSpotIdRef = useRef<string | null>(null);
   const closingRef = useRef(false);
 
-  // Keep ref synchronized with current state to avoid closure issues in async callbacks
+  // Viewport pin loading (T34): id-keyed cache of pins seen so far, so panning
+  // the map merges new pins in instead of replacing everything on screen.
+  const [mapPins, setMapPins] = useState<MapPin[]>([]);
+  const [mapClusters, setMapClusters] = useState<MapCluster[]>([]);
+  const [mapPinsLoading, setMapPinsLoading] = useState(true);
+  const [mapPinsError, setMapPinsError] = useState("");
+  const mapPinsCacheRef = useRef<Map<string, MapPin>>(new Map());
+  const mapRef = useRef<MapView>(null);
+  const currentRegionRef = useRef<Region | null>(null);
+  const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapFetchSeqRef = useRef(0);
+  const activeTypeRef = useRef<TacoType | null>(null);
+
+  // Keep refs synchronized with current state to avoid closure issues in async callbacks
   useEffect(() => {
     selectedSpotIdRef.current = selectedSpotId;
   }, [selectedSpotId]);
+  useEffect(() => {
+    activeTypeRef.current = activeType;
+  }, [activeType]);
 
   const loadTypes = useCallback(async () => {
     try {
@@ -210,7 +264,11 @@ export default function ExploreScreen() {
         return;
       }
       setArea(areaAtLocation);
-      await load(query, activeType, areaAtLocation);
+      if (mode === "mapa") {
+        animateCameraToArea(areaAtLocation);
+      } else {
+        await load(query, activeType, areaAtLocation);
+      }
     } catch {
       setError("No pudimos obtener tu ubicación. Elige una zona para seguir explorando.");
     } finally {
@@ -218,20 +276,97 @@ export default function ExploreScreen() {
     }
   };
 
-  const mapRegion = useMemo<Region>(() => {
-    const latitude = items.length
-      ? items.reduce((total, item) => total + item.latitude, 0) / items.length
-      : (area.north + area.south) / 2;
-    const longitude = items.length
-      ? items.reduce((total, item) => total + item.longitude, 0) / items.length
-      : (area.east + area.west) / 2;
-    return {
-      latitude,
-      longitude,
-      latitudeDelta: Math.max(0.045, area.north - area.south),
-      longitudeDelta: Math.max(0.05, area.east - area.west),
+  // Initial camera only — once the map is interactive, panning/zooming is
+  // uncontrolled and viewport pins follow via onRegionChangeComplete below.
+  const mapRegion = useMemo<Region>(() => areaToRegion(area), [area]);
+
+  const fetchMapPins = useCallback(async (region: Region) => {
+    const bounds = regionToViewportBounds(region);
+    const seq = ++mapFetchSeqRef.current;
+    if (!bounds) {
+      setMapPinsError("Esta zona queda fuera de la cobertura disponible.");
+      setMapPinsLoading(false);
+      return;
+    }
+    setMapPinsLoading(true);
+    setMapPinsError("");
+    try {
+      const params = new URLSearchParams({
+        north: String(bounds.north),
+        south: String(bounds.south),
+        east: String(bounds.east),
+        west: String(bounds.west),
+      });
+      const type = activeTypeRef.current;
+      if (type) params.set("tacoType", type.slug);
+      const response = await fetch(`${API}/spots/map?${params}`);
+      if (!response.ok) throw new Error("No se pudo cargar el mapa.");
+      const data = (await response.json()) as MapPinsResponse;
+      // A newer fetch (later pan/zoom or filter change) already landed; drop this one.
+      if (seq !== mapFetchSeqRef.current) return;
+      const cache = mapPinsCacheRef.current;
+      for (const pin of data.pins) cache.set(pin.id, pin);
+      setMapPins(Array.from(cache.values()));
+      setMapClusters(data.clusters);
+    } catch {
+      if (seq === mapFetchSeqRef.current) {
+        setMapPinsError("No hay conexión con Taco Hunt. Puedes reintentar cuando vuelva la señal.");
+      }
+    } finally {
+      if (seq === mapFetchSeqRef.current) setMapPinsLoading(false);
+    }
+  }, []);
+
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      currentRegionRef.current = region;
+      if (regionDebounceRef.current) clearTimeout(regionDebounceRef.current);
+      regionDebounceRef.current = setTimeout(() => {
+        void fetchMapPins(region);
+      }, 300);
+    },
+    [fetchMapPins],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (regionDebounceRef.current) clearTimeout(regionDebounceRef.current);
     };
-  }, [items, area]);
+  }, []);
+
+  // Taco-type is the only filter allowed to hide map pins (per CLAUDE.md T34 spec).
+  // The cache was built under the previous filter, so it's invalidated here rather
+  // than merged, and the viewport is re-fetched under the new one.
+  useEffect(() => {
+    if (mode !== "mapa") return;
+    mapPinsCacheRef.current = new Map();
+    setMapPins([]);
+    setMapClusters([]);
+    void fetchMapPins(currentRegionRef.current ?? mapRegion);
+    // mapRegion intentionally excluded: it should only seed the very first fetch,
+    // not re-trigger when `area` changes list-mode state while map mode is active.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, activeType, fetchMapPins]);
+
+  // Neighborhood/area chips are camera shortcuts only in map mode — they move the
+  // camera and let onRegionChangeComplete load pins for the new viewport, they
+  // never filter the loaded pin set directly.
+  const animateCameraToArea = useCallback((next: Area) => {
+    mapRef.current?.animateToRegion(areaToRegion(next), 400);
+  }, []);
+
+  const handleClusterPress = useCallback((cluster: MapCluster) => {
+    const { north, south, east, west } = cluster.bounds;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: (north + south) / 2,
+        longitude: (east + west) / 2,
+        latitudeDelta: Math.max(0.01, (north - south) * 1.4),
+        longitudeDelta: Math.max(0.01, (east - west) * 1.4),
+      },
+      350,
+    );
+  }, []);
 
   const chooseType = (type: TacoType | null) => {
     setActiveType(type);
@@ -243,7 +378,11 @@ export default function ExploreScreen() {
   }, [clearFilterAt]);
   const chooseArea = (next: Area) => {
     setArea(next);
-    void load(query, activeType, next);
+    if (mode === "mapa") {
+      animateCameraToArea(next);
+    } else {
+      void load(query, activeType, next);
+    }
   };
   const clearFilters = () => {
     setQuery("");
@@ -422,7 +561,7 @@ export default function ExploreScreen() {
     </Pressable>
   );
 
-  const summaryRow = (
+  const renderSummaryRow = (count: number) => (
     <View style={styles.summaryRow}>
       <Pressable
         accessibilityRole="button"
@@ -438,10 +577,11 @@ export default function ExploreScreen() {
         <Ionicons name="chevron-down" size={12} color={colors.ink} />
       </Pressable>
       <View style={styles.countPill}>
-        <Text style={styles.countPillText}>{items.length} puestos</Text>
+        <Text style={styles.countPillText}>{count} puestos</Text>
       </View>
     </View>
   );
+  const mapPinTotal = mapPins.length + mapClusters.reduce((total, c) => total + c.count, 0);
 
   const filterPanel = panelOpen && (
     <>
@@ -524,33 +664,47 @@ export default function ExploreScreen() {
   if (mode === "mapa") {
     return (
       <View style={styles.screen}>
-        <ClusteredMapView
+        <MapView
+          ref={mapRef}
           provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
           style={StyleSheet.absoluteFill}
           initialRegion={mapRegion}
-          region={mapRegion}
+          onRegionChangeComplete={handleRegionChangeComplete}
           accessibilityLabel="Mapa de puestos en la zona seleccionada"
           showsUserLocation={false}
-          clusterColor={colors.red}
-          clusterTextColor={colors.white}
         >
-          {items.map((item) => (
+          {mapPins.map((pin) => (
             <Marker
-              key={item.id}
-              coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-              accessibilityLabel={`${item.name}, ${item.neighborhood}`}
-              onPress={() => void handleMarkerPress(item.id)}
+              key={pin.id}
+              coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+              accessibilityLabel={`${pin.name}, ${pin.neighborhood}`}
+              onPress={() => void handleMarkerPress(pin.id)}
             >
-              <CustomMarkerContent hasReviews={item.reviewCount > 0} />
+              {/* MapPin has no reviewCount (see packages/contracts mapPinSchema), so the
+                  "sin reseñas" sparkle badge from the fixture-era marker isn't shown here;
+                  flagged as a gap in the PR. */}
+              <CustomMarkerContent hasReviews />
             </Marker>
           ))}
-        </ClusteredMapView>
+          {mapClusters.map((cluster, index) => (
+            <Marker
+              key={`cluster-${index}-${cluster.latitude.toFixed(4)}-${cluster.longitude.toFixed(4)}`}
+              coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
+              accessibilityLabel={`${cluster.count} puestos agrupados`}
+              onPress={() => handleClusterPress(cluster)}
+            >
+              <View style={styles.clusterBubble}>
+                <Text style={styles.clusterBubbleText}>{cluster.count}</Text>
+              </View>
+            </Marker>
+          ))}
+        </MapView>
         <View style={styles.mapOverlay} pointerEvents="box-none">
           <View style={styles.collapsedRow}>
             {searchPill}
             {profileButton}
           </View>
-          {summaryRow}
+          {renderSummaryRow(mapPinTotal)}
           {filterPanel}
         </View>
         <View style={styles.bottomControls} pointerEvents="box-none">
@@ -580,22 +734,22 @@ export default function ExploreScreen() {
             </Pressable>
           </View>
         </View>
-        {loading && (
+        {mapPinsLoading && mapPinTotal === 0 && (
           <View style={styles.mapCenterState} pointerEvents="none">
             <ActivityIndicator color={colors.red} />
           </View>
         )}
-        {!loading && error ? (
+        {!mapPinsLoading && mapPinsError ? (
           <Pressable
             accessibilityRole="button"
-            onPress={() => void load()}
+            onPress={() => void fetchMapPins(currentRegionRef.current ?? mapRegion)}
             style={styles.mapErrorCard}
           >
             <Text style={styles.emptyTitle}>Sin conexión</Text>
-            <Text style={styles.muted}>{error} Toca para reintentar.</Text>
+            <Text style={styles.muted}>{mapPinsError} Toca para reintentar.</Text>
           </Pressable>
         ) : null}
-        {!loading && !error && items.length === 0 && (
+        {!mapPinsLoading && !mapPinsError && mapPinTotal === 0 && (
           <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}>
             <Ionicons name="location-outline" size={42} color={colors.red} />
             <Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text>
@@ -727,7 +881,7 @@ export default function ExploreScreen() {
               ¿No encuentras tu taquería? Propónla
             </Link>
             <View style={{ marginTop: spacing.lg }}>{searchPill}</View>
-            {summaryRow}
+            {renderSummaryRow(items.length)}
             {filterPanel}
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Puestos para descubrir</Text>
@@ -990,6 +1144,23 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 5,
   },
+  clusterBubble: {
+    minWidth: 44,
+    height: 44,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 22,
+    backgroundColor: colors.red,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.paper,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  clusterBubbleText: { color: colors.white, fontWeight: "800", fontSize: 14 },
   markerSparkle: {
     position: "absolute",
     top: -2,
