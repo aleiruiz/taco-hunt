@@ -6,6 +6,10 @@ As of 2026-10-01, T34 (PR #50), T37 (PR #52), T40 (PR #53), T42 (PR #51), T61 (P
 
 The orchestrator operates in the main Codex task. Every worker must be a separate, user-visible Codex task/session with its own history and worktree in the repository. Do not use subagents within the orchestrator task as implementation workers. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. The limit is **three active worker tasks**; coordination in the main task does not use one of those slots.
 
+## Current integration snapshot
+
+As of 2026-10-01, the owner has merged T40 (PR #53, Profile API and avatars). T40 is no longer an open worker or merge blocker; its profile, avatar, account-deletion, and mobile fixture-swap changes are integrated into `main`. Keep `docs/orchestration-state.json` aligned with this snapshot when the next coordination pass reconciles GitHub state.
+
 ## Worker cycle
 
 1. Select the highest-priority available task whose dependencies are integrated into `main`. Prefer tasks with separate areas and stable contracts.
