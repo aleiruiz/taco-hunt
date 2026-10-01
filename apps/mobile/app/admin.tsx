@@ -17,7 +17,13 @@ import { PhotoTile } from "@/components/PhotoTile";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/Button";
 import { getFixturePhotos, type Photo } from "@/data/media";
-import { getFixtureImportCandidates, type ImportCandidate } from "@/data/importCandidates";
+import {
+  fetchImportCandidates,
+  approveImportCandidate,
+  rejectImportCandidate,
+  mergeImportCandidate,
+  type ImportCandidate,
+} from "@/data/importCandidates";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 const tabs = [
@@ -41,10 +47,10 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [standPhotos, setStandPhotos] = useState<Photo[]>(() => getFixturePhotos());
-  const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>(() =>
-    getFixtureImportCandidates(),
-  );
+  const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(null);
+  const [pendingCandidateId, setPendingCandidateId] = useState<string | null>(null);
   const [candidatePins, setCandidatePins] = useState<
     Record<string, { latitude: number; longitude: number }>
   >({});
@@ -82,18 +88,40 @@ export default function AdminScreen() {
     setCandidatePins((current) => ({ ...current, [candidateId]: { latitude, longitude } }));
   }
 
-  function moderateImportCandidate(
-    candidateId: string,
-    decision: "approved" | "rejected" | "merged",
-  ) {
-    const candidate = importCandidates.find((item) => item.id === candidateId);
+  function dropCandidate(candidateId: string) {
     setImportCandidates((current) => current.filter((item) => item.id !== candidateId));
     setCandidatePins((current) => {
       const { [candidateId]: _removed, ...rest } = current;
       return rest;
     });
     if (expandedCandidateId === candidateId) setExpandedCandidateId(null);
-    if (candidate) {
+  }
+
+  async function moderateImportCandidate(
+    candidateId: string,
+    decision: "approved" | "rejected" | "merged",
+  ) {
+    const candidate = importCandidates.find((item) => item.id === candidateId);
+    if (!candidate || pendingCandidateId) return;
+    setPendingCandidateId(candidateId);
+    try {
+      setMessage(null);
+      if (decision === "approved") {
+        const pin = candidatePin(candidate);
+        await approveImportCandidate(headers, candidateId, pin);
+      } else if (decision === "merged") {
+        const match = candidate.matches[0];
+        if (!match) return;
+        await mergeImportCandidate(
+          headers,
+          candidateId,
+          match.spotId,
+          "Duplicado cercano confirmado",
+        );
+      } else {
+        await rejectImportCandidate(headers, candidateId, "No cumple los criterios de publicación");
+      }
+      dropCandidate(candidateId);
       const message =
         decision === "approved"
           ? `${candidate.normalizedName} publicado en el mapa.`
@@ -101,11 +129,36 @@ export default function AdminScreen() {
             ? `${candidate.normalizedName} fusionado con un puesto existente.`
             : `${candidate.normalizedName} rechazado.`;
       AccessibilityInfo.announceForAccessibility(message);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "La acción no pudo completarse.");
+    } finally {
+      setPendingCandidateId(null);
     }
   }
 
+  const loadImportCandidates = useCallback(async () => {
+    const requestId = ++loadId.current;
+    setCandidatesLoading(true);
+    setMessage(null);
+    try {
+      const candidates = await fetchImportCandidates(headers);
+      if (loadId.current !== requestId) return;
+      setImportCandidates(candidates);
+    } catch (error) {
+      if (loadId.current !== requestId) return;
+      setImportCandidates([]);
+      setMessage(error instanceof Error ? error.message : "No pudimos cargar los candidatos.");
+    } finally {
+      if (loadId.current === requestId) setCandidatesLoading(false);
+    }
+  }, [headers]);
+
   const load = useCallback(async () => {
-    if (!session || tab === "standPhotos" || tab === "importCandidates") return;
+    if (!session || tab === "standPhotos") return;
+    if (tab === "importCandidates") {
+      await loadImportCandidates();
+      return;
+    }
     const requestId = ++loadId.current;
     setLoading(true);
     setMessage(null);
@@ -194,9 +247,15 @@ export default function AdminScreen() {
             Puestos investigados por el equipo (web_research), en espera de revisión antes de
             publicarse en el mapa.
           </Text>
-          {importCandidates.length === 0 ? (
+          {candidatesLoading ? (
+            <ActivityIndicator color={colors.red} style={styles.loader} />
+          ) : null}
+          {message ? <Text style={styles.notice}>{message}</Text> : null}
+          {!candidatesLoading && !message && importCandidates.length === 0 ? (
             <Text style={styles.empty}>No hay candidatos pendientes.</Text>
-          ) : (
+          ) : null}
+          {!candidatesLoading &&
+            importCandidates.length > 0 &&
             importCandidates.map((candidate) => {
               const expanded = expandedCandidateId === candidate.id;
               const pin = candidatePin(candidate);
@@ -273,25 +332,27 @@ export default function AdminScreen() {
                           label="Aprobar"
                           onPress={() => moderateImportCandidate(candidate.id, "approved")}
                           primary
+                          disabled={pendingCandidateId === candidate.id}
                         />
                         {candidate.matches.length > 0 ? (
                           <Action
                             label="Fusionar con existente"
                             onPress={() => moderateImportCandidate(candidate.id, "merged")}
+                            disabled={pendingCandidateId === candidate.id}
                           />
                         ) : null}
                         <Action
                           label="Rechazar"
                           onPress={() => moderateImportCandidate(candidate.id, "rejected")}
                           danger
+                          disabled={pendingCandidateId === candidate.id}
                         />
                       </View>
                     </View>
                   ) : null}
                 </View>
               );
-            })
-          )}
+            })}
         </>
       ) : tab === "standPhotos" ? (
         <>
@@ -453,17 +514,26 @@ function Action({
   onPress,
   primary,
   danger,
+  disabled,
 }: {
   label: string;
   onPress: () => void;
   primary?: boolean;
   danger?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={disabled ? { disabled: true } : undefined}
       onPress={onPress}
-      style={[styles.action, primary && styles.primary, danger && styles.danger]}
+      disabled={disabled}
+      style={[
+        styles.action,
+        primary && styles.primary,
+        danger && styles.danger,
+        disabled && styles.actionDisabled,
+      ]}
     >
       <Text style={[styles.actionText, (primary || danger) && styles.inverse]}>{label}</Text>
     </Pressable>
@@ -566,6 +636,7 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: colors.green, borderColor: colors.green },
   danger: { backgroundColor: colors.red, borderColor: colors.red },
+  actionDisabled: { opacity: 0.5 },
   actionText: { color: colors.ink, fontWeight: "800", fontSize: 12 },
   inverse: { color: colors.paper },
 });
