@@ -184,6 +184,7 @@ export default function ProposeScreen() {
       announce("Propuesta enviada. Está en revisión.");
     } catch (cause) {
       if (cause instanceof ProposalDuplicateError) {
+        setSelectedGoogle(undefined);
         setDuplicate(cause.duplicate);
         setStep(1);
         setSubmitStatus("idle");
