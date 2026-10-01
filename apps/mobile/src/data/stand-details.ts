@@ -135,6 +135,13 @@ export interface TacoHuntPhotoGalleryFixture {
   uploadMessage?: string;
 }
 
+let fixtureUploadSequence = 0;
+
+function nextFixtureUploadId(spotId: string): string {
+  fixtureUploadSequence += 1;
+  return `${spotId}-taco-hunt-upload-${Date.now()}-${fixtureUploadSequence}`;
+}
+
 function configuredTacoHuntPhotoMode(): TacoHuntPhotoFixtureMode | null {
   const value = process.env.EXPO_PUBLIC_T63_TACO_HUNT_PHOTO_MODE?.trim().toLowerCase();
   if (
@@ -224,6 +231,7 @@ export function createFixtureTacoHuntPhoto(
   localUri: string,
   kind: TacoHuntPhotoKind,
 ): Promise<TacoHuntPhoto> {
+  const uploadId = nextFixtureUploadId(spotId);
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       const mode = configuredTacoHuntPhotoMode();
@@ -234,7 +242,7 @@ export function createFixtureTacoHuntPhoto(
       const status: TacoHuntPhotoModerationStatus = mode === "rejected" ? "rejected" : "pending";
       resolve({
         source: "taco-hunt",
-        id: `${spotId}-taco-hunt-uploaded`,
+        id: uploadId,
         url: localUri,
         uploaderId,
         uploaderName: "Tú",

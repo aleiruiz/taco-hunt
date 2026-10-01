@@ -135,10 +135,14 @@ export default function SpotScreen() {
     setMyPhotos([]);
   }, [session?.user.id]);
   useEffect(() => {
+    googleRequestId.current += 1;
     setGoogleDetails(null);
     setGoogleDetailsState("idle");
     setGoogleDetailsMessage("");
     setGoogleGalleryOpen(false);
+    return () => {
+      googleRequestId.current += 1;
+    };
   }, [id]);
   const loadTacoTypes = useCallback(() => {
     setTacoTypesLoading(true);
