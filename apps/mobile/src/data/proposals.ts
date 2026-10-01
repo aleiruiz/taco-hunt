@@ -49,7 +49,7 @@ export type ProposalSearchResult = {
 
 export type GoogleProposalSubmission = {
   source: "google";
-  placeId: string;
+  place_id: string;
 };
 
 export type LocalProposalSubmission = {

@@ -147,7 +147,7 @@ export default function ProposeScreen() {
     try {
       const submission =
         source === "google" && selectedGoogle
-          ? { source: "google" as const, placeId: selectedGoogle.placeId }
+          ? { source: "google" as const, place_id: selectedGoogle.placeId }
           : {
               source: "local" as const,
               latitude,
@@ -200,8 +200,18 @@ export default function ProposeScreen() {
           <TimelineRow icon="time" label="En revisión" color={colors.gold} badge="AHORA" />
           <TimelineRow icon="ellipse-outline" label="Publicada" color={colors.muted} muted />
         </Card>
-        <Button label="Volver al mapa" variant="primary" onPress={() => router.push("/")} style={styles.topAction} />
-        <Button label="Mis propuestas" variant="secondary" onPress={() => router.push("/my-tacos")} style={styles.action} />
+        <Button
+          label="Volver al mapa"
+          variant="primary"
+          onPress={() => router.push("/")}
+          style={styles.topAction}
+        />
+        <Button
+          label="Mis propuestas"
+          variant="secondary"
+          onPress={() => router.push("/my-tacos")}
+          style={styles.action}
+        />
         <Button label="Proponer otra" variant="ghost" onPress={startOver} style={styles.action} />
       </ScrollView>
     );
@@ -233,8 +243,14 @@ export default function ProposeScreen() {
           onPress={() => resetSource("google")}
           style={[styles.sourceTab, source === "google" && styles.sourceTabActive]}
         >
-          <Ionicons name="search" size={16} color={source === "google" ? colors.green : colors.muted} />
-          <Text style={[styles.sourceTabText, source === "google" && styles.sourceTabTextActive]}>Buscar en Google</Text>
+          <Ionicons
+            name="search"
+            size={16}
+            color={source === "google" ? colors.green : colors.muted}
+          />
+          <Text style={[styles.sourceTabText, source === "google" && styles.sourceTabTextActive]}>
+            Buscar en Google
+          </Text>
         </Pressable>
         <Pressable
           accessibilityRole="tab"
@@ -243,8 +259,14 @@ export default function ProposeScreen() {
           onPress={() => resetSource("local")}
           style={[styles.sourceTab, source === "local" && styles.sourceTabActive]}
         >
-          <Ionicons name="location" size={16} color={source === "local" ? colors.green : colors.muted} />
-          <Text style={[styles.sourceTabText, source === "local" && styles.sourceTabTextActive]}>Poner un pin</Text>
+          <Ionicons
+            name="location"
+            size={16}
+            color={source === "local" ? colors.green : colors.muted}
+          />
+          <Text style={[styles.sourceTabText, source === "local" && styles.sourceTabTextActive]}>
+            Poner un pin
+          </Text>
         </Pressable>
       </View>
 
@@ -253,15 +275,24 @@ export default function ProposeScreen() {
       {!session ? (
         <Card tone="highlight" style={styles.accountCard}>
           <Text style={styles.cardTitle}>Necesitas una cuenta para proponer</Text>
-          <Text style={styles.bodyLeft}>Tu propuesta será privada para ti mientras está pendiente.</Text>
-          <Button label="Iniciar sesión" variant="primary" onPress={() => router.push("/sign-in")} style={styles.inlineAction} />
+          <Text style={styles.bodyLeft}>
+            Tu propuesta será privada para ti mientras está pendiente.
+          </Text>
+          <Button
+            label="Iniciar sesión"
+            variant="primary"
+            onPress={() => router.push("/sign-in")}
+            style={styles.inlineAction}
+          />
         </Card>
       ) : null}
 
       {source === "google" && step === 1 ? (
         <Card>
           <Text style={styles.stepTitle}>¿Cuál taquería es?</Text>
-          <Text style={styles.bodyLeft}>Elige un resultado para vincularlo sin copiar datos de Google a Taco Hunt.</Text>
+          <Text style={styles.bodyLeft}>
+            Elige un resultado para vincularlo sin copiar datos de Google a Taco Hunt.
+          </Text>
           <TextInput
             value={query}
             onChangeText={(value) => {
@@ -282,12 +313,23 @@ export default function ProposeScreen() {
             </View>
           ) : null}
           {searchStatus === "error" ? (
-            <View style={styles.errorBanner} accessibilityRole="alert" accessibilityLiveRegion="polite">
+            <View
+              style={styles.errorBanner}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+            >
               <Ionicons name="alert-circle" size={18} color={colors.dangerText} />
-              <Text style={styles.errorText}>No pudimos buscar. Puedes colocar un pin en el mapa.</Text>
+              <Text style={styles.errorText}>
+                No pudimos buscar. Puedes colocar un pin en el mapa.
+              </Text>
             </View>
           ) : null}
-          {duplicate ? <DuplicateCard match={duplicate} onView={() => router.push(`/spot/${duplicate.spotId}`)} /> : null}
+          {duplicate ? (
+            <DuplicateCard
+              match={duplicate}
+              onView={() => router.push(`/spot/${duplicate.spotId}`)}
+            />
+          ) : null}
           {suggestions.length > 0 ? (
             <View style={styles.suggestionList} accessibilityLabel="Resultados de Google">
               {suggestions.map((suggestion) => (
@@ -330,49 +372,122 @@ export default function ProposeScreen() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.redStrong} />
           </Pressable>
-          <Button label="Siguiente" variant="primary" disabled={!selectedGoogle} onPress={() => setStep(2)} style={styles.topAction} />
+          <Button
+            label="Siguiente"
+            variant="primary"
+            disabled={!selectedGoogle}
+            onPress={() => setStep(2)}
+            style={styles.topAction}
+          />
         </Card>
       ) : null}
 
       {source === "local" && step === 1 ? (
         <Card>
           <Text style={styles.stepTitle}>¿Dónde se pone?</Text>
-          <Text style={styles.bodyLeft}>Mueve el mapa hasta el punto exacto. El pin es lo único necesario.</Text>
-          <PinMap region={mapRegion} onRegionChange={(region) => { setLatitude(region.latitude); setLongitude(region.longitude); }} />
-          <Button label={locating ? "Buscando…" : "Estoy aquí"} variant="secondary" icon="navigate" loading={locating} onPress={() => void useLocation()} style={styles.inlineAction} />
+          <Text style={styles.bodyLeft}>
+            Mueve el mapa hasta el punto exacto. El pin es lo único necesario.
+          </Text>
+          <PinMap
+            region={mapRegion}
+            onRegionChange={(region) => {
+              setLatitude(region.latitude);
+              setLongitude(region.longitude);
+            }}
+          />
+          <Button
+            label={locating ? "Buscando…" : "Estoy aquí"}
+            variant="secondary"
+            icon="navigate"
+            loading={locating}
+            onPress={() => void useLocation()}
+            style={styles.inlineAction}
+          />
           <Text style={styles.mapHint}>Arrastra el mapa para ajustar el pin.</Text>
-          <Button label="Siguiente" variant="primary" onPress={() => setStep(2)} style={styles.topAction} />
+          <Button
+            label="Siguiente"
+            variant="primary"
+            onPress={() => setStep(2)}
+            style={styles.topAction}
+          />
         </Card>
       ) : null}
 
       {step === 2 ? (
         <Card>
-          <Text style={styles.stepTitle}>{source === "google" ? "¿Dónde se pone?" : "Detalles que ayudan"}</Text>
+          <Text style={styles.stepTitle}>
+            {source === "google" ? "¿Dónde se pone?" : "Detalles que ayudan"}
+          </Text>
           {source === "google" ? (
             <>
-              <PinMap region={mapRegion} onRegionChange={(region) => { setLatitude(region.latitude); setLongitude(region.longitude); }} />
+              <PinMap
+                region={mapRegion}
+                onRegionChange={(region) => {
+                  setLatitude(region.latitude);
+                  setLongitude(region.longitude);
+                }}
+              />
               <Text style={styles.mapHint}>Pin tomado de Google · puedes corregirlo.</Text>
-              <Button label={locating ? "Buscando…" : "Estoy aquí"} variant="secondary" icon="navigate" loading={locating} onPress={() => void useLocation()} style={styles.inlineAction} />
+              <Button
+                label={locating ? "Buscando…" : "Estoy aquí"}
+                variant="secondary"
+                icon="navigate"
+                loading={locating}
+                onPress={() => void useLocation()}
+                style={styles.inlineAction}
+              />
             </>
           ) : (
-            <Text style={styles.bodyLeft}>Estos datos son opcionales y se quedan con tu propuesta.</Text>
+            <Text style={styles.bodyLeft}>
+              Estos datos son opcionales y se quedan con tu propuesta.
+            </Text>
           )}
           {source === "local" ? (
             <>
               <Text style={styles.label}>Nombre (opcional)</Text>
-              <TextInput value={name} onChangeText={setName} placeholder="Ej. Tacos de la esquina" placeholderTextColor={colors.placeholder} style={styles.input} maxLength={120} accessibilityLabel="Nombre opcional de la taquería" />
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Ej. Tacos de la esquina"
+                placeholderTextColor={colors.placeholder}
+                style={styles.input}
+                maxLength={120}
+                accessibilityLabel="Nombre opcional de la taquería"
+              />
               <Text style={styles.label}>Nota o referencia (opcional)</Text>
-              <TextInput value={note} onChangeText={setNote} placeholder="Ej. Frente al parque, junto a la farmacia" placeholderTextColor={colors.placeholder} style={[styles.input, styles.note]} multiline maxLength={500} accessibilityLabel="Nota o referencia opcional" />
+              <TextInput
+                value={note}
+                onChangeText={setNote}
+                placeholder="Ej. Frente al parque, junto a la farmacia"
+                placeholderTextColor={colors.placeholder}
+                style={[styles.input, styles.note]}
+                multiline
+                maxLength={500}
+                accessibilityLabel="Nota o referencia opcional"
+              />
             </>
           ) : (
             <Card tone="highlight" style={styles.googlePrivacyCard}>
               <Ionicons name="shield-checkmark" size={20} color={colors.green} />
-              <Text style={styles.bodyLeft}>Google se usa solo para encontrar el lugar. Taco Hunt guardará únicamente el place_id.</Text>
+              <Text style={styles.bodyLeft}>
+                Google se usa solo para encontrar el lugar. Taco Hunt guardará únicamente el
+                place_id.
+              </Text>
             </Card>
           )}
           <View style={styles.stepFooter}>
-            <Button label="Atrás" variant="ghost" onPress={() => setStep(1)} style={styles.backAction} />
-            <Button label="Siguiente" variant="primary" onPress={() => setStep(3)} style={styles.nextAction} />
+            <Button
+              label="Atrás"
+              variant="ghost"
+              onPress={() => setStep(1)}
+              style={styles.backAction}
+            />
+            <Button
+              label="Siguiente"
+              variant="primary"
+              onPress={() => setStep(3)}
+              style={styles.nextAction}
+            />
           </View>
         </Card>
       ) : null}
@@ -381,10 +496,18 @@ export default function ProposeScreen() {
         <Card>
           <Text style={styles.stepTitle}>Revisa antes de enviar</Text>
           <View style={styles.reviewRow}>
-            <Ionicons name={source === "google" ? "logo-google" : "location"} size={20} color={colors.green} />
+            <Ionicons
+              name={source === "google" ? "logo-google" : "location"}
+              size={20}
+              color={colors.green}
+            />
             <View style={styles.suggestionCopy}>
-              <Text style={styles.reviewLabel}>{source === "google" ? "Lugar de Google" : "Pin de Taco Hunt"}</Text>
-              <Text style={styles.reviewValue}>{source === "google" ? selectedGoogle?.displayName : name.trim() || "Sin nombre"}</Text>
+              <Text style={styles.reviewLabel}>
+                {source === "google" ? "Lugar de Google" : "Pin de Taco Hunt"}
+              </Text>
+              <Text style={styles.reviewValue}>
+                {source === "google" ? selectedGoogle?.displayName : name.trim() || "Sin nombre"}
+              </Text>
             </View>
           </View>
           <Text style={styles.bodyLeft}>
@@ -393,14 +516,29 @@ export default function ProposeScreen() {
               : "La ubicación está lista. El nombre y la nota son opcionales; puedes enviar solo el pin."}
           </Text>
           {submitError ? (
-            <View style={styles.errorBanner} accessibilityRole="alert" accessibilityLiveRegion="polite">
+            <View
+              style={styles.errorBanner}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+            >
               <Ionicons name="alert-circle" size={18} color={colors.dangerText} />
               <Text style={styles.errorText}>{submitError}</Text>
             </View>
           ) : null}
           <View style={styles.stepFooter}>
-            <Button label="Atrás" variant="ghost" onPress={() => setStep(2)} style={styles.backAction} />
-            <Button label={submitStatus === "error" ? "Reintentar envío" : "Enviar para revisión"} variant="accent" loading={submitStatus === "loading"} onPress={() => void submit()} style={styles.nextAction} />
+            <Button
+              label="Atrás"
+              variant="ghost"
+              onPress={() => setStep(2)}
+              style={styles.backAction}
+            />
+            <Button
+              label={submitStatus === "error" ? "Reintentar envío" : "Enviar para revisión"}
+              variant="accent"
+              loading={submitStatus === "loading"}
+              onPress={() => void submit()}
+              style={styles.nextAction}
+            />
           </View>
         </Card>
       ) : null}
@@ -410,10 +548,20 @@ export default function ProposeScreen() {
   );
 }
 
-function PinMap({ region, onRegionChange }: { region: Region; onRegionChange: (region: Region) => void }) {
+function PinMap({
+  region,
+  onRegionChange,
+}: {
+  region: Region;
+  onRegionChange: (region: Region) => void;
+}) {
   return (
     <View style={styles.mapWrap} accessibilityLabel="Mapa para elegir la ubicación">
-      <MapView style={StyleSheet.absoluteFill} region={region} onRegionChangeComplete={onRegionChange} />
+      <MapView
+        style={StyleSheet.absoluteFill}
+        region={region}
+        onRegionChangeComplete={onRegionChange}
+      />
       <View style={styles.centerPin} pointerEvents="none">
         <Ionicons name="location" size={36} color={colors.redStrong} />
       </View>
@@ -435,7 +583,19 @@ function DuplicateCard({ match, onView }: { match: RegisteredPlaceMatch; onView:
   );
 }
 
-function TimelineRow({ icon, label, color, badge, muted = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; color: string; badge?: string; muted?: boolean }) {
+function TimelineRow({
+  icon,
+  label,
+  color,
+  badge,
+  muted = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  color: string;
+  badge?: string;
+  muted?: boolean;
+}) {
   return (
     <View style={styles.timelineRow}>
       <Ionicons name={icon} size={20} color={color} />
@@ -450,7 +610,9 @@ function MyProposals() {
   return (
     <Card style={styles.proposalsCard}>
       <Text style={styles.cardTitle}>Mis propuestas</Text>
-      <Text style={styles.bodyLeft}>Son propuestas de Taco Hunt; los resultados de Google no se guardan aquí.</Text>
+      <Text style={styles.bodyLeft}>
+        Son propuestas de Taco Hunt; los resultados de Google no se guardan aquí.
+      </Text>
       {proposals.map((proposal) => (
         <View key={proposal.id} style={styles.proposalRow}>
           <View style={styles.suggestionCopy}>
@@ -467,63 +629,208 @@ function MyProposals() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: 44 },
-  reviewContent: { flexGrow: 1, alignItems: "center", paddingHorizontal: spacing.xl, paddingTop: spacing.xxl, paddingBottom: 44 },
-  back: { flexDirection: "row", alignItems: "center", minHeight: 44, gap: spacing.xs, marginBottom: spacing.lg },
+  reviewContent: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: 44,
+  },
+  back: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 44,
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+  },
   backText: { color: colors.green, fontSize: 15, fontWeight: "800" },
   kicker: { ...typography.kicker, color: colors.green },
   title: { color: colors.ink, ...typography.title, marginTop: spacing.sm },
   intro: { color: colors.muted, ...typography.body, lineHeight: 21, marginTop: spacing.sm },
-  sourceSwitch: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg, padding: spacing.xs, borderRadius: radii.lg, backgroundColor: colors.segmentTrack },
-  sourceTab: { flex: 1, minHeight: 44, borderRadius: radii.md, justifyContent: "center", alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  sourceSwitch: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    padding: spacing.xs,
+    borderRadius: radii.lg,
+    backgroundColor: colors.segmentTrack,
+  },
+  sourceTab: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: radii.md,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
   sourceTabActive: { backgroundColor: colors.paper },
   sourceTabText: { color: colors.muted, fontSize: 12, fontWeight: "800" },
   sourceTabTextActive: { color: colors.green },
   accountCard: { marginBottom: spacing.lg },
   cardTitle: { color: colors.ink, ...typography.sectionTitle },
   stepTitle: { color: colors.ink, ...typography.sectionTitle, marginBottom: spacing.sm },
-  body: { color: colors.muted, ...typography.body, lineHeight: 21, textAlign: "center", marginTop: spacing.sm },
+  body: {
+    color: colors.muted,
+    ...typography.body,
+    lineHeight: 21,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
   bodyLeft: { color: colors.muted, ...typography.body, lineHeight: 21, marginTop: spacing.sm },
   inlineAction: { marginTop: spacing.md },
   topAction: { marginTop: spacing.lg },
   action: { marginTop: spacing.sm },
-  input: { minHeight: 48, borderRadius: radii.md, borderWidth: 1, borderColor: colors.lineSoft, backgroundColor: colors.paper, paddingHorizontal: spacing.md, color: colors.ink, fontSize: 15, marginTop: spacing.md },
+  input: {
+    minHeight: 48,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    backgroundColor: colors.paper,
+    paddingHorizontal: spacing.md,
+    color: colors.ink,
+    fontSize: 15,
+    marginTop: spacing.md,
+  },
   note: { minHeight: 92, paddingTop: spacing.md, textAlignVertical: "top" },
-  statusRow: { minHeight: 44, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: spacing.sm },
+  statusRow: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   muted: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
-  suggestionList: { marginTop: spacing.md, borderRadius: radii.md, borderWidth: 1, borderColor: colors.lineSoft, backgroundColor: colors.paper, overflow: "hidden" },
-  suggestionRow: { minHeight: 60, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.line, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  suggestionList: {
+    marginTop: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
+    backgroundColor: colors.paper,
+    overflow: "hidden",
+  },
+  suggestionRow: {
+    minHeight: 60,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
   suggestionCopy: { flex: 1 },
   suggestionTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
   pickText: { color: colors.green, fontSize: 12, fontWeight: "900" },
-  attribution: { color: colors.muted, fontSize: 10, fontWeight: "700", textAlign: "right", padding: spacing.sm },
-  selectedCard: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.greenSoft, flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  manualCard: { marginTop: spacing.lg, minHeight: 66, padding: spacing.md, borderRadius: radii.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.redStrong, backgroundColor: colors.cream, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  attribution: {
+    color: colors.muted,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    padding: spacing.sm,
+  },
+  selectedCard: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.greenSoft,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  manualCard: {
+    marginTop: spacing.lg,
+    minHeight: 66,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.redStrong,
+    backgroundColor: colors.cream,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
   manualTitle: { flex: 1, color: colors.redStrong, fontSize: 13, fontWeight: "800" },
-  errorBanner: { marginTop: spacing.md, padding: spacing.md, borderRadius: radii.md, backgroundColor: colors.dangerBg, flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  errorBanner: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.dangerBg,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
   errorText: { flex: 1, color: colors.dangerText, fontSize: 13, lineHeight: 19, fontWeight: "700" },
   duplicateCard: { marginTop: spacing.md },
   duplicateHeading: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   duplicateKicker: { color: colors.pendingText, ...typography.kicker, fontSize: 10 },
   duplicateTitle: { color: colors.ink, fontSize: 16, fontWeight: "900", marginTop: spacing.sm },
   mapWrap: { height: 210, marginTop: spacing.md, borderRadius: radii.lg, overflow: "hidden" },
-  centerPin: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", paddingBottom: spacing.lg },
+  centerPin: {
+    ...StyleSheet.absoluteFill,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: spacing.lg,
+  },
   mapHint: { color: colors.muted, fontSize: 12, marginTop: spacing.sm },
-  googlePrivacyCard: { marginTop: spacing.lg, flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
-  label: { color: colors.muted, ...typography.label, marginTop: spacing.lg, marginBottom: spacing.xs },
+  googlePrivacyCard: {
+    marginTop: spacing.lg,
+    flexDirection: "row",
+    gap: spacing.sm,
+    alignItems: "flex-start",
+  },
+  label: {
+    color: colors.muted,
+    ...typography.label,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
   stepFooter: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xl },
   backAction: { flex: 1 },
   nextAction: { flex: 2 },
-  reviewRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+  reviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
   reviewLabel: { color: colors.muted, fontSize: 12, fontWeight: "800" },
   reviewValue: { color: colors.ink, fontSize: 15, fontWeight: "900", marginTop: spacing.xs },
   reviewIcon: { marginTop: spacing.xxl },
-  reviewTitle: { color: colors.ink, ...typography.title, fontSize: 26, textAlign: "center", marginTop: spacing.sm },
+  reviewTitle: {
+    color: colors.ink,
+    ...typography.title,
+    fontSize: 26,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
   timelineCard: { width: "100%", marginTop: spacing.xl },
-  timelineRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
   timelineLabel: { color: colors.ink, fontSize: 14, fontWeight: "800" },
   timelineMuted: { color: colors.muted },
-  timelineBadge: { marginLeft: "auto", color: colors.pendingText, ...typography.badge, backgroundColor: colors.goldSoft, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radii.pill },
+  timelineBadge: {
+    marginLeft: "auto",
+    color: colors.pendingText,
+    ...typography.badge,
+    backgroundColor: colors.goldSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
   proposalsCard: { marginTop: spacing.xl },
-  proposalRow: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: colors.line, paddingVertical: spacing.md, marginTop: spacing.md },
+  proposalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+  },
   pendingStatus: { color: colors.pendingText, ...typography.caption },
 });
