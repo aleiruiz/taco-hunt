@@ -1,20 +1,28 @@
+import { createHash } from "node:crypto";
 import {
   BadRequestException,
   Controller,
   Get,
+  Header,
   Inject,
   Logger,
   NotFoundException,
   Param,
   Query,
+  Req,
+  Res,
   ServiceUnavailableException,
 } from "@nestjs/common";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import {
+  mapPinsQuerySchema,
   reviewListQuerySchema,
   searchSuggestQuerySchema,
   spotListQuerySchema,
   uuidSchema,
+  type MapCluster,
+  type MapPin,
   type SearchColoniaSuggestion,
   type SearchPuestoSuggestion,
 } from "@taco-hunt/contracts";
@@ -28,6 +36,26 @@ const SEARCH_SUGGEST_LIMIT = 8;
 // already shown elsewhere (e.g. spot/[id].tsx's pin card). Revisit if/when
 // a real municipality column lands (see docs/data-provenance.md).
 const DEFAULT_MUNICIPALITY = "Monterrey y área metropolitana";
+
+// Per-request limit, not an area cap: the viewport can be anywhere in (and
+// around) the Monterrey metro area with no maximum size. When more approved
+// stands than this fall inside it, they're returned as grid clusters instead
+// of truncating results silently.
+const MAP_PIN_LIMIT = 300;
+
+// RFC 9110 §13.1.2: If-None-Match is a comma-separated list of entity tags
+// (or "*"), compared weakly even against a strong ETag; a plain `=== etag`
+// check misses every case but a single matching strong tag with nothing
+// else in the header. Splits only on commas outside quoted tags.
+function ifNoneMatchHas(headerValue: string | string[] | undefined, etag: string): boolean {
+  if (!headerValue) return false;
+  const header = Array.isArray(headerValue) ? headerValue.join(",") : headerValue;
+  if (header.trim() === "*") return true;
+  const tags = header.match(/(?:W\/)?"(?:[^"\\]|\\.)*"/g) ?? [];
+  const normalize = (tag: string) => tag.replace(/^W\//, "");
+  const target = normalize(etag);
+  return tags.some((tag) => normalize(tag) === target);
+}
 
 const spotCursorSchema = z.object({
   distanceKm: z.number().finite().nonnegative(),
@@ -229,6 +257,135 @@ export class SpotsController {
       this.logQueryFailure("Spot list query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
     }
+  }
+
+  @Get("/spots/map")
+  @Header("Cache-Control", "public, max-age=30")
+  async getSpotMapPins(
+    @Query() query: Record<string, unknown>,
+    @Req() request: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    const parsed = mapPinsQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    const { north, south, east, west, tacoType } = parsed.data;
+    if (south > north || west > east) {
+      throw new BadRequestException({ message: "Los límites del área son inválidos" });
+    }
+
+    const values: unknown[] = [north, south, east, west];
+    const where = [
+      "s.status='approved'",
+      "s.latitude <= $1",
+      "s.latitude >= $2",
+      "s.longitude <= $3",
+      "s.longitude >= $4",
+    ];
+    if (tacoType) {
+      values.push(tacoType);
+      where.push(
+        `exists (select 1 from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id where st.spot_id=s.id and st.status='approved' and tt.active and tt.slug=$${values.length})`,
+      );
+    }
+    const whereClause = where.join(" and ");
+
+    try {
+      const bestTacoExpr =
+        "(select coalesce(st.display_name,tt.name_es) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r.id) desc,avg((r.tortilla+r.filling+r.salsa+r.value)/4.0) desc nulls last limit 1)";
+      const probe = await this.pool.query(
+        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,${bestTacoExpr} as "bestTaco" from app_private.spots s where ${whereClause} order by s.id limit ${MAP_PIN_LIMIT + 1}`,
+        values,
+      );
+
+      const body: { pins: MapPin[]; clusters: MapCluster[] } =
+        probe.rowCount !== null && probe.rowCount <= MAP_PIN_LIMIT
+          ? { pins: probe.rows, clusters: [] }
+          : await this.clusterSpotsInViewport(whereClause, values, north, south, east, west);
+
+      // Derived from the actual response, not just the viewport, so a 304
+      // can never serve stale data if an approved spot, its status,
+      // coordinates, or visible taco data changed since the client's copy.
+      const etag = `"${createHash("sha1").update(JSON.stringify(body)).digest("hex")}"`;
+      reply.header("ETag", etag);
+      if (ifNoneMatchHas(request.headers["if-none-match"], etag)) {
+        reply.code(304);
+        return undefined;
+      }
+      return body;
+    } catch (error) {
+      this.logQueryFailure("Spot map pins query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  private async clusterSpotsInViewport(
+    whereClause: string,
+    filterValues: unknown[],
+    north: number,
+    south: number,
+    east: number,
+    west: number,
+  ): Promise<{ pins: MapPin[]; clusters: MapCluster[] }> {
+    const countResult = await this.pool.query<{ total: string }>(
+      `select count(*)::text as total from app_private.spots s where ${whereClause}`,
+      filterValues,
+    );
+    const total = Number(countResult.rows[0]?.total ?? 0);
+    const divisions = Math.min(20, Math.max(2, Math.ceil(Math.sqrt(total / MAP_PIN_LIMIT))));
+    const latStep = (north - south) / divisions || 1;
+    const lonStep = (east - west) / divisions || 1;
+
+    const values = [...filterValues, south, latStep, west, lonStep];
+    const southIdx = filterValues.length + 1;
+    const latStepIdx = filterValues.length + 2;
+    const westIdx = filterValues.length + 3;
+    const lonStepIdx = filterValues.length + 4;
+    const { rows } = await this.pool.query<{
+      cnt: number;
+      centroidLat: number;
+      centroidLon: number;
+      minLat: number;
+      maxLat: number;
+      minLon: number;
+      maxLon: number;
+      ids: string[];
+    }>(
+      `select count(*)::int as cnt,avg(s.latitude)::float8 as "centroidLat",avg(s.longitude)::float8 as "centroidLon",min(s.latitude)::float8 as "minLat",max(s.latitude)::float8 as "maxLat",min(s.longitude)::float8 as "minLon",max(s.longitude)::float8 as "maxLon",array_agg(s.id) as ids from app_private.spots s where ${whereClause} group by floor((s.latitude - $${southIdx}) / $${latStepIdx}),floor((s.longitude - $${westIdx}) / $${lonStepIdx})`,
+      values,
+    );
+
+    const clusters: MapCluster[] = [];
+    const singletonIds: string[] = [];
+    for (const row of rows) {
+      if (row.cnt === 1) {
+        singletonIds.push(row.ids[0]);
+      } else {
+        clusters.push({
+          count: row.cnt,
+          latitude: row.centroidLat,
+          longitude: row.centroidLon,
+          bounds: { north: row.maxLat, south: row.minLat, east: row.maxLon, west: row.minLon },
+        });
+      }
+    }
+
+    let pins: MapPin[] = [];
+    if (singletonIds.length > 0) {
+      const bestTacoExpr =
+        "(select coalesce(st.display_name,tt.name_es) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r.id) desc,avg((r.tortilla+r.filling+r.salsa+r.value)/4.0) desc nulls last limit 1)";
+      const pinRows = await this.pool.query<MapPin>(
+        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,${bestTacoExpr} as "bestTaco" from app_private.spots s where s.id = any($1::uuid[])`,
+        [singletonIds],
+      );
+      pins = pinRows.rows;
+    }
+
+    return { pins, clusters };
   }
 
   @Get("/spots/:id/reviews")
