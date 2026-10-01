@@ -137,11 +137,22 @@ export default function ExploreScreen() {
   const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
   const { session } = useAuth();
   const [headerAvatarPreset, setHeaderAvatarPreset] = useState<AvatarPreset>("pastor");
+  const [headerAvatarPhotoUrl, setHeaderAvatarPhotoUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (!session) return;
+    let cancelled = false;
+    setHeaderAvatarPreset("pastor");
+    setHeaderAvatarPhotoUrl(null);
+    if (!session) return () => undefined;
     getProfile(session)
-      .then((profile) => setHeaderAvatarPreset(profile.avatarPreset))
+      .then((profile) => {
+        if (cancelled) return;
+        setHeaderAvatarPreset(profile.avatarPreset);
+        setHeaderAvatarPhotoUrl(profile.avatarPhotoUrl);
+      })
       .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
   const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
   const sheetAnimRef = useRef(new Animated.Value(0)).current;
@@ -572,7 +583,11 @@ export default function ExploreScreen() {
       onPress={() => router.push("/settings")}
     >
       {session ? (
-        <Avatar size={40} preset={headerAvatarPreset} />
+        <Avatar
+          size={40}
+          preset={headerAvatarPreset}
+          photoUrl={headerAvatarPhotoUrl ?? undefined}
+        />
       ) : (
         <Ionicons name="person" size={22} color={colors.ink} />
       )}

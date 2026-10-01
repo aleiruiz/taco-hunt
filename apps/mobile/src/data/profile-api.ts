@@ -8,6 +8,14 @@ import type { Session } from "@supabase/supabase-js";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
+function assertSecureApiUrl() {
+  const url = new URL(API);
+  const localHost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  if (url.protocol !== "https:" && !localHost) {
+    throw new Error("La conexión segura con el API no está configurada.");
+  }
+}
+
 export type AvatarPreset =
   "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
 
@@ -43,6 +51,7 @@ function messageFromResponse(value: unknown) {
 }
 
 async function request<T>(path: string, session: Session, init?: RequestInit): Promise<T> {
+  assertSecureApiUrl();
   const response = await fetch(`${API}${path}`, {
     ...init,
     headers: {
@@ -84,6 +93,7 @@ export async function uploadAvatarPhoto(
   session: Session,
   asset: { uri: string; fileName?: string | null; mimeType?: string | null },
 ): Promise<AvatarPhotoUpload> {
+  assertSecureApiUrl();
   const form = new FormData();
   form.append("file", {
     uri: asset.uri,
