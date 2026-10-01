@@ -27,7 +27,6 @@ const GOOGLE_MAPS_ATTRIBUTION = {
 const GOOGLE_CALLS_SCOPE = "places-google-calls-global";
 const GOOGLE_CALLS_WINDOW_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_CALL_LIMIT = 2_000;
-const MAX_GOOGLE_PHOTO_BYTES = 10 * 1024 * 1024;
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -53,10 +52,6 @@ type GooglePlace = {
   types?: unknown;
   businessStatus?: unknown;
   googleMapsUri?: unknown;
-  photos?: Array<{
-    name?: unknown;
-    authorAttributions?: Array<{ displayName?: unknown; uri?: unknown }>;
-  }>;
 };
 
 type GooglePlacesResponse = { places?: GooglePlace[] };
@@ -134,11 +129,10 @@ export class PlacesService {
   }
 
   /**
-   * Fetches details and photo metadata on demand. The response contains only
-   * the contract's attribution-safe fields; photo bytes are served through
-   * getPlacePhoto so the Google API key never reaches a client.
+   * Fetches attribution-safe place details on demand. Taco Hunt photos are
+   * served only through the moderated gallery, never from Google payloads.
    */
-  async getPlaceDetails(placeId: string, photoBaseUrl: string) {
+  async getPlaceDetails(placeId: string) {
     const parsedPlaceId = googlePlaceIdSchema.safeParse(placeId);
     if (!parsedPlaceId.success) throw new BadRequestException("placeId inválido");
 
@@ -165,13 +159,7 @@ export class PlacesService {
       const response = await fetch(endpoint, {
         headers: {
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": [
-            "id",
-            "displayName",
-            "formattedAddress",
-            "googleMapsUri",
-            "photos",
-          ].join(","),
+          "X-Goog-FieldMask": ["id", "displayName", "formattedAddress", "googleMapsUri"].join(","),
         },
         signal: AbortSignal.timeout(5_000),
       });
@@ -183,9 +171,6 @@ export class PlacesService {
       if (!name) throw new BadGatewayException("Google Places devolvió datos incompletos");
 
       const googleMapsUrl = safeGoogleMapsUrl(place.googleMapsUri, parsedPlaceId.data);
-      const photos = (place.photos ?? [])
-        .map((photo) => toGooglePhoto(photo, parsedPlaceId.data, photoBaseUrl, googleMapsUrl))
-        .filter((photo): photo is NonNullable<typeof photo> => photo !== null);
       return {
         state: "ready" as const,
         details: {
@@ -195,8 +180,6 @@ export class PlacesService {
           formattedAddress: stringValue(place.formattedAddress),
           googleMapsUrl,
           attribution: GOOGLE_MAPS_ATTRIBUTION,
-          photosState: photos.length > 0 ? ("available" as const) : ("unavailable" as const),
-          photos,
         },
       };
     } catch (error) {
@@ -212,74 +195,6 @@ export class PlacesService {
         error instanceof Error ? error.stack : undefined,
       );
       throw new ServiceUnavailableException("Google Places no está disponible");
-    }
-  }
-
-  /**
-   * Proxies one transient Google photo through the API. The opaque token is
-   * accepted only when it decodes to a photo resource for the requested place.
-   */
-  async getPlacePhoto(placeId: string, photoToken: string) {
-    const parsedPlaceId = googlePlaceIdSchema.safeParse(placeId);
-    if (!parsedPlaceId.success) throw new BadRequestException("placeId inválido");
-    if (!/^[A-Za-z0-9_-]+$/.test(photoToken)) {
-      throw new BadRequestException("Foto inválida");
-    }
-
-    let photoName: string;
-    try {
-      photoName = Buffer.from(photoToken, "base64url").toString("utf8");
-    } catch {
-      throw new BadRequestException("Foto inválida");
-    }
-    const expectedPrefix = `places/${parsedPlaceId.data}/photos/`;
-    if (!photoName.startsWith(expectedPrefix) || photoName.length <= expectedPrefix.length) {
-      throw new NotFoundException("Foto no encontrada");
-    }
-
-    if (this.googlePlacesUnavailable()) {
-      throw new ServiceUnavailableException("Las fotos de Google no están disponibles");
-    }
-    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
-    if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
-
-    this.assertGoogleCallAllowed();
-    try {
-      const configuredEndpoint = process.env.GOOGLE_PLACES_PHOTO_URL?.trim();
-      const endpointTemplate =
-        configuredEndpoint || "https://places.googleapis.com/v1/{photoName}/media";
-      const endpoint = endpointTemplate.replace("{photoName}", photoName);
-      const url = new URL(endpoint);
-      url.searchParams.set("maxWidthPx", "1200");
-      const response = await fetch(url, {
-        headers: { "X-Goog-Api-Key": apiKey },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (response.status === 404) throw new NotFoundException("Foto no encontrada");
-      if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
-
-      const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim();
-      if (!contentType?.startsWith("image/")) {
-        throw new BadGatewayException("Google Places devolvió un archivo no válido");
-      }
-      const contentLength = Number(response.headers.get("content-length"));
-      if (Number.isFinite(contentLength) && contentLength > MAX_GOOGLE_PHOTO_BYTES) {
-        throw new BadGatewayException("La foto de Google es demasiado grande");
-      }
-      const body = Buffer.from(await response.arrayBuffer());
-      if (body.byteLength > MAX_GOOGLE_PHOTO_BYTES) {
-        throw new BadGatewayException("La foto de Google es demasiado grande");
-      }
-      return { body, contentType };
-    } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadGatewayException) {
-        throw error;
-      }
-      this.logger.error(
-        "Google Places photo proxy failed",
-        error instanceof Error ? error.stack : undefined,
-      );
-      throw new ServiceUnavailableException("Las fotos de Google no están disponibles");
     }
   }
 
@@ -356,6 +271,10 @@ export class PlacesService {
   }
 
   private async searchGoogleViewport(input: PlacesViewportQuery): Promise<GooglePlace[]> {
+    const longitudeSpan = input.east - input.west;
+    if (longitudeSpan > 180) {
+      throw new BadRequestException("Viewport demasiado amplio");
+    }
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
     this.assertGoogleCallAllowed();
@@ -363,6 +282,24 @@ export class PlacesService {
     const endpoint =
       process.env.GOOGLE_PLACES_VIEWPORT_URL?.trim() ||
       "https://places.googleapis.com/v1/places:searchNearby";
+    const center = {
+      latitude: (input.south + input.north) / 2,
+      longitude: (input.west + input.east) / 2,
+    };
+    const radius = Math.min(
+      50_000,
+      Math.max(
+        100,
+        ...[
+          [input.south, input.west],
+          [input.south, input.east],
+          [input.north, input.west],
+          [input.north, input.east],
+        ].map(([latitude, longitude]) =>
+          haversineDistanceMeters(center.latitude, center.longitude, latitude, longitude),
+        ),
+      ),
+    );
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -382,10 +319,7 @@ export class PlacesService {
         maxResultCount: Math.min(input.limit, 20),
         languageCode: "es",
         locationRestriction: {
-          rectangle: {
-            low: { latitude: input.south, longitude: input.west },
-            high: { latitude: input.north, longitude: input.east },
-          },
+          circle: { center, radius },
         },
       }),
       signal: AbortSignal.timeout(5_000),
@@ -737,29 +671,6 @@ function toViewportResult(place: GooglePlace) {
   };
 }
 
-function toGooglePhoto(
-  photo: NonNullable<GooglePlace["photos"]>[number],
-  placeId: string,
-  photoBaseUrl: string,
-  googleMapsUrl: string,
-) {
-  const photoName = stringValue(photo.name);
-  if (!photoName) return null;
-  const token = Buffer.from(photoName, "utf8").toString("base64url");
-  if (token.length > 300) return null;
-  const author = photo.authorAttributions?.[0];
-  const authorAttribution = stringValue(author?.displayName);
-  if (!authorAttribution) return null;
-  const sourceUrl = safeHttpsUrl(author?.uri) ?? googleMapsUrl;
-  return {
-    source: "google" as const,
-    id: token,
-    url: `${photoBaseUrl.replace(/\/+$/, "")}/places/${encodeURIComponent(placeId)}/photos/${token}`,
-    authorAttribution,
-    sourceUrl,
-  };
-}
-
 function safeGoogleMapsUrl(value: unknown, placeId: string): string {
   try {
     const url = new URL(stringValue(value) ?? "");
@@ -775,17 +686,26 @@ function safeGoogleMapsUrl(value: unknown, placeId: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId)}`;
 }
 
-function safeHttpsUrl(value: unknown): string | null {
-  try {
-    const url = new URL(stringValue(value) ?? "");
-    return url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function haversineDistanceMeters(
+  latitudeA: number,
+  longitudeA: number,
+  latitudeB: number,
+  longitudeB: number,
+): number {
+  const earthRadiusMeters = 6_371_000;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+  const latitudeDelta = toRadians(latitudeB - latitudeA);
+  const longitudeDelta = toRadians(longitudeB - longitudeA);
+  const latitudeARadians = toRadians(latitudeA);
+  const latitudeBRadians = toRadians(latitudeB);
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(latitudeARadians) * Math.cos(latitudeBRadians) * Math.sin(longitudeDelta / 2) ** 2;
+  return earthRadiusMeters * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
 }
 
 function numberValue(value: unknown): number | null {

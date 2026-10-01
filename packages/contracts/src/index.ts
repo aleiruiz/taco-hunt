@@ -626,18 +626,6 @@ export const placesViewportResponseSchema = z.object({
 });
 export type PlacesViewportResponse = z.infer<typeof placesViewportResponseSchema>;
 
-export const googlePlacePhotoSchema = z.object({
-  source: z.literal("google"),
-  id: z.string().trim().min(1).max(300),
-  url: z.string().url(),
-  authorAttribution: z.string().trim().min(1).max(500),
-  sourceUrl: z.string().url(),
-});
-export type GooglePlacePhoto = z.infer<typeof googlePlacePhotoSchema>;
-
-export const googlePlacePhotosStateSchema = z.enum(["available", "unavailable"]);
-export type GooglePlacePhotosState = z.infer<typeof googlePlacePhotosStateSchema>;
-
 export const googlePlaceDetailsSchema = z.object({
   source: z.literal("google"),
   placeId: googlePlaceIdSchema,
@@ -645,8 +633,6 @@ export const googlePlaceDetailsSchema = z.object({
   formattedAddress: z.string().nullable(),
   googleMapsUrl: z.string().url(),
   attribution: googleAttributionSchema,
-  photosState: googlePlacePhotosStateSchema,
-  photos: z.array(googlePlacePhotoSchema),
 });
 export type GooglePlaceDetails = z.infer<typeof googlePlaceDetailsSchema>;
 

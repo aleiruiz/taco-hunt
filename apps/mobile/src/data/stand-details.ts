@@ -11,15 +11,6 @@ import { listSpotPhotos, uploadSpotPhoto, type SpotPhotoKind } from "@/features/
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
 export type GooglePlaceDetailsResultState = "ready" | "unavailable" | "error";
-export type GooglePlacePhotosState = "available" | "unavailable";
-
-export interface GooglePlacePhoto {
-  source: "google";
-  id: string;
-  url: string;
-  authorAttribution: string;
-  sourceUrl: string;
-}
 
 export interface GooglePlaceDetails {
   source: "google";
@@ -28,8 +19,6 @@ export interface GooglePlaceDetails {
   address: string;
   googleMapsUrl: string;
   attributionLabel: "Google Maps";
-  photosState: GooglePlacePhotosState;
-  photos: GooglePlacePhoto[];
 }
 
 export interface GooglePlaceDetailsResult {
@@ -47,8 +36,6 @@ type PlaceDetailsResponse = {
     formattedAddress: string | null;
     googleMapsUrl: string;
     attribution: { label: string; sourceUrl: string };
-    photosState: GooglePlacePhotosState;
-    photos: GooglePlacePhoto[];
   };
   message?: string;
 };
@@ -112,8 +99,6 @@ export async function getFixtureGooglePlaceDetails(
       address: data.details.formattedAddress ?? "Dirección no confirmada",
       googleMapsUrl: data.details.googleMapsUrl,
       attributionLabel: "Google Maps",
-      photosState: data.details.photosState,
-      photos: data.details.photos,
     },
   };
 }
