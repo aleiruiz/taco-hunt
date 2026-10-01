@@ -78,7 +78,10 @@ export default function MyTacosScreen() {
         fetch(`${API}/me/proposals`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }).catch(() => null),
-        getProfile(session),
+        // Kept out of the failure path below: a profile fetch failure shouldn't block
+        // reviews/favorites/proposals from loading. displayName already falls back to
+        // sign-up metadata when profile is null (see below).
+        getProfile(session).catch(() => null),
       ]);
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);

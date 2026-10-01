@@ -124,8 +124,14 @@ export class ProfileController {
       client.release();
     }
 
-    // The previous photo (replaced or cleared) is no longer referenced; best-effort cleanup.
-    if (previousPhotoKey && previousPhotoKey !== claimedNewKey) {
+    // The previous photo is only orphaned if this patch actually touched avatarPhotoUploadId
+    // (replaced or cleared it); a displayName/avatarPreset-only patch leaves avatar_photo_key
+    // unchanged, so previousPhotoKey is still the live, referenced object.
+    if (
+      previousPhotoKey &&
+      previousPhotoKey !== claimedNewKey &&
+      Object.hasOwn(patch, "avatarPhotoUploadId")
+    ) {
       await this.deletePhotoObject(previousPhotoKey);
     }
 
