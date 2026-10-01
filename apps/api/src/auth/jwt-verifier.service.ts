@@ -15,6 +15,7 @@ interface JwtClaims {
   aud?: unknown;
   exp?: unknown;
   nbf?: unknown;
+  user_metadata?: unknown;
 }
 
 interface Jwk {
@@ -37,7 +38,7 @@ export class JwtVerifierService {
   private jwksCache: { keys: Jwk[]; expiresAt: number } | undefined;
   private jwksRefresh: Promise<Jwk[]> | undefined;
 
-  async verifyAccessToken(token: string): Promise<{ subject: string }> {
+  async verifyAccessToken(token: string): Promise<{ subject: string; signupDisplayName?: string }> {
     if (token.length > 12_000) throw new UnauthorizedException("Token inválido");
     const parts = token.split(".");
     if (parts.length !== 3 || parts.some((part) => part.length === 0)) {
@@ -78,7 +79,24 @@ export class JwtVerifierService {
       throw new UnauthorizedException("Token inválido");
     }
 
-    return { subject: claims.sub };
+    return { subject: claims.sub, signupDisplayName: this.extractSignupDisplayName(claims) };
+  }
+
+  /**
+   * Supabase stamps the client-supplied sign-up metadata (set in
+   * AuthScreen.tsx's `signUp({ options: { data: { display_name } } })`) onto
+   * every access token as `user_metadata`. It's already verified by the
+   * signature check above, so it's safe to read here and use to seed
+   * `profiles.display_name` the first time this subject is seen — see
+   * ProfileService.findOrCreate.
+   */
+  private extractSignupDisplayName(claims: JwtClaims): string | undefined {
+    const metadata = claims.user_metadata;
+    if (!metadata || typeof metadata !== "object") return undefined;
+    const value = (metadata as Record<string, unknown>).display_name;
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    return trimmed ? trimmed.slice(0, 60) : undefined;
   }
 
   private async isSignatureValid(

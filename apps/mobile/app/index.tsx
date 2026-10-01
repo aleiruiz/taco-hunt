@@ -23,7 +23,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { Avatar } from "@/components/Avatar";
-import { getFixtureUser } from "@/data/auth";
+import { getProfile, type AvatarPreset } from "@/data/profile-api";
 
 type TacoType = { id: string; slug: string; nameEs: string };
 type Taco = {
@@ -136,6 +136,24 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
   const { session } = useAuth();
+  const [headerAvatarPreset, setHeaderAvatarPreset] = useState<AvatarPreset>("pastor");
+  const [headerAvatarPhotoUrl, setHeaderAvatarPhotoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setHeaderAvatarPreset("pastor");
+    setHeaderAvatarPhotoUrl(null);
+    if (!session) return () => undefined;
+    getProfile(session)
+      .then((profile) => {
+        if (cancelled) return;
+        setHeaderAvatarPreset(profile.avatarPreset);
+        setHeaderAvatarPhotoUrl(profile.avatarPhotoUrl);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
   const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
   const sheetAnimRef = useRef(new Animated.Value(0)).current;
   const selectedSpotIdRef = useRef<string | null>(null);
@@ -565,7 +583,11 @@ export default function ExploreScreen() {
       onPress={() => router.push("/settings")}
     >
       {session ? (
-        <Avatar size={40} preset={getFixtureUser().avatarPreset} />
+        <Avatar
+          size={40}
+          preset={headerAvatarPreset}
+          photoUrl={headerAvatarPhotoUrl ?? undefined}
+        />
       ) : (
         <Ionicons name="person" size={22} color={colors.ink} />
       )}

@@ -50,6 +50,14 @@ export class MediaStorageService {
     if (error) throw new ServiceUnavailableException("No se pudo guardar la foto");
   }
 
+  async download(objectKey: string): Promise<Buffer> {
+    const { data, error } = await this.ensureEnabled()
+      .storage.from(this.bucket)
+      .download(objectKey);
+    if (error || !data) throw new ServiceUnavailableException("No se pudo leer la foto");
+    return Buffer.from(await data.arrayBuffer());
+  }
+
   async remove(objectKeys: string[]): Promise<void> {
     if (objectKeys.length === 0) return;
     const { error } = await this.ensureEnabled().storage.from(this.bucket).remove(objectKeys);
