@@ -209,7 +209,10 @@ export default function ProposeScreen() {
         <Button
           label="Mis propuestas"
           variant="secondary"
-          onPress={() => setSubmitted(false)}
+          onPress={() => {
+            setSubmitStatus("idle");
+            setSubmitted(false);
+          }}
           style={styles.action}
         />
         <Button label="Proponer otra" variant="ghost" onPress={startOver} style={styles.action} />
