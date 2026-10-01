@@ -32,6 +32,20 @@ import { DATABASE_POOL } from "../database/database.module.js";
 // of truncating results silently.
 const MAP_PIN_LIMIT = 300;
 
+// RFC 9110 §13.1.2: If-None-Match is a comma-separated list of entity tags
+// (or "*"), compared weakly even against a strong ETag; a plain `=== etag`
+// check misses every case but a single matching strong tag with nothing
+// else in the header. Splits only on commas outside quoted tags.
+function ifNoneMatchHas(headerValue: string | string[] | undefined, etag: string): boolean {
+  if (!headerValue) return false;
+  const header = Array.isArray(headerValue) ? headerValue.join(",") : headerValue;
+  if (header.trim() === "*") return true;
+  const tags = header.match(/(?:W\/)?"(?:[^"\\]|\\.)*"/g) ?? [];
+  const normalize = (tag: string) => tag.replace(/^W\//, "");
+  const target = normalize(etag);
+  return tags.some((tag) => normalize(tag) === target);
+}
+
 const spotCursorSchema = z.object({
   distanceKm: z.number().finite().nonnegative(),
   normalizedName: z.string().max(120),
@@ -219,7 +233,7 @@ export class SpotsController {
       // coordinates, or visible taco data changed since the client's copy.
       const etag = `"${createHash("sha1").update(JSON.stringify(body)).digest("hex")}"`;
       reply.header("ETag", etag);
-      if (request.headers["if-none-match"] === etag) {
+      if (ifNoneMatchHas(request.headers["if-none-match"], etag)) {
         reply.code(304);
         return undefined;
       }
