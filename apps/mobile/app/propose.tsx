@@ -18,12 +18,14 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Stepper } from "@/components/Stepper";
 import {
-  getFixtureSpotProposals,
+  listMySpotProposals,
+  ProposalDuplicateError,
   searchProposalPlaces,
-  submitProposalFixture,
+  submitProposal,
   type GoogleProposalSuggestion,
   type RegisteredPlaceMatch,
   type ProposalSource,
+  type SpotProposal,
 } from "@/data/proposals";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -51,6 +53,7 @@ export default function ProposeScreen() {
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>("idle");
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [proposals, setProposals] = useState<SpotProposal[]>([]);
 
   const mapRegion = useMemo<Region>(
     () => ({ latitude, longitude, latitudeDelta: 0.01, longitudeDelta: 0.01 }),
@@ -58,7 +61,7 @@ export default function ProposeScreen() {
   );
 
   useEffect(() => {
-    if (source !== "google" || selectedGoogle || query.trim().length < 2) {
+    if (!session || source !== "google" || selectedGoogle || query.trim().length < 2) {
       setSearchStatus("idle");
       setSuggestions([]);
       setDuplicate(undefined);
@@ -68,7 +71,7 @@ export default function ProposeScreen() {
     let cancelled = false;
     setSearchStatus("loading");
     const timer = setTimeout(() => {
-      void searchProposalPlaces(query)
+      void searchProposalPlaces(session, query)
         .then((result) => {
           if (cancelled) return;
           setSuggestions(result.suggestions);
@@ -88,7 +91,25 @@ export default function ProposeScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, selectedGoogle, source]);
+  }, [query, selectedGoogle, session, source]);
+
+  useEffect(() => {
+    if (!session) {
+      setProposals([]);
+      return;
+    }
+    let cancelled = false;
+    void listMySpotProposals(session)
+      .then((items) => {
+        if (!cancelled) setProposals(items);
+      })
+      .catch(() => {
+        if (!cancelled) setProposals([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   function announce(message: string) {
     AccessibilityInfo.announceForAccessibility(message);
@@ -147,7 +168,7 @@ export default function ProposeScreen() {
     try {
       const submission =
         source === "google" && selectedGoogle
-          ? { source: "google" as const, place_id: selectedGoogle.placeId }
+          ? { source: "google" as const, placeId: selectedGoogle.placeId }
           : {
               source: "local" as const,
               latitude,
@@ -155,10 +176,21 @@ export default function ProposeScreen() {
               ...(name.trim() ? { name: name.trim() } : {}),
               ...(note.trim() ? { note: note.trim() } : {}),
             };
-      await submitProposalFixture(submission);
+      await submitProposal(session, submission);
+      void listMySpotProposals(session)
+        .then(setProposals)
+        .catch(() => undefined);
       setSubmitted(true);
       announce("Propuesta enviada. Está en revisión.");
     } catch (cause) {
+      if (cause instanceof ProposalDuplicateError) {
+        setSelectedGoogle(undefined);
+        setDuplicate(cause.duplicate);
+        setStep(1);
+        setSubmitStatus("idle");
+        announce("Este lugar ya está registrado. Puedes abrir su ficha.");
+        return;
+      }
       const message = cause instanceof Error ? cause.message : "No se pudo enviar la propuesta.";
       setSubmitError(message);
       setSubmitStatus("error");
@@ -526,7 +558,7 @@ export default function ProposeScreen() {
         </Card>
       ) : null}
 
-      {session ? <MyProposals /> : null}
+      {session ? <MyProposals proposals={proposals} /> : null}
     </ScrollView>
   );
 }
@@ -588,8 +620,7 @@ function TimelineRow({
   );
 }
 
-function MyProposals() {
-  const proposals = getFixtureSpotProposals();
+function MyProposals({ proposals }: { proposals: SpotProposal[] }) {
   return (
     <Card style={styles.proposalsCard}>
       <Text style={styles.cardTitle}>Mis propuestas</Text>
@@ -599,8 +630,16 @@ function MyProposals() {
       {proposals.map((proposal) => (
         <View key={proposal.id} style={styles.proposalRow}>
           <View style={styles.suggestionCopy}>
-            <Text style={styles.suggestionTitle}>{proposal.name || "Pin sin nombre"}</Text>
-            <Text style={styles.muted}>Pin local · solo tú la ves por ahora</Text>
+            <Text style={styles.suggestionTitle}>
+              {proposal.source === "google"
+                ? "Lugar de Google"
+                : proposal.name || "Pin sin nombre"}
+            </Text>
+            <Text style={styles.muted}>
+              {proposal.source === "google"
+                ? "Vínculo pendiente de moderación"
+                : "Pin local · solo tú la ves por ahora"}
+            </Text>
           </View>
           <Text style={styles.pendingStatus}>Pendiente</Text>
         </View>
