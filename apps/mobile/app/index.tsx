@@ -372,6 +372,7 @@ export default function ExploreScreen() {
   const fetchMapDiscovery = useCallback(async (region: Region) => {
     const bounds = regionToViewportBounds(region);
     const seq = ++mapDiscoveryFetchSeqRef.current;
+    setSelectedProposal(null);
     if (!bounds) {
       setMapDiscoveryLoading(false);
       setMapDiscovery({
@@ -384,7 +385,6 @@ export default function ExploreScreen() {
       return;
     }
     setMapDiscoveryLoading(true);
-    setSelectedProposal(null);
     setMapDiscovery((current) => ({
       ...current,
       state: "empty",
@@ -561,6 +561,12 @@ export default function ExploreScreen() {
     return true;
   }, []);
 
+  const handleProposalPress = useCallback((proposal: TacoHuntProposalPin) => {
+    setSelectedProposal(proposal);
+    setSelectedSpotId(null);
+    selectedSpotIdRef.current = null;
+  }, []);
+
   const CustomMarkerContent = ({ hasReviews }: { hasReviews: boolean }) => (
     <View style={styles.markerWrap}>
       <View style={styles.marker}>
@@ -722,7 +728,7 @@ export default function ExploreScreen() {
     ? "Los puestos y propuestas de Taco Hunt siguen cargando por separado."
     : mapDiscovery.message;
   const discoveryCard = (
-    <View
+    <Card
       style={styles.discoveryCard}
       accessibilityLabel={`Descubrimiento externo. ${discoveryTitle}. ${discoveryMessage ?? ""}`}
       accessibilityLiveRegion="polite"
@@ -747,7 +753,7 @@ export default function ExploreScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${mapDiscovery.localProposals.length} propuesta${mapDiscovery.localProposals.length === 1 ? "" : "s"} de Taco Hunt en revisión`}
-          onPress={() => setSelectedProposal(mapDiscovery.localProposals[0])}
+          onPress={() => handleProposalPress(mapDiscovery.localProposals[0])}
           style={styles.discoveryLegendRow}
         >
           <View style={[styles.discoveryLegendDot, styles.proposalLegendDot]} />
@@ -768,15 +774,14 @@ export default function ExploreScreen() {
       (mapDiscovery.state === "unavailable" ||
         mapDiscovery.state === "offline" ||
         mapDiscovery.state === "error") ? (
-        <Pressable
-          accessibilityRole="button"
+        <Button
+          label="Reintentar"
+          variant="ghost"
+          icon="refresh"
           accessibilityLabel="Reintentar búsqueda de Google"
           onPress={() => void fetchMapDiscovery(currentRegionRef.current ?? mapRegion)}
           style={styles.discoveryRetry}
-        >
-          <Ionicons name="refresh" size={14} color={colors.green} />
-          <Text style={styles.discoverySourceLinkText}>Reintentar</Text>
-        </Pressable>
+        />
       ) : null}
       {selectedProposal ? (
         <View style={styles.proposalDetail}>
@@ -794,7 +799,7 @@ export default function ExploreScreen() {
           />
         </View>
       ) : null}
-    </View>
+    </Card>
   );
 
   const filterPanel = panelOpen && (
@@ -927,7 +932,7 @@ export default function ExploreScreen() {
               key={proposal.id}
               coordinate={{ latitude: proposal.latitude, longitude: proposal.longitude }}
               accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}, ${proposal.neighborhood}, en revisión`}
-              onPress={() => setSelectedProposal(proposal)}
+              onPress={() => handleProposalPress(proposal)}
             >
               {proposalMarkerContent({ proposal })}
             </Marker>
@@ -1511,11 +1516,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: spacing.lg,
     right: spacing.lg,
-    bottom: 96,
-    borderRadius: radii.xl,
-    backgroundColor: colors.paper,
-    borderWidth: 1,
-    borderColor: colors.line,
+    bottom: spacing.lg + sizes.locateButton + spacing.md + sizes.fab + spacing.md,
     padding: spacing.md,
     ...elevation.float,
   },
