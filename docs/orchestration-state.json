@@ -400,12 +400,12 @@
       "coderabbitReviewedSha": "832c0d0"
     },
     "T34": {
-      "status": "ready",
+      "status": "pr-open",
       "dependsOn": ["T33", "T46"],
-      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI. Free now that T33 is merged.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI. Implemented by another concurrent process (state was stale showing ready/pr:null - PR already existed when checked). CodeRabbit found 2 Minor issues (cached singleton pins not excluded when a later response returns them as a cluster, causing duplicate markers/inflated counts; hardcoded #000 shadow color on the new clusterBubble style instead of a theme token) - both fixed and manually verified present in code at head 48d586e, not just trusting the auto-tag. CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/50",
+      "headSha": "48d586ea77d5982ca5edf9a1b77ee8c822ca140f",
+      "coderabbitReviewedSha": "48d586ea77d5982ca5edf9a1b77ee8c822ca140f"
     },
     "T52": {
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/48",
@@ -440,12 +440,12 @@
       "note": "Phase B. GET /v1/me/progress: all 6 badges computed from the user's own reviews/proposals/photos only (no other users' counts), nextChallenge from the design's grid order. Implemented by the orchestrator in-session. CodeRabbit reviewed head d669ac0 with no actionable comments. CI green. Merged as 5c6db86."
     },
     "T42": {
-      "status": "ready",
+      "status": "pr-open",
       "dependsOn": ["T51"],
-      "note": "Phase B. Import-candidate approval API + swap T50 fixtures. Free now that T51 is merged.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Phase B. Import-candidate approval API + swap T50 fixtures. Implemented by another concurrent process (state was stale showing ready/pr:null - PR already existed when checked). CodeRabbit found 1 Minor (admin.tsx moderation buttons lacked a double-tap guard, same pattern fixed in T37's PR) - fixed and manually verified present in code at head 065feae, not just trusting the auto-tag. The only other finding (add integration tests for the admin import-candidate routes) was declined per CLAUDE.md's no-tests-unless-requested policy, same precedent as T52. CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/51",
+      "headSha": "065feae1fa7fec0f062bec809139902f79b9143d",
+      "coderabbitReviewedSha": "065feae1fa7fec0f062bec809139902f79b9143d"
     },
     "T43": {
       "status": "blocked",
