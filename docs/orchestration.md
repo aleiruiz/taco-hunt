@@ -1,5 +1,9 @@
 # Taco Hunt Orchestration
 
+## Current integration snapshot
+
+As of 2026-10-01, T34 (PR #50), T37 (PR #52), T40 (PR #53), T42 (PR #51), T61 (PR #54), T69 (PR #55), T63 (PR #56), T62 (PR #57), T64 (PR #58), and T65 (PR #59) are merged into `main`. T34 and T42 are historical/superseded by the Google Places architecture reset. T66 and T67 are ready in parallel; T68 remains gated until both merge. Keep `docs/orchestration-state.json` aligned with this snapshot during every coordination pass.
+
 The orchestrator operates in the main Codex task. Every worker must be a separate, user-visible Codex task/session with its own history and worktree in the repository. Do not use subagents within the orchestrator task as implementation workers. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. The limit is **three active worker tasks**; coordination in the main task does not use one of those slots.
 
 ## Worker cycle
