@@ -185,20 +185,6 @@ export class SpotsController {
       throw new BadRequestException({ message: "Los límites del área son inválidos" });
     }
 
-    // Rounded to ~100 m: a viewport that only shifted by a few meters between
-    // requests (e.g. minor map-drag jitter) should still hit the client's
-    // cached copy instead of forcing a fresh query.
-    const round = (value: number) => Math.round(value * 1000) / 1000;
-    const etag = `"${createHash("sha1")
-      .update(`${round(north)}:${round(south)}:${round(east)}:${round(west)}:${tacoType ?? ""}`)
-      .digest("hex")}"`;
-    reply.header("ETag", etag);
-    const ifNoneMatch = request.headers["if-none-match"];
-    if (ifNoneMatch === etag) {
-      reply.code(304);
-      return undefined;
-    }
-
     const values: unknown[] = [north, south, east, west];
     const where = [
       "s.status='approved'",
@@ -223,13 +209,21 @@ export class SpotsController {
         values,
       );
 
-      if (probe.rowCount !== null && probe.rowCount <= MAP_PIN_LIMIT) {
-        return { pins: probe.rows, clusters: [] } satisfies {
-          pins: MapPin[];
-          clusters: MapCluster[];
-        };
+      const body: { pins: MapPin[]; clusters: MapCluster[] } =
+        probe.rowCount !== null && probe.rowCount <= MAP_PIN_LIMIT
+          ? { pins: probe.rows, clusters: [] }
+          : await this.clusterSpotsInViewport(whereClause, values, north, south, east, west);
+
+      // Derived from the actual response, not just the viewport, so a 304
+      // can never serve stale data if an approved spot, its status,
+      // coordinates, or visible taco data changed since the client's copy.
+      const etag = `"${createHash("sha1").update(JSON.stringify(body)).digest("hex")}"`;
+      reply.header("ETag", etag);
+      if (request.headers["if-none-match"] === etag) {
+        reply.code(304);
+        return undefined;
       }
-      return await this.clusterSpotsInViewport(whereClause, values, north, south, east, west);
+      return body;
     } catch (error) {
       this.logQueryFailure("Spot map pins query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
