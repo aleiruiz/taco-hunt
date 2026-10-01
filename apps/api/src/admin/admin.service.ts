@@ -113,7 +113,7 @@ export class AdminService {
         for (const row of rows) {
           const { objectKey, ...rest } = row as typeof row & { objectKey: string };
           const url = this.media.enabled ? await this.media.createSignedUrl(objectKey) : null;
-          items.push({ ...rest, url: url ?? "" });
+          items.push({ ...rest, url: url ?? "", urlError: this.media.enabled && url === null });
         }
         return { items };
       }

@@ -299,7 +299,7 @@ export default function SpotScreen() {
       // A sign-out/sign-in during the upload already reset local state (see
       // the session-change effect above); don't resurrect a photo under the
       // new identity.
-      if (session.user.id !== uploaderId) return;
+      if (currentUserId.current !== uploaderId) return;
       const pending: Photo = {
         id: created.id,
         url: created.url,

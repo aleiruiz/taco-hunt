@@ -45,6 +45,7 @@ export default function AdminScreen() {
     getFixtureImportCandidates(),
   );
   const [expandedCandidateId, setExpandedCandidateId] = useState<string | null>(null);
+  const [pendingPhotoId, setPendingPhotoId] = useState<string | null>(null);
   const [candidatePins, setCandidatePins] = useState<
     Record<string, { latitude: number; longitude: number }>
   >({});
@@ -301,6 +302,9 @@ export default function AdminScreen() {
                     size={120}
                     accessibilityLabel={`Foto enviada por ${String(photo.uploaderName ?? "alguien")} para ${String(photo.spotName ?? "un puesto")}`}
                   />
+                  {photo.urlError ? (
+                    <Text style={styles.notice}>No se pudo cargar la foto.</Text>
+                  ) : null}
                   <View style={styles.photoCardBody}>
                     <Text style={styles.cardTitle}>{String(photo.spotName ?? "Puesto")}</Text>
                     <Text style={styles.body}>
@@ -315,18 +319,34 @@ export default function AdminScreen() {
                         variant="primary"
                         size="md"
                         style={styles.photoActionButton}
-                        onPress={() => void run(`/admin/spot-photos/${photo.id}/approve`)}
+                        disabled={pendingPhotoId !== null}
+                        loading={pendingPhotoId === photo.id}
+                        onPress={async () => {
+                          setPendingPhotoId(String(photo.id));
+                          try {
+                            await run(`/admin/spot-photos/${photo.id}/approve`);
+                          } finally {
+                            setPendingPhotoId(null);
+                          }
+                        }}
                       />
                       <Button
                         label="Rechazar"
                         variant="danger"
                         size="md"
                         style={styles.photoActionButton}
-                        onPress={() =>
-                          void run(`/admin/spot-photos/${photo.id}/reject`, {
-                            reason: "Foto no apta para publicación",
-                          })
-                        }
+                        disabled={pendingPhotoId !== null}
+                        loading={pendingPhotoId === photo.id}
+                        onPress={async () => {
+                          setPendingPhotoId(String(photo.id));
+                          try {
+                            await run(`/admin/spot-photos/${photo.id}/reject`, {
+                              reason: "Foto no apta para publicación",
+                            });
+                          } finally {
+                            setPendingPhotoId(null);
+                          }
+                        }}
                       />
                     </View>
                   </View>
