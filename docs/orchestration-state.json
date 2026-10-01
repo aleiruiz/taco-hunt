@@ -392,17 +392,17 @@
       "coderabbitReviewedSha": "1d9f174"
     },
     "T33": {
-      "status": "ready",
+      "status": "merged",
       "dependsOn": ["T51"],
-      "note": "Phase B. GET /v1/spots/map viewport pins (bbox), no geographic cap, per-request limit with server clusters, cacheable. Free now that T51 is merged.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Phase B. GET /v1/spots/map viewport pins: no geographic cap, per-request limit (300) with server-side grid clustering above it, Cache-Control + ETag. Implemented by the orchestrator in-session. CodeRabbit rounds 1-2 (heads 96d1974/8e8c3b1) found: ETag derived from the rounded bbox alone instead of the actual response (Major - could 304 stale data or collide across viewports), and a plain === check instead of RFC 9110 entity-tag parsing for If-None-Match. Both fixed, head 832c0d0. CI green, no open threads. Merged as bbea4e5.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/47",
+      "headSha": "bbea4e5",
+      "coderabbitReviewedSha": "832c0d0"
     },
     "T34": {
-      "status": "blocked",
+      "status": "ready",
       "dependsOn": ["T33", "T46"],
-      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI.",
+      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI. Free now that T33 is merged.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
@@ -432,12 +432,12 @@
       "coderabbitReviewedSha": null
     },
     "T49": {
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null,
-      "status": "ready",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/49",
+      "headSha": "5c6db86",
+      "coderabbitReviewedSha": "d669ac0",
+      "status": "merged",
       "dependsOn": ["T51"],
-      "note": "Phase B. GET /v1/me/progress for challenges/badges + swap T48 fixtures. Free now that T51 is merged."
+      "note": "Phase B. GET /v1/me/progress: all 6 badges computed from the user's own reviews/proposals/photos only (no other users' counts), nextChallenge from the design's grid order. Implemented by the orchestrator in-session. CodeRabbit reviewed head d669ac0 with no actionable comments. CI green. Merged as 5c6db86."
     },
     "T42": {
       "status": "ready",
