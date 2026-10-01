@@ -408,12 +408,12 @@
       "coderabbitReviewedSha": null
     },
     "T52": {
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null,
-      "status": "ready",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/48",
+      "headSha": "fa64f92",
+      "coderabbitReviewedSha": "be1f1df",
+      "status": "merged",
       "dependsOn": ["T51", "T35"],
-      "note": "Phase B. GET /v1/search/suggest (all stands/neighborhoods, no area cap, proximity-ranked) + swap T35 fixtures. Free now that T51 is merged."
+      "note": "Phase B. GET /v1/search/suggest: all approved stands/neighborhoods, no area cap, haversine proximity ranking when near given, fixed municipality string pending a real column. Implemented by the orchestrator in-session. CodeRabbit round 1 (head f43b32b) found 2 issues: near coordinates weren't range-validated, and an unquoted distanceKm ORDER BY alias (Postgres folds to lowercase) 503'd every near-ranked request - both fixed, head 352f391. Hit a merge conflict with T33 in spots.controller.ts after T33 merged first; resolved on the branch (combined imports/consts), head be1f1df. CodeRabbit's only remaining ask (add integration tests) was declined per CLAUDE.md's no-tests-unless-requested policy. CI green, no open threads. Merged as fa64f92."
     },
     "T37": {
       "status": "ready",
