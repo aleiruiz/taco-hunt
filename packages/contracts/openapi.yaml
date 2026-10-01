@@ -425,7 +425,8 @@ paths:
             in: query,
             name: kind,
             required: true,
-            schema: { type: string, enum: [spots, tacos, reports] },
+            schema:
+              { type: string, enum: [spots, tacos, reports, photos, duplicates, spot-photos] },
           }
       responses:
         "200":

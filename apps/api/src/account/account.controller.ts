@@ -68,12 +68,13 @@ export class AccountController {
    * proposals, and review photos — never other users' counts, per the
    * owner's "incentives use only real data" rule (design §4).
    *
-   * "fotografo" (3 approved photos) counts review photos with photo_key set
-   * as a stand-in for a real moderation-approved count: T37's spot_photos
-   * table (with an actual approved/pending/rejected status) doesn't exist
-   * yet, and review photos are post-moderated (hidden after the fact, not
-   * pre-approved), so this slightly over-counts until T37 lands. Documented
-   * here rather than hardcoding 0.
+   * "fotografo" (3 approved photos) still counts review photos with photo_key
+   * set, not app_private.spot_photos' real approved/pending/rejected status:
+   * T37 added that table (pre-moderated stand photos) but switching this
+   * badge's count to it is a separate change, left as future work rather than
+   * done as a side effect of T37. Review photos are post-moderated (hidden
+   * after the fact, not pre-approved), so this still slightly over-counts.
+   * Documented here rather than hardcoding 0.
    */
   @Get("/me/progress")
   async getProgress(@CurrentProfile() profile: AuthenticatedProfile): Promise<ProgressResponse> {
@@ -174,14 +175,23 @@ export class AccountController {
 
   private async ownedPhotoKeys(userId: string): Promise<string[]> {
     try {
-      const { rows } = await this.pool.query<{ photo_key: string }>(
-        "select photo_key from app_private.reviews where user_id=$1 and photo_key is not null",
-        [userId],
-      );
-      return rows.map((row) => row.photo_key);
+      const [reviewPhotos, spotPhotos] = await Promise.all([
+        this.pool.query<{ photo_key: string }>(
+          "select photo_key from app_private.reviews where user_id=$1 and photo_key is not null",
+          [userId],
+        ),
+        this.pool.query<{ object_key: string }>(
+          "select object_key from app_private.spot_photos where uploader_id=$1",
+          [userId],
+        ),
+      ]);
+      return [
+        ...reviewPhotos.rows.map((row) => row.photo_key),
+        ...spotPhotos.rows.map((row) => row.object_key),
+      ];
     } catch (error) {
       this.logger.error(
-        "Could not list owned review photos before account deletion",
+        "Could not list owned photos before account deletion",
         error instanceof Error ? error.stack : undefined,
       );
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
