@@ -708,6 +708,8 @@ paths:
         Los resultados de Google son de lectura transitoria y deben mostrarse
         sobre Google Maps con la atribución incluida. localProposals contiene
         únicamente datos propios de Taco Hunt autorizados para el usuario.
+        south debe ser menor o igual a north, y west debe ser menor o igual a
+        east.
       parameters:
         - {
             in: query,
@@ -1576,7 +1578,7 @@ components:
       required: [spotId, path]
       properties:
         spotId: { type: string, format: uuid }
-        path: { type: string, pattern: "^/spot/[0-9a-f-]+$" }
+        path: { type: string, pattern: "^/[Ss][Pp][Oo][Tt]/[0-9a-fA-F-]+$" }
     PlaceProposalConflict:
       type: object
       required: [error]
