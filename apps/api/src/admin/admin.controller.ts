@@ -9,7 +9,12 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
-import { uuidSchema } from "@taco-hunt/contracts";
+import {
+  uuidSchema,
+  importCandidateApproveSchema,
+  importCandidateRejectSchema,
+  importCandidateMergeSchema,
+} from "@taco-hunt/contracts";
 import { AdminGuard } from "../auth/admin.guard.js";
 import { CurrentProfile } from "../auth/current-profile.decorator.js";
 import type { AuthenticatedProfile } from "../auth/auth.types.js";
@@ -111,6 +116,67 @@ export class AdminController {
       });
     }
     return this.admin.findDuplicates(parsed.data.name, parsed.data.latitude, parsed.data.longitude);
+  }
+
+  @Get("/import-candidates")
+  importCandidates(@Query("state") stateValue?: string) {
+    const parsed = z.enum(["pending", "approved", "rejected"]).optional().safeParse(stateValue);
+    if (!parsed.success)
+      throw new BadRequestException("state debe ser pending, approved o rejected");
+    return this.admin.importCandidatesQueue(parsed.data);
+  }
+
+  @Post("/import-candidates/:id/approve")
+  approveImportCandidate(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    const parsed = importCandidateApproveSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Coordenadas inválidas",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    return this.admin.approveImportCandidate(this.parseId(id), moderator.id, parsed.data);
+  }
+
+  @Post("/import-candidates/:id/reject")
+  rejectImportCandidate(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    const parsed = importCandidateRejectSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Motivo de rechazo inválido",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    return this.admin.rejectImportCandidate(this.parseId(id), moderator.id, parsed.data.reason);
+  }
+
+  @Post("/import-candidates/:id/merge")
+  mergeImportCandidate(
+    @Param("id") id: string,
+    @CurrentProfile() moderator: AuthenticatedProfile,
+    @Body() body: unknown,
+  ) {
+    const parsed = importCandidateMergeSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Datos de fusión inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    return this.admin.mergeImportCandidate(
+      this.parseId(id),
+      moderator.id,
+      parsed.data.canonicalSpotId,
+      parsed.data.reason,
+    );
   }
 
   @Post("/spot-proposals/:id/approve")

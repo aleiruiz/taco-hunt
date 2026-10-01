@@ -218,6 +218,215 @@ export class AdminService {
     }
   }
 
+  /** Returns up to 100 import candidates (pending by default) with their possible spot matches. */
+  async importCandidatesQueue(state: "pending" | "approved" | "rejected" = "pending") {
+    try {
+      const { rows } = await this.pool.query(
+        `select ic.id,
+           ic.normalized_name as "normalizedName",
+           coalesce(nullif(ic.original_payload->>'name',''), ic.normalized_name) as "originalName",
+           coalesce(
+             nullif(ic.original_payload->>'formatted_address',''),
+             nullif(ic.original_payload->>'short_formatted_address',''),
+             nullif(ic.original_payload->>'neighborhood',''),
+             ''
+           ) as address,
+           ic.latitude::float8 as latitude,
+           ic.longitude::float8 as longitude,
+           ic.source,
+           coalesce(
+             nullif(ic.original_payload->>'source_ref',''),
+             case when ic.source='google_places' and ic.original_payload->>'place_id' is not null
+               then 'google_places:' || (ic.original_payload->>'place_id') end,
+             ''
+           ) as "sourceRef",
+           ic.license_ref as "licenseRef",
+           ic.import_batch_id as "importBatchId",
+           ic.state,
+           ic.review_notes as "reviewNotes",
+           ic.created_at as "createdAt",
+           coalesce(matches.items, '[]'::json) as matches
+         from app_private.import_candidates ic
+         left join lateral (
+           select json_agg(json_build_object(
+             'spotId', s.id,
+             'spotName', s.name,
+             'distanceMeters', round((6371000 * 2 * asin(sqrt(least(1,
+               power(sin(radians(s.latitude::float8 - ic.latitude::float8) / 2), 2) +
+               cos(radians(s.latitude::float8)) * cos(radians(ic.latitude::float8)) *
+               power(sin(radians(s.longitude::float8 - ic.longitude::float8) / 2), 2)
+             ))))::numeric)
+           ) order by s.name) as items
+           from unnest(ic.matched_spot_ids) as m(spot_id)
+           join app_private.spots s on s.id = m.spot_id
+         ) matches on true
+         where ic.state=$1
+         order by ic.created_at asc limit 100`,
+        [state],
+      );
+      return { items: rows };
+    } catch (error) {
+      this.fail("Import candidate queue query failed", error);
+    }
+  }
+
+  async approveImportCandidate(
+    id: string,
+    moderator: string,
+    approval: { latitude: number; longitude: number },
+  ) {
+    let client: PoolClient | undefined;
+    try {
+      client = await this.pool.connect();
+      await client.query("begin");
+      const { rows } = await client.query(
+        `select id, original_payload as "originalPayload", normalized_name as "normalizedName", source
+         from app_private.import_candidates
+         where id=$1 and state='pending'
+         for update`,
+        [id],
+      );
+      const candidate = rows[0] as
+        | {
+            id: string;
+            originalPayload: Record<string, unknown>;
+            normalizedName: string;
+            source: string;
+          }
+        | undefined;
+      if (!candidate) throw new NotFoundException("Candidato no encontrado o ya revisado");
+
+      const payload = candidate.originalPayload ?? {};
+      const rawName = typeof payload.name === "string" ? payload.name.trim() : "";
+      const name = (rawName || candidate.normalizedName).slice(0, 120);
+      const rawNeighborhood =
+        (typeof payload.neighborhood === "string" ? payload.neighborhood.trim() : "") ||
+        (typeof payload.formatted_address === "string" ? payload.formatted_address.trim() : "");
+      const neighborhood = (rawNeighborhood || "Monterrey").slice(0, 120);
+      const knownSourceTypes = new Set(["user", "owner", "licensed", "fictional"]);
+      // `import_candidates.source` holds either a CSV `source_type` (already one of the
+      // spots enum values) or an importer tag such as `google_places`/`web_research` that
+      // isn't a valid spots.source_type — licensed third-party research/API data maps to
+      // 'licensed' per docs/data-provenance.md.
+      const sourceType = knownSourceTypes.has(candidate.source) ? candidate.source : "licensed";
+      const rawSourceRef = typeof payload.source_ref === "string" ? payload.source_ref.trim() : "";
+      const placeId = typeof payload.place_id === "string" ? payload.place_id.trim() : "";
+      const sourceRef = (
+        rawSourceRef ||
+        (candidate.source === "google_places" && placeId ? `google_places:${placeId}` : "") ||
+        `import_candidate:${candidate.id}`
+      ).slice(0, 200);
+
+      const inserted = await client.query(
+        `insert into app_private.spots
+           (name, normalized_name, neighborhood, latitude, longitude, status, created_by,
+            source_type, source_ref, last_verified_at, approved_by, approved_at, verified_by,
+            verification_note)
+         values ($1,$2,$3,$4,$5,'approved',null,$6,$7,now(),$8,now(),$8,$9)
+         returning id`,
+        [
+          name,
+          normalizeName(name),
+          neighborhood,
+          approval.latitude,
+          approval.longitude,
+          sourceType,
+          sourceRef,
+          moderator,
+          `Aprobado desde el candidato de importación ${candidate.id}`,
+        ],
+      );
+      const spotId = inserted.rows[0].id as string;
+
+      await client.query(
+        `update app_private.import_candidates set state='approved', review_notes=$2 where id=$1`,
+        [id, `Aprobado como puesto ${spotId}`],
+      );
+      await client.query(
+        `insert into app_private.moderation_audit(moderator_id,target_type,target_id,action,internal_reason)
+         values($1,'import_candidate',$2,'approve',$3)`,
+        [moderator, id, `Creó el puesto ${spotId}`],
+      );
+      await client.query("commit");
+      return { id, state: "approved" as const, spotId };
+    } catch (error) {
+      if (client) await client.query("rollback").catch(() => undefined);
+      if (error instanceof NotFoundException) throw error;
+      this.fail("Import candidate approval failed", error);
+    } finally {
+      client?.release();
+    }
+  }
+
+  async rejectImportCandidate(id: string, moderator: string, reason: string) {
+    let client: PoolClient | undefined;
+    try {
+      client = await this.pool.connect();
+      await client.query("begin");
+      const updated = await client.query(
+        `update app_private.import_candidates set state='rejected', review_notes=$2
+         where id=$1 and state='pending'`,
+        [id, reason],
+      );
+      if (!updated.rowCount) throw new NotFoundException("Candidato no encontrado o ya revisado");
+      await client.query(
+        `insert into app_private.moderation_audit(moderator_id,target_type,target_id,action,internal_reason)
+         values($1,'import_candidate',$2,'reject',$3)`,
+        [moderator, id, reason],
+      );
+      await client.query("commit");
+      return { id, state: "rejected" as const };
+    } catch (error) {
+      if (client) await client.query("rollback").catch(() => undefined);
+      if (error instanceof NotFoundException) throw error;
+      this.fail("Import candidate rejection failed", error);
+    } finally {
+      client?.release();
+    }
+  }
+
+  async mergeImportCandidate(
+    id: string,
+    moderator: string,
+    canonicalSpotId: string,
+    reason: string | undefined,
+  ) {
+    let client: PoolClient | undefined;
+    try {
+      client = await this.pool.connect();
+      await client.query("begin");
+      const canonical = await client.query(
+        `select id from app_private.spots where id=$1 and status='approved'`,
+        [canonicalSpotId],
+      );
+      if (!canonical.rowCount) throw new BadRequestException("Puesto canónico inválido");
+
+      const note = `Fusionado con el puesto ${canonicalSpotId}${reason ? `: ${reason}` : ""}`.slice(
+        0,
+        1000,
+      );
+      const updated = await client.query(
+        `update app_private.import_candidates set state='rejected', review_notes=$2
+         where id=$1 and state='pending'`,
+        [id, note],
+      );
+      if (!updated.rowCount) throw new NotFoundException("Candidato no encontrado o ya revisado");
+      await client.query(
+        `insert into app_private.moderation_audit(moderator_id,target_type,target_id,action,internal_reason)
+         values($1,'import_candidate',$2,'merge',$3)`,
+        [moderator, id, note.slice(0, 500)],
+      );
+      await client.query("commit");
+      return { id, state: "rejected" as const, canonicalSpotId };
+    } catch (error) {
+      if (client) await client.query("rollback").catch(() => undefined);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      this.fail("Import candidate merge failed", error);
+    } finally {
+      client?.release();
+    }
+  }
+
   approveSpot(id: string, moderator: string, approval: SpotApproval) {
     return this.mutate("spot", id, moderator, "approve", null, undefined, approval);
   }
