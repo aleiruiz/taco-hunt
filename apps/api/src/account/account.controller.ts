@@ -53,7 +53,8 @@ export class AccountController {
    * are anonymized rather than removed, so moderation queues and public spots stay intact — both
    * outcomes come from each table's own on-delete rule in the schema, triggered by deleting the
    * Supabase Auth user. Safe to retry: nothing is destroyed until that deletion call, and an
-   * already-deleted user is treated as success.
+   * already-deleted user is treated as success. Storage cleanup (T40) also covers the profile's
+   * own avatar photo, not just review photos.
    */
   @Delete("/me")
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -174,14 +175,23 @@ export class AccountController {
 
   private async ownedPhotoKeys(userId: string): Promise<string[]> {
     try {
-      const { rows } = await this.pool.query<{ photo_key: string }>(
-        "select photo_key from app_private.reviews where user_id=$1 and photo_key is not null",
-        [userId],
-      );
-      return rows.map((row) => row.photo_key);
+      const [reviewPhotos, avatarPhoto] = await Promise.all([
+        this.pool.query<{ photo_key: string }>(
+          "select photo_key from app_private.reviews where user_id=$1 and photo_key is not null",
+          [userId],
+        ),
+        this.pool.query<{ avatar_photo_key: string }>(
+          "select avatar_photo_key from app_private.profiles where id=$1 and avatar_photo_key is not null",
+          [userId],
+        ),
+      ]);
+      return [
+        ...reviewPhotos.rows.map((row) => row.photo_key),
+        ...avatarPhoto.rows.map((row) => row.avatar_photo_key),
+      ];
     } catch (error) {
       this.logger.error(
-        "Could not list owned review photos before account deletion",
+        "Could not list owned review/avatar photos before account deletion",
         error instanceof Error ? error.stack : undefined,
       );
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");

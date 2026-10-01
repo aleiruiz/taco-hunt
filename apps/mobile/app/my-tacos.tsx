@@ -18,7 +18,13 @@ import {
   type Favorite,
   type OwnReview,
 } from "@/features/contributions/api";
-import { getFixtureUser } from "@/data/auth";
+import {
+  getProfile,
+  updateProfile,
+  uploadAvatarPhoto,
+  type AvatarPreset,
+  type Profile,
+} from "@/data/profile-api";
 import { getFixtureProgress } from "@/data/progress";
 import { AvatarSheet } from "@/features/profile/AvatarSheet";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -56,15 +62,7 @@ export default function MyTacosScreen() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("favoritos");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
-  // Avatar preset/photo has no session-backed source yet (T40 adds
-  // GET/PATCH /v1/me); the fixture only seeds a starting point for this
-  // Phase A UI. Display name, once available, always comes from the real
-  // session below.
-  const fixtureUser = getFixtureUser();
-  const [avatar, setAvatar] = useState({
-    preset: fixtureUser.avatarPreset,
-    photoUrl: fixtureUser.avatarPhotoUrl,
-  });
+  const [profile, setProfile] = useState<Profile | null>(null);
   const progress = getFixtureProgress();
   const earnedBadges = progress.badges.filter((badge) => badge.earned);
   const nextBadge = progress.badges.find((badge) => !badge.earned);
@@ -74,15 +72,17 @@ export default function MyTacosScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [reviewPage, favoritePage, proposalsResponse] = await Promise.all([
+      const [reviewPage, favoritePage, proposalsResponse, ownProfile] = await Promise.all([
         listOwnReviews(session),
         listFavorites(session),
         fetch(`${API}/me/proposals`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         }).catch(() => null),
+        getProfile(session),
       ]);
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);
+      setProfile(ownProfile);
       if (proposalsResponse?.ok) {
         const data = (await proposalsResponse.json()) as {
           spotProposals: Proposal[];
@@ -135,10 +135,34 @@ export default function MyTacosScreen() {
     ? `Cazando tacos desde ${MONTHS_ES[memberSince.getMonth()]} ${memberSince.getFullYear()}`
     : null;
   const pendingProposals = proposals.filter((proposal) => proposal.status === "pending").length;
+  // Prefer the persisted profile (T40); fall back to the sign-up metadata (in
+  // case the profile hasn't loaded yet) and finally a generic label.
   const displayName =
+    profile?.displayName?.trim() ||
     (typeof session.user.user_metadata?.display_name === "string"
       ? session.user.user_metadata.display_name.trim()
-      : "") || "Explorador";
+      : "") ||
+    "Explorador";
+
+  async function saveAvatar(next: {
+    preset: AvatarPreset;
+    photoUri?: string;
+    clearPhoto: boolean;
+  }) {
+    if (!session) return;
+    let avatarPhotoUploadId: string | null | undefined;
+    if (next.photoUri) {
+      const upload = await uploadAvatarPhoto(session, { uri: next.photoUri });
+      avatarPhotoUploadId = upload.id;
+    } else if (next.clearPhoto) {
+      avatarPhotoUploadId = null;
+    }
+    const updated = await updateProfile(session, {
+      avatarPreset: next.preset,
+      ...(avatarPhotoUploadId !== undefined ? { avatarPhotoUploadId } : {}),
+    });
+    setProfile(updated);
+  }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -167,7 +191,11 @@ export default function MyTacosScreen() {
           onPress={() => setAvatarSheetOpen(true)}
           style={styles.avatarWrap}
         >
-          <Avatar size={72} preset={avatar.preset} photoUrl={avatar.photoUrl} />
+          <Avatar
+            size={72}
+            preset={profile?.avatarPreset ?? "pastor"}
+            photoUrl={profile?.avatarPhotoUrl ?? undefined}
+          />
           <View style={styles.avatarCameraBadge}>
             <Ionicons name="camera" size={14} color={colors.paper} />
           </View>
@@ -364,9 +392,9 @@ export default function MyTacosScreen() {
       <AvatarSheet
         visible={avatarSheetOpen}
         onClose={() => setAvatarSheetOpen(false)}
-        preset={avatar.preset}
-        photoUrl={avatar.photoUrl}
-        onSave={(next) => setAvatar({ preset: next.preset, photoUrl: next.photoUrl })}
+        preset={profile?.avatarPreset ?? "pastor"}
+        photoUrl={profile?.avatarPhotoUrl ?? undefined}
+        onSave={saveAvatar}
       />
     </ScrollView>
   );

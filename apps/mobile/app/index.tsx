@@ -24,7 +24,7 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { Avatar } from "@/components/Avatar";
-import { getFixtureUser } from "@/data/auth";
+import { getProfile, type AvatarPreset } from "@/data/profile-api";
 
 type TacoType = { id: string; slug: string; nameEs: string };
 type Taco = {
@@ -98,6 +98,13 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
   const { session } = useAuth();
+  const [headerAvatarPreset, setHeaderAvatarPreset] = useState<AvatarPreset>("pastor");
+  useEffect(() => {
+    if (!session) return;
+    getProfile(session)
+      .then((profile) => setHeaderAvatarPreset(profile.avatarPreset))
+      .catch(() => undefined);
+  }, [session]);
   const spotCacheRef = useRef<Map<string, SpotDetail>>(new Map());
   const sheetAnimRef = useRef(new Animated.Value(0)).current;
   const selectedSpotIdRef = useRef<string | null>(null);
@@ -415,7 +422,7 @@ export default function ExploreScreen() {
       onPress={() => router.push("/settings")}
     >
       {session ? (
-        <Avatar size={40} preset={getFixtureUser().avatarPreset} />
+        <Avatar size={40} preset={headerAvatarPreset} />
       ) : (
         <Ionicons name="person" size={22} color={colors.ink} />
       )}

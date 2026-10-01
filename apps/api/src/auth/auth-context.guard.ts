@@ -18,8 +18,8 @@ export class AuthContextGuard implements CanActivate {
 
     const match = /^Bearer ([^\s]+)$/i.exec(authorization);
     if (!match) throw new UnauthorizedException("Token inválido");
-    const { subject } = await this.verifier.verifyAccessToken(match[1]!);
-    request.user = await this.profiles.findOrCreate(subject);
+    const { subject, signupDisplayName } = await this.verifier.verifyAccessToken(match[1]!);
+    request.user = await this.profiles.findOrCreate(subject, signupDisplayName);
     return true;
   }
 }

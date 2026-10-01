@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "@/theme";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { BottomSheet } from "@/components/BottomSheet";
-
-type Preset =
-  "pastor" | "masa" | "cilantro" | "tortilla" | "salsa" | "comal" | "aguacate" | "horchata";
+import type { AvatarPreset as Preset } from "@/data/profile-api";
 
 const AVATAR_OPTIONS: { preset: Preset; label: string }[] = [
   { preset: "pastor", label: "El Trompo" },
@@ -21,17 +19,27 @@ const AVATAR_OPTIONS: { preset: Preset; label: string }[] = [
   { preset: "horchata", label: "La Horchata" },
 ];
 
+/**
+ * `photoUri` is set only when the user picked a *new* local image this
+ * session (needs uploading); `clearPhoto` means they picked a preset,
+ * replacing a previously saved photo. Neither set means only the preset
+ * selection changed. `onSave` does the real upload + PATCH /v1/me and can
+ * reject — the sheet surfaces that error and stays open.
+ */
+type SaveInput = { preset: Preset; photoUri?: string; clearPhoto: boolean };
+
 type Props = {
   visible: boolean;
   onClose: () => void;
   preset: Preset;
   photoUrl?: string;
-  onSave: (next: { preset: Preset; photoUrl?: string }) => void;
+  onSave: (next: SaveInput) => Promise<void>;
 };
 
 export function AvatarSheet({ visible, onClose, preset, photoUrl, onSave }: Props) {
   const [selectedPreset, setSelectedPreset] = useState<Preset>(preset);
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | undefined>(photoUrl);
+  const [saving, setSaving] = useState(false);
 
   // The sheet stays mounted between opens (only `visible` toggles), so
   // resync the working selection to the actual saved avatar each time it
@@ -66,10 +74,25 @@ export function AvatarSheet({ visible, onClose, preset, photoUrl, onSave }: Prop
     setSelectedPhotoUrl(undefined);
   }
 
-  function save() {
-    onSave({ preset: selectedPreset, photoUrl: selectedPhotoUrl });
-    AccessibilityInfo.announceForAccessibility("Foto de perfil actualizada.");
-    onClose();
+  async function save() {
+    const isNewPhoto = Boolean(selectedPhotoUrl) && selectedPhotoUrl !== photoUrl;
+    setSaving(true);
+    try {
+      await onSave({
+        preset: selectedPreset,
+        photoUri: isNewPhoto ? selectedPhotoUrl : undefined,
+        clearPhoto: !selectedPhotoUrl && Boolean(photoUrl),
+      });
+      AccessibilityInfo.announceForAccessibility("Foto de perfil actualizada.");
+      onClose();
+    } catch (cause) {
+      Alert.alert(
+        "No se pudo actualizar",
+        cause instanceof Error ? cause.message : "Intenta de nuevo.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -119,10 +142,16 @@ export function AvatarSheet({ visible, onClose, preset, photoUrl, onSave }: Prop
         })}
       </View>
       <Text style={styles.note}>
-        Este cambio solo dura mientras esta pantalla está abierta. No se guarda como preferencia del
-        dispositivo ni se sube para una revisión automática.
+        Una foto nueva se muestra de inmediato y pasa por una revisión automática; si no se aprueba,
+        volvemos a tu avatar y te decimos por qué.
       </Text>
-      <Button label="Guardar" variant="primary" onPress={save} style={styles.saveButton} />
+      <Button
+        label="Guardar"
+        variant="primary"
+        loading={saving}
+        onPress={() => void save()}
+        style={styles.saveButton}
+      />
     </BottomSheet>
   );
 }
