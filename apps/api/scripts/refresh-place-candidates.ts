@@ -18,7 +18,7 @@ type EligibleSpot = {
   neighborhood: string;
   latitude: number;
   longitude: number;
-  sourceRef: string;
+  googlePlaceId: string;
 };
 
 type GoogleDetails = {
@@ -60,17 +60,11 @@ async function main(): Promise<void> {
   const spots = await eligibleSpots(limit);
   const findings: Finding[] = [];
   let confirmed = 0;
-  let skippedNoPlaceId = 0;
   let skippedStale = 0;
   let skippedErrors = 0;
 
   for (const spot of spots) {
-    const placeId = extractPlaceId(spot.sourceRef);
-    if (!placeId) {
-      skippedNoPlaceId += 1;
-      continue;
-    }
-
+    const placeId = spot.googlePlaceId;
     try {
       const details = await fetchDetails(placeId);
       const issues = compare(spot, details);
@@ -109,7 +103,6 @@ async function main(): Promise<void> {
       {
         mode: apply ? "apply" : "dry-run",
         checked: spots.length,
-        skippedNoPlaceId,
         skippedStale: apply ? skippedStale : undefined,
         skippedErrors,
         confirmedFresh: confirmed,
@@ -140,12 +133,12 @@ async function eligibleSpots(max: number): Promise<EligibleSpot[]> {
     neighborhood: string;
     latitude: number;
     longitude: number;
-    sourceRef: string;
+    googlePlaceId: string;
   }>(
     `select s.id, s.name, s.neighborhood, s.latitude::float8 as latitude,
-       s.longitude::float8 as longitude, s.source_ref as "sourceRef"
+       s.longitude::float8 as longitude, s.google_place_id as "googlePlaceId"
      from app_private.spots s
-     where s.status='approved' and s.source_ref like 'autocomplete:%'
+     where s.status='approved' and s.google_place_id is not null
        and not exists (
          select 1 from app_private.reports r
          where r.target_type='spot' and r.target_id=s.id and r.status='open'
@@ -169,12 +162,6 @@ async function confirmStillFresh(spot: EligibleSpot): Promise<boolean> {
     [spot.id, spot.name, spot.latitude, spot.longitude],
   );
   return result.rowCount !== null && result.rowCount > 0;
-}
-
-function extractPlaceId(sourceRef: string): string | null {
-  const match = /^autocomplete:(.+)$/.exec(sourceRef);
-  const placeId = match?.[1]?.trim();
-  return placeId ? placeId : null;
 }
 
 async function fetchDetails(placeId: string): Promise<GoogleDetails> {

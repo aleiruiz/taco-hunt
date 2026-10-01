@@ -60,6 +60,7 @@ export class AdminService {
              s.longitude::float8 as longitude,s.proposal_note as note,s.created_by as "createdBy",
              s.created_at as "createdAt",
              s.status,s.source_type as "sourceType",s.source_ref as "sourceRef",
+             s.google_place_id as "googlePlaceId",
              s.last_verified_at as "lastVerifiedAt",s.approved_by as "approvedBy",
              s.approved_at as "approvedAt",s.verified_by as "verifiedBy",
              s.verification_note as "verificationNote",
@@ -315,14 +316,14 @@ export class AdminService {
         rawSourceRef ||
         (candidate.source === "google_places" && placeId ? `google_places:${placeId}` : "") ||
         `import_candidate:${candidate.id}`
-      ).slice(0, 200);
+      );
 
       const inserted = await client.query(
         `insert into app_private.spots
            (name, normalized_name, neighborhood, latitude, longitude, status, created_by,
-            source_type, source_ref, last_verified_at, approved_by, approved_at, verified_by,
+            source_type, source_ref, google_place_id, last_verified_at, approved_by, approved_at, verified_by,
             verification_note)
-         values ($1,$2,$3,$4,$5,'approved',null,$6,$7,now(),$8,now(),$8,$9)
+         values ($1,$2,$3,$4,$5,'approved',null,$6,$7,$8,now(),$9,now(),$9,$10)
          returning id`,
         [
           name,
@@ -332,6 +333,7 @@ export class AdminService {
           approval.longitude,
           sourceType,
           sourceRef,
+          candidate.source === "google_places" && placeId ? placeId : null,
           moderator,
           `Aprobado desde el candidato de importación ${candidate.id}`,
         ],
@@ -351,6 +353,9 @@ export class AdminService {
       return { id, state: "approved" as const, spotId };
     } catch (error) {
       if (client) await client.query("rollback").catch(() => undefined);
+      if (isGooglePlaceLinkViolation(error)) {
+        throw new ConflictException("El lugar de Google ya está registrado");
+      }
       if (error instanceof NotFoundException) throw error;
       this.fail("Import candidate approval failed", error);
     } finally {
@@ -543,7 +548,7 @@ export class AdminService {
                verification_note=coalesce($13,verification_note),updated_at=now()
          where id=$1 and status in ('pending','changes_requested')
          returning id,status,source_type as "sourceType",source_ref as "sourceRef",
-           last_verified_at as "lastVerifiedAt",approved_by as "approvedBy",approved_at as "approvedAt",
+           google_place_id as "googlePlaceId",last_verified_at as "lastVerifiedAt",approved_by as "approvedBy",approved_at as "approvedAt",
            verified_by as "verifiedBy",verification_note as "verificationNote"`,
         [
           id,
@@ -690,4 +695,12 @@ function normalizeName(name: string): string {
     .toLocaleLowerCase("es-MX")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function isGooglePlaceLinkViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const databaseError = error as { code?: string; constraint?: string };
+  return (
+    databaseError.code === "23505" && databaseError.constraint === "spots_google_place_id_unique_idx"
+  );
 }

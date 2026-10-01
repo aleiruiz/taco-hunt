@@ -232,15 +232,18 @@ export class SpotsController {
       );
     }
     values.push(p.limit + 1);
-    const sql = `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.last_verified_at as "lastVerifiedAt",s.normalized_name as "cursorName",${distanceExpression} as "distanceKm",count(distinct r.id)::int as "reviewCount",(select jsonb_build_object('id',st.id,'tacoTypeId',tt.id,'name',coalesce(st.display_name,tt.name_es),'score',round(avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0)::numeric,1),'reviewCount',count(r2.id)::int) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r2 on r2.spot_taco_id=st.id and r2.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r2.id) desc,avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0) desc nulls last limit 1) as "bestTaco" from app_private.spots s left join app_private.spot_tacos st0 on st0.spot_id=s.id and st0.status='approved' left join app_private.taco_types tt0 on tt0.id=st0.taco_type_id and tt0.active left join app_private.reviews r on r.spot_taco_id=st0.id and r.status='visible' and tt0.id is not null where ${where.join(" and ")} group by s.id order by "distanceKm",s.normalized_name,s.id limit $${values.length}`;
+    const sql = `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.google_place_id as "googlePlaceId",s.last_verified_at as "lastVerifiedAt",s.normalized_name as "cursorName",${distanceExpression} as "distanceKm",count(distinct r.id)::int as "reviewCount",(select jsonb_build_object('id',st.id,'tacoTypeId',tt.id,'name',coalesce(st.display_name,tt.name_es),'score',round(avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0)::numeric,1),'reviewCount',count(r2.id)::int) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r2 on r2.spot_taco_id=st.id and r2.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r2.id) desc,avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0) desc nulls last limit 1) as "bestTaco" from app_private.spots s left join app_private.spot_tacos st0 on st0.spot_id=s.id and st0.status='approved' left join app_private.taco_types tt0 on tt0.id=st0.taco_type_id and tt0.active left join app_private.reviews r on r.spot_taco_id=st0.id and r.status='visible' and tt0.id is not null where ${where.join(" and ")} group by s.id order by "distanceKm",s.normalized_name,s.id limit $${values.length}`;
     try {
       const { rows } = await this.pool.query(sql, values);
       const more = rows.length > p.limit;
       const page = rows.slice(0, p.limit);
-      const items = page.map(({ cursorName: _cursorName, distanceKm: _distanceKm, ...row }) => ({
-        ...row,
-        photoUrl: null,
-      }));
+      const items = page.map(
+        ({ cursorName: _cursorName, distanceKm: _distanceKm, googlePlaceId, ...row }) => ({
+          ...row,
+          ...(googlePlaceId ? { googlePlaceId } : {}),
+          photoUrl: null,
+        }),
+      );
       const last = page.at(-1);
       return {
         items,
@@ -449,7 +452,7 @@ export class SpotsController {
     if (!parsed.success) throw new BadRequestException({ message: "Identificador inválido" });
     try {
       const spot = await this.pool.query(
-        "select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.last_verified_at as \"lastVerifiedAt\",count(distinct r.id)::int as \"reviewCount\" from app_private.spots s left join app_private.spot_tacos st on st.spot_id=s.id and st.status='approved' left join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' and tt.id is not null where s.id=$1 and s.status='approved' group by s.id",
+        "select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.google_place_id as \"googlePlaceId\",s.last_verified_at as \"lastVerifiedAt\",count(distinct r.id)::int as \"reviewCount\" from app_private.spots s left join app_private.spot_tacos st on st.spot_id=s.id and st.status='approved' left join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' and tt.id is not null where s.id=$1 and s.status='approved' group by s.id",
         [parsed.data],
       );
       if (!spot.rowCount) throw new NotFoundException("Puesto no encontrado");
@@ -461,7 +464,14 @@ export class SpotsController {
         'select r.id,tt.id as "tacoTypeId",coalesce(st.display_name,tt.name_es) as "tacoName",p.display_name as "displayName",r.tortilla,r.filling,r.salsa,r.value,round((r.tortilla+r.filling+r.salsa+r.value)/4.0::numeric,1)::float8 as score,r.price_paid_mxn::float8 as "pricePaidMxn",r.body,to_char(r.created_at at time zone \'UTC\',\'YYYY-MM-DD"T"HH24:MI:SS.US"Z"\') as "createdAt" from app_private.reviews r join app_private.spot_tacos st on st.id=r.spot_taco_id join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active join app_private.profiles p on p.id=r.user_id where st.spot_id=$1 and st.status=\'approved\' and r.status=\'visible\' order by r.created_at desc,r.id desc limit 5',
         [parsed.data],
       );
-      return { ...spot.rows[0], photoUrl: null, tacos: tacos.rows, reviews: reviews.rows };
+      const { googlePlaceId, ...spotRow } = spot.rows[0];
+      return {
+        ...spotRow,
+        ...(googlePlaceId ? { googlePlaceId } : {}),
+        photoUrl: null,
+        tacos: tacos.rows,
+        reviews: reviews.rows,
+      };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logQueryFailure("Spot detail query failed", error);
