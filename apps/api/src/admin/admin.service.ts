@@ -316,7 +316,7 @@ export class AdminService {
         rawSourceRef ||
         (candidate.source === "google_places" && placeId ? `google_places:${placeId}` : "") ||
         `import_candidate:${candidate.id}`
-      ).slice(0, 200);
+      );
 
       const inserted = await client.query(
         `insert into app_private.spots
@@ -353,6 +353,9 @@ export class AdminService {
       return { id, state: "approved" as const, spotId };
     } catch (error) {
       if (client) await client.query("rollback").catch(() => undefined);
+      if (isGooglePlaceLinkViolation(error)) {
+        throw new ConflictException("El lugar de Google ya está registrado");
+      }
       if (error instanceof NotFoundException) throw error;
       this.fail("Import candidate approval failed", error);
     } finally {
@@ -692,4 +695,12 @@ function normalizeName(name: string): string {
     .toLocaleLowerCase("es-MX")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function isGooglePlaceLinkViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const databaseError = error as { code?: string; constraint?: string };
+  return (
+    databaseError.code === "23505" && databaseError.constraint === "spots_google_place_id_unique_idx"
+  );
 }

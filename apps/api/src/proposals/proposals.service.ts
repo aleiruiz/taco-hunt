@@ -72,6 +72,9 @@ export class ProposalsService {
       );
       return { ...rows[0], nearbyCandidates: duplicateCandidates };
     } catch (error) {
+      if (isGooglePlaceLinkViolation(error)) {
+        throw new ConflictException("El lugar de Google ya está registrado");
+      }
       this.rethrowExpected(error);
       this.logFailure("Spot proposal create failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
@@ -143,4 +146,12 @@ export class ProposalsService {
 
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+}
+
+function isGooglePlaceLinkViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const databaseError = error as { code?: string; constraint?: string };
+  return (
+    databaseError.code === "23505" && databaseError.constraint === "spots_google_place_id_unique_idx"
+  );
 }
