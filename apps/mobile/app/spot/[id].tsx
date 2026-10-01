@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -27,8 +28,13 @@ import {
   type TacoType,
 } from "@/features/proposals/api";
 import { openDirections as openMapDirections } from "@/lib/directions";
-import type { Photo } from "@/data/media";
-import { listSpotPhotos, uploadSpotPhoto } from "@/features/spotPhotos/api";
+import {
+  createFixtureTacoHuntPhoto,
+  getFixtureGooglePlaceDetails,
+  getFixtureTacoHuntPhotoGallery,
+  type GooglePlaceDetails,
+  type TacoHuntPhoto,
+} from "@/data/stand-details";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Chip } from "@/components/Chip";
@@ -101,9 +107,16 @@ export default function SpotScreen() {
   currentUserId.current = session?.user.id ?? null;
   const proposalsOwner = useRef<string | null>(null);
   const tacoSubmissionId = useRef(0);
-  const [approvedPhotos, setApprovedPhotos] = useState<Photo[]>([]);
-  const [myPhotos, setMyPhotos] = useState<Photo[]>([]);
+  const [approvedPhotos, setApprovedPhotos] = useState<TacoHuntPhoto[]>([]);
+  const [myPhotos, setMyPhotos] = useState<TacoHuntPhoto[]>([]);
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [googleGalleryOpen, setGoogleGalleryOpen] = useState(false);
+  const [googleDetails, setGoogleDetails] = useState<GooglePlaceDetails | null>(null);
+  const [googleDetailsState, setGoogleDetailsState] = useState<
+    "idle" | "loading" | "ready" | "unavailable" | "error"
+  >("idle");
+  const [googleDetailsMessage, setGoogleDetailsMessage] = useState("");
+  const googleRequestId = useRef(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadAsset, setUploadAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
@@ -120,8 +133,13 @@ export default function SpotScreen() {
     setUploadOpen(false);
     setUploadBusy(false);
     setMyPhotos([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.id]);
+  useEffect(() => {
+    setGoogleDetails(null);
+    setGoogleDetailsState("idle");
+    setGoogleDetailsMessage("");
+    setGoogleGalleryOpen(false);
+  }, [id]);
   const loadTacoTypes = useCallback(() => {
     setTacoTypesLoading(true);
     setTacoTypesError(false);
@@ -142,36 +160,48 @@ export default function SpotScreen() {
       if (!response.ok) throw new Error("Request failed");
       const data = (await response.json()) as Spot;
       setSpot(data);
-      try {
-        const photos = await listSpotPhotos(data.id);
-        setApprovedPhotos(
-          photos.map((photo) => ({
-            id: photo.id,
-            url: photo.url,
-            uploaderId: "",
-            uploaderName: photo.uploaderName,
-            spotId: data.id,
-            spotName: data.name,
-            status: "approved",
-            createdAt: photo.createdAt,
-          })),
-        );
-      } catch {
-        // Gallery is a non-critical enhancement to the spot screen: a failed
-        // photo fetch should not surface the "offline" error state for the
-        // whole screen, which already loaded successfully.
-        setApprovedPhotos([]);
-      }
+      const fixture = await getFixtureTacoHuntPhotoGallery(
+        data.id,
+        data.name,
+        session?.user.id ?? "user-123",
+      );
+      setApprovedPhotos(fixture.approved);
+      setMyPhotos(fixture.mine);
     } catch {
       setError("offline");
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, session?.user.id]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function loadGoogleDetails() {
+    const requestId = ++googleRequestId.current;
+    setGoogleDetailsState("loading");
+    setGoogleDetailsMessage("");
+    try {
+      const result = await getFixtureGooglePlaceDetails(id);
+      if (googleRequestId.current !== requestId) return;
+      setGoogleDetails(result.details ?? null);
+      setGoogleDetailsState(result.state);
+      setGoogleDetailsMessage(result.message ?? "");
+    } catch {
+      if (googleRequestId.current !== requestId) return;
+      setGoogleDetails(null);
+      setGoogleDetailsState("error");
+      setGoogleDetailsMessage("No pudimos actualizar los datos de Google.");
+    }
+  }
+
+  function openGoogleSource(url: string) {
+    void Linking.openURL(url).catch(() => {
+      Alert.alert("No se pudo abrir Google Maps", "Intenta de nuevo más tarde.");
+    });
+  }
+
   useFocusEffect(
     useCallback(() => {
       const requestId = ++proposalRequestId.current;
@@ -289,29 +319,23 @@ export default function SpotScreen() {
     const uploaderId = session.user.id;
     const targetSpot = spot;
     const asset = uploadAsset;
-    const kind = uploadKind;
     setUploadBusy(true);
     setUploadError("");
     setUploadProgress(30);
     try {
-      const created = await uploadSpotPhoto(session, targetSpot.id, asset, kind);
+      const created = await createFixtureTacoHuntPhoto(
+        targetSpot.id,
+        targetSpot.name,
+        uploaderId,
+        asset.uri,
+        uploadKind,
+      );
       setUploadProgress(100);
       // A sign-out/sign-in during the upload already reset local state (see
       // the session-change effect above); don't resurrect a photo under the
       // new identity.
       if (currentUserId.current !== uploaderId) return;
-      const pending: Photo = {
-        id: created.id,
-        url: created.url,
-        uploaderId,
-        uploaderName: "Tú",
-        spotId: targetSpot.id,
-        spotName: targetSpot.name,
-        status: created.status,
-        rejectionReason: created.rejectionReason ?? undefined,
-        createdAt: created.createdAt,
-      };
-      setMyPhotos((current) => [pending, ...current]);
+      setMyPhotos((current) => [created, ...current]);
       setUploadBusy(false);
       setUploadOpen(false);
       setToast("Foto enviada… un moderador la revisa antes de publicarla.");
@@ -493,7 +517,7 @@ export default function SpotScreen() {
                 {approvedPhotos.length > 0 && (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Ver las ${approvedPhotos.length} fotos de ${spot.name}`}
+                    accessibilityLabel={`Ver las ${approvedPhotos.length} fotos de Taco Hunt de ${spot.name}`}
                     onPress={() => setGalleryOpen(true)}
                     style={styles.heroCountPill}
                   >
@@ -535,7 +559,131 @@ export default function SpotScreen() {
                 </View>
               )}
 
-              <Text style={styles.section}>Fotos</Text>
+              <Text style={styles.section}>Datos del puesto</Text>
+              <Card style={styles.googleDetailsCard}>
+                <View style={styles.googleHeadingRow}>
+                  <View style={styles.googleIcon}>
+                    <Ionicons name="logo-google" size={18} color={colors.ink} />
+                  </View>
+                  <View style={styles.googleHeadingCopy}>
+                    <Text style={styles.googleTitle}>Detalles de Google</Text>
+                    <Text style={styles.googleCaption}>
+                      Se consultan al abrirlos y no se guardan como datos de Taco Hunt.
+                    </Text>
+                  </View>
+                </View>
+                {googleDetailsState === "idle" && (
+                  <Button
+                    label="Ver datos actuales de Google"
+                    variant="secondary"
+                    icon="cloud-download-outline"
+                    onPress={() => void loadGoogleDetails()}
+                    style={styles.googleAction}
+                  />
+                )}
+                {googleDetailsState === "loading" && (
+                  <View style={styles.googleLoading} accessibilityLiveRegion="polite">
+                    <ActivityIndicator color={colors.green} />
+                    <Text style={styles.body}>Consultando Google…</Text>
+                  </View>
+                )}
+                {(googleDetailsState === "unavailable" || googleDetailsState === "error") && (
+                  <View style={styles.googleUnavailable}>
+                    <Ionicons
+                      name={
+                        googleDetailsState === "error"
+                          ? "cloud-offline-outline"
+                          : "information-circle-outline"
+                      }
+                      size={20}
+                      color={colors.dangerText}
+                    />
+                    <Text style={styles.googleUnavailableText}>
+                      {googleDetailsMessage ||
+                        "Los datos de Google no están disponibles por ahora."}
+                    </Text>
+                    <Button
+                      label="Reintentar"
+                      variant="secondary"
+                      onPress={() => void loadGoogleDetails()}
+                      style={styles.googleRetry}
+                    />
+                  </View>
+                )}
+                {googleDetailsState === "ready" && googleDetails && (
+                  <View style={styles.googleReady}>
+                    <Text style={styles.googlePlaceName}>{googleDetails.name}</Text>
+                    <Text style={styles.googleAddress}>{googleDetails.address}</Text>
+                    <Pressable
+                      accessibilityRole="link"
+                      accessibilityLabel="Abrir este puesto en Google Maps"
+                      onPress={() => openGoogleSource(googleDetails.googleMapsUrl)}
+                      style={styles.googleSourceLink}
+                    >
+                      <Ionicons name="open-outline" size={17} color={colors.green} />
+                      <Text style={styles.googleSourceLinkText}>Abrir en Google Maps</Text>
+                    </Pressable>
+                    <Text style={styles.googleAttribution}>
+                      Fuente: {googleDetails.attributionLabel}. Datos mostrados bajo sus términos.
+                    </Text>
+                  </View>
+                )}
+              </Card>
+
+              {googleDetailsState === "ready" && googleDetails && (
+                <View>
+                  <Text style={styles.section}>Fotos de Google</Text>
+                  {googleDetails.photosState === "available" && googleDetails.photos.length > 0 ? (
+                    <>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.photoStrip}
+                      >
+                        {googleDetails.photos.map((photo) => (
+                          <PhotoTile
+                            key={photo.id}
+                            photoUrl={photo.url}
+                            size={96}
+                            accessibilityLabel={`Foto de Google, ${photo.authorAttribution}`}
+                            onPress={() => setGoogleGalleryOpen(true)}
+                          />
+                        ))}
+                      </ScrollView>
+                      <Text style={styles.googleAttribution}>
+                        Fotos de Google · {googleDetails.photos[0].authorAttribution}.
+                      </Text>
+                      <Pressable
+                        accessibilityRole="link"
+                        accessibilityLabel="Ver la fuente de las fotos de Google en Google Maps"
+                        onPress={() => openGoogleSource(googleDetails.photos[0].sourceUrl)}
+                        style={styles.googleSourceLink}
+                      >
+                        <Ionicons name="open-outline" size={17} color={colors.green} />
+                        <Text style={styles.googleSourceLinkText}>Ver fuente en Google Maps</Text>
+                      </Pressable>
+                    </>
+                  ) : (
+                    <Card tone="dashed" style={styles.googlePhotoUnavailable}>
+                      <Ionicons name="images-outline" size={24} color={colors.muted} />
+                      <View style={styles.googlePhotoUnavailableCopy}>
+                        <Text style={styles.googleUnavailableTitle}>
+                          Fotos de Google no disponibles
+                        </Text>
+                        <Text style={styles.body}>
+                          No guardamos ni copiamos fotos de Google. Puedes compartir una foto propia
+                          con la comunidad de Taco Hunt.
+                        </Text>
+                      </View>
+                    </Card>
+                  )}
+                </View>
+              )}
+
+              <Text style={styles.section}>Fotos de Taco Hunt</Text>
+              <Text style={styles.photoSourceNote}>
+                Fotos subidas por la comunidad y revisadas por Taco Hunt.
+              </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -586,7 +734,18 @@ export default function SpotScreen() {
                   {visibleMyPhotos.map((photo) => (
                     <View key={photo.id} style={styles.myPhotoRow}>
                       <PhotoTile photoUrl={photo.url} size={44} accessibilityLabel="Tu foto" />
-                      <StatusBadge status={photo.status} reason={photo.rejectionReason} />
+                      <View style={styles.myPhotoStatus}>
+                        <StatusBadge status={photo.status} reason={photo.rejectionReason} />
+                        {photo.status === "rejected" && (
+                          <Button
+                            label="Subir otra"
+                            variant="secondary"
+                            size="md"
+                            onPress={openUpload}
+                            style={styles.replacePhotoButton}
+                          />
+                        )}
+                      </View>
                     </View>
                   ))}
                 </View>
@@ -836,12 +995,51 @@ export default function SpotScreen() {
                 label="Cerrar galería"
                 onPress={() => setGalleryOpen(false)}
               />
-              <Text style={styles.modalTitle}>Fotos de {spot?.name ?? "este puesto"}</Text>
+              <Text style={styles.modalTitle}>Fotos de Taco Hunt</Text>
             </View>
             <ScrollView contentContainerStyle={styles.galleryGrid}>
               {approvedPhotos.map((photo) => (
                 <Image key={photo.id} source={{ uri: photo.url }} style={styles.galleryImage} />
               ))}
+            </ScrollView>
+          </View>
+        </Modal>
+        <Modal
+          visible={googleGalleryOpen}
+          animationType="slide"
+          onRequestClose={() => setGoogleGalleryOpen(false)}
+        >
+          <View style={styles.galleryScreen}>
+            <View style={styles.galleryHeader}>
+              <IconButton
+                icon="close"
+                label="Cerrar galería de Google"
+                onPress={() => setGoogleGalleryOpen(false)}
+              />
+              <Text style={styles.modalTitle}>Fotos de Google</Text>
+            </View>
+            <ScrollView contentContainerStyle={styles.googleGalleryContent}>
+              {googleDetails?.photos.map((photo) => (
+                <View key={photo.id} style={styles.googleGalleryItem}>
+                  <Image
+                    source={{ uri: photo.url }}
+                    style={styles.googleGalleryImage}
+                    accessibilityLabel={`Foto de Google, ${photo.authorAttribution}`}
+                  />
+                  <Text style={styles.googleAttribution}>{photo.authorAttribution}</Text>
+                </View>
+              ))}
+              {googleDetails?.photos[0] && (
+                <Pressable
+                  accessibilityRole="link"
+                  accessibilityLabel="Abrir la fuente de estas fotos en Google Maps"
+                  onPress={() => openGoogleSource(googleDetails.photos[0].sourceUrl)}
+                  style={styles.googleSourceLink}
+                >
+                  <Ionicons name="open-outline" size={17} color={colors.green} />
+                  <Text style={styles.googleSourceLinkText}>Abrir fuente en Google Maps</Text>
+                </Pressable>
+              )}
             </ScrollView>
           </View>
         </Modal>
@@ -958,6 +1156,57 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroCountText: { color: colors.paper, fontSize: 12, fontWeight: "800" },
+  googleDetailsCard: { marginTop: spacing.sm },
+  googleHeadingRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  googleIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.goldSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleHeadingCopy: { flex: 1 },
+  googleTitle: { ...typography.sectionTitle, color: colors.ink },
+  googleCaption: { ...typography.caption, color: colors.muted, marginTop: 2, lineHeight: 16 },
+  googleAction: { marginTop: spacing.md },
+  googleLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    minHeight: 48,
+  },
+  googleUnavailable: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  googleUnavailableText: { flex: 1, color: colors.dangerText, fontSize: 13, lineHeight: 19 },
+  googleRetry: { marginLeft: 28 },
+  googleReady: { marginTop: spacing.md },
+  googlePlaceName: { color: colors.ink, fontSize: 14, fontWeight: "800", marginBottom: spacing.xs },
+  googleAddress: { ...typography.body, color: colors.ink, lineHeight: 21 },
+  googleSourceLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minHeight: 44,
+    alignSelf: "flex-start",
+  },
+  googleSourceLinkText: { color: colors.green, fontSize: 13, fontWeight: "800" },
+  googleAttribution: { color: colors.muted, fontSize: 11, lineHeight: 17 },
+  googlePhotoUnavailable: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  googlePhotoUnavailableCopy: { flex: 1, gap: spacing.xs },
+  googleUnavailableTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
+  photoSourceNote: { ...typography.body, color: colors.muted, marginTop: -spacing.sm },
   label: { color: colors.ink, fontSize: 14, fontWeight: "800", marginTop: spacing.md },
   photoStrip: { gap: spacing.sm, paddingVertical: spacing.xs },
   photoStripItem: { position: "relative" },
@@ -990,6 +1239,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
+  myPhotoStatus: { flex: 1, gap: spacing.xs },
+  replacePhotoButton: { alignSelf: "flex-start" },
   moreSheet: {
     marginTop: "auto",
     backgroundColor: colors.paper,
@@ -1013,6 +1264,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   galleryImage: { width: "48%", aspectRatio: 1, borderRadius: radii.md },
+  googleGalleryContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+    gap: spacing.lg,
+  },
+  googleGalleryItem: { gap: spacing.xs },
+  googleGalleryImage: { width: "100%", aspectRatio: 1.5, borderRadius: radii.md },
   uploadPreviewWrap: { alignItems: "center", marginTop: spacing.sm },
   uploadRulesCard: { marginTop: spacing.md },
   uploadProgressWrap: { marginTop: spacing.md, gap: spacing.xs },

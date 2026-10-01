@@ -109,13 +109,9 @@ export function getFixtureGooglePlaceDetails(spotId: string): Promise<GooglePlac
 }
 
 export type TacoHuntPhotoModerationStatus = "pending" | "approved" | "rejected";
+export type TacoHuntPhotoKind = "tacos" | "puesto" | "menu";
 export type TacoHuntPhotoFixtureMode =
-  | "empty"
-  | "pending"
-  | "rejected"
-  | "published"
-  | "uploading"
-  | "error";
+  "empty" | "pending" | "rejected" | "published" | "uploading" | "error";
 
 export interface TacoHuntPhoto {
   source: "taco-hunt";
@@ -125,6 +121,7 @@ export interface TacoHuntPhoto {
   uploaderName: string;
   spotId: string;
   spotName: string;
+  kind: TacoHuntPhotoKind;
   status: TacoHuntPhotoModerationStatus;
   rejectionReason?: string;
   createdAt: string;
@@ -153,14 +150,13 @@ function configuredTacoHuntPhotoMode(): TacoHuntPhotoFixtureMode | null {
   return null;
 }
 
-export function getFixtureTacoHuntPhotoMode(): TacoHuntPhotoFixtureMode | null {
-  return configuredTacoHuntPhotoMode();
+export function getFixtureTacoHuntPhotoMode(): TacoHuntPhotoFixtureMode {
+  return configuredTacoHuntPhotoMode() ?? "empty";
 }
 
 /**
- * Optional Phase A fixture mode for the Taco Hunt-owned gallery. Normal
- * development keeps the existing T37 API adapter; setting the env var lets
- * QA exercise empty, pending, rejected, published, uploading, and error
+ * Phase A fixture adapter for the Taco Hunt-owned gallery. Setting the env var
+ * lets QA exercise empty, pending, rejected, published, uploading, and error
  * moderation states without any API or Storage data.
  */
 export function getFixtureTacoHuntPhotoGallery(
@@ -177,6 +173,7 @@ export function getFixtureTacoHuntPhotoGallery(
         spotName,
         uploaderId,
         uploaderName: "Tú",
+        kind: "tacos" as const,
         createdAt: "2026-10-01T12:00:00.000Z",
       };
       const approved: TacoHuntPhoto[] =
@@ -190,6 +187,8 @@ export function getFixtureTacoHuntPhotoGallery(
               },
             ]
           : [];
+      const mineStatus: TacoHuntPhotoModerationStatus =
+        mode === "published" ? "approved" : mode === "rejected" ? "rejected" : "pending";
       const mine: TacoHuntPhoto[] =
         mode === "pending" || mode === "rejected" || mode === "published"
           ? [
@@ -197,9 +196,11 @@ export function getFixtureTacoHuntPhotoGallery(
                 ...base,
                 id: `${spotId}-taco-hunt-${mode}`,
                 url: "https://placehold.co/480x480/FCEBC8/302723?text=Mi+foto",
-                status: mode === "published" ? "approved" : mode,
+                status: mineStatus,
                 rejectionReason:
-                  mode === "rejected" ? "La foto necesita mostrar mejor el puesto o la comida." : undefined,
+                  mode === "rejected"
+                    ? "La foto necesita mostrar mejor el puesto o la comida."
+                    : undefined,
               },
             ]
           : [];
@@ -221,6 +222,7 @@ export function createFixtureTacoHuntPhoto(
   spotName: string,
   uploaderId: string,
   localUri: string,
+  kind: TacoHuntPhotoKind,
 ): Promise<TacoHuntPhoto> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
@@ -238,9 +240,12 @@ export function createFixtureTacoHuntPhoto(
         uploaderName: "Tú",
         spotId,
         spotName,
+        kind,
         status,
         rejectionReason:
-          status === "rejected" ? "La foto necesita mostrar mejor el puesto o la comida." : undefined,
+          status === "rejected"
+            ? "La foto necesita mostrar mejor el puesto o la comida."
+            : undefined,
         createdAt: new Date().toISOString(),
       });
     }, 450);
