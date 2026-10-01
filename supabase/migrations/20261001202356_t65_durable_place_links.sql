@@ -62,6 +62,6 @@ create unique index spots_google_place_id_unique_idx
 
 -- google_place_id is Taco Hunt-owned moderation/provenance metadata, not
 -- personal data. It intentionally survives created_by ON DELETE SET NULL when
--- an account is deleted. taco_hunt_api already has the minimum existing
--- spots INSERT/SELECT/UPDATE grants needed by proposal and moderation paths;
--- this migration grants no broader privilege for the new column.
+-- an account is deleted. Proposal, refresh, and moderation paths only need
+-- INSERT/SELECT/UPDATE on spots; no API path deletes a spot directly.
+revoke delete on app_private.spots from taco_hunt_api;
