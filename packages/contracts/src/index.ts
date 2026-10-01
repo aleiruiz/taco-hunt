@@ -4,6 +4,11 @@ export const uuidSchema = z.string().uuid();
 export const isoTimestampSchema = z.string().datetime({ offset: true });
 export const cursorTokenSchema = z.string().min(1).max(512);
 
+// A Google place ID is the only Google-owned value that may be retained as a
+// durable Taco Hunt relationship. Google display fields remain transient.
+export const googlePlaceIdSchema = z.string().trim().min(1).max(300);
+export type GooglePlaceId = z.infer<typeof googlePlaceIdSchema>;
+
 export const apiErrorCodeSchema = z.enum([
   "VALIDATION_ERROR",
   "UNAUTHORIZED",
@@ -62,6 +67,8 @@ export const spotSummarySchema = z.object({
   neighborhood: z.string(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
+  // Durable relationship only; Google display data is never stored here.
+  googlePlaceId: googlePlaceIdSchema.optional(),
   photoUrl: z.string().url().nullable(),
   lastVerifiedAt: isoTimestampSchema.nullable(),
   reviewCount: z.number().int().nonnegative(),
@@ -88,6 +95,8 @@ export const spotDetailSchema = z.object({
   neighborhood: z.string(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
+  // Durable relationship only; hydrate Google details separately on demand.
+  googlePlaceId: googlePlaceIdSchema.optional(),
   lastVerifiedAt: isoTimestampSchema.nullable(),
   photoUrl: z.string().url().nullable(),
   reviewCount: z.number().int().nonnegative(),
@@ -535,3 +544,181 @@ export type ImportCandidateMerge = z.infer<typeof importCandidateMergeSchema>;
 // migration lands; not yet required by spotProposalSchema.
 export const openingTimeSchema = z.enum(["manana", "tarde", "noche"]);
 export type OpeningTime = z.infer<typeof openingTimeSchema>;
+
+// --- T64: Google Places contract gate ---
+// Google-owned display fields below are transient API response data. They are
+// intentionally kept separate from Taco Hunt-owned records and must not be
+// persisted by the API. A Google place ID is the only Google-owned value that
+// may be retained as a durable relationship (T65).
+export const googleAttributionSchema = z.object({
+  label: z.string().trim().min(1).max(200),
+  sourceUrl: z.string().url(),
+});
+export type GoogleAttribution = z.infer<typeof googleAttributionSchema>;
+
+export const durablePlaceLinkSchema = z.object({
+  googlePlaceId: googlePlaceIdSchema,
+});
+export type DurablePlaceLink = z.infer<typeof durablePlaceLinkSchema>;
+
+// Google viewport results are hydrated for the current map request only.
+export const googleViewportResultSchema = z.object({
+  source: z.literal("google"),
+  placeId: googlePlaceIdSchema,
+  name: z.string(),
+  neighborhood: z.string().nullable(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  googleMapsUrl: z.string().url(),
+  attribution: googleAttributionSchema,
+});
+export type GoogleViewportResult = z.infer<typeof googleViewportResultSchema>;
+
+// Only Taco Hunt-owned proposal pins may carry a durable local ID. Pending
+// pins are returned only where the API has established the viewer may see
+// them; Google results are never mixed into this shape.
+export const localProposalPinSchema = z.object({
+  source: z.literal("taco-hunt"),
+  id: uuidSchema,
+  name: z.string().nullable(),
+  neighborhood: z.string().nullable(),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  status: z.enum(["pending", "approved"]),
+});
+export type LocalProposalPin = z.infer<typeof localProposalPinSchema>;
+
+export const placesViewportQuerySchema = z
+  .object({
+    north: z.coerce.number().min(-90).max(90),
+    south: z.coerce.number().min(-90).max(90),
+    east: z.coerce.number().min(-180).max(180),
+    west: z.coerce.number().min(-180).max(180),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+  })
+  .superRefine((query, context) => {
+    if (query.south > query.north) {
+      context.addIssue({
+        code: "custom",
+        path: ["south"],
+        message: "south debe ser menor o igual a north",
+      });
+    }
+    if (query.west > query.east) {
+      context.addIssue({
+        code: "custom",
+        path: ["west"],
+        message: "west debe ser menor o igual a east",
+      });
+    }
+  });
+export type PlacesViewportQuery = z.infer<typeof placesViewportQuerySchema>;
+
+export const placesViewportStateSchema = z.enum(["ready", "empty", "unavailable"]);
+export type PlacesViewportState = z.infer<typeof placesViewportStateSchema>;
+
+export const placesViewportResponseSchema = z.object({
+  state: placesViewportStateSchema,
+  googleResults: z.array(googleViewportResultSchema),
+  localProposals: z.array(localProposalPinSchema),
+  attribution: googleAttributionSchema,
+  message: z.string().optional(),
+});
+export type PlacesViewportResponse = z.infer<typeof placesViewportResponseSchema>;
+
+export const googlePlacePhotoSchema = z.object({
+  source: z.literal("google"),
+  id: z.string().trim().min(1).max(300),
+  url: z.string().url(),
+  authorAttribution: z.string().trim().min(1).max(500),
+  sourceUrl: z.string().url(),
+});
+export type GooglePlacePhoto = z.infer<typeof googlePlacePhotoSchema>;
+
+export const googlePlacePhotosStateSchema = z.enum(["available", "unavailable"]);
+export type GooglePlacePhotosState = z.infer<typeof googlePlacePhotosStateSchema>;
+
+export const googlePlaceDetailsSchema = z.object({
+  source: z.literal("google"),
+  placeId: googlePlaceIdSchema,
+  name: z.string(),
+  formattedAddress: z.string().nullable(),
+  googleMapsUrl: z.string().url(),
+  attribution: googleAttributionSchema,
+  photosState: googlePlacePhotosStateSchema,
+  photos: z.array(googlePlacePhotoSchema),
+});
+export type GooglePlaceDetails = z.infer<typeof googlePlaceDetailsSchema>;
+
+export const googlePlaceDetailsStateSchema = z.enum(["ready", "unavailable", "error"]);
+export type GooglePlaceDetailsState = z.infer<typeof googlePlaceDetailsStateSchema>;
+
+export const googlePlaceDetailsResponseSchema = z.object({
+  state: googlePlaceDetailsStateSchema,
+  details: googlePlaceDetailsSchema.optional(),
+  message: z.string().optional(),
+});
+export type GooglePlaceDetailsResponse = z.infer<typeof googlePlaceDetailsResponseSchema>;
+
+export const registeredPlaceMatchSchema = z.object({
+  spotId: uuidSchema,
+  displayName: z.string(),
+  neighborhood: z.string(),
+});
+export type RegisteredPlaceMatch = z.infer<typeof registeredPlaceMatchSchema>;
+
+// The autocomplete response is transient Google data plus an optional
+// Taco Hunt-owned redirect when the selected place is already registered.
+export const placeAutocompleteResponseV2Schema = placeAutocompleteResponseSchema.extend({
+  registeredMatch: registeredPlaceMatchSchema.optional(),
+});
+export type PlaceAutocompleteResponseV2 = z.infer<typeof placeAutocompleteResponseV2Schema>;
+
+export const placeProposalCreateSchema = z.discriminatedUnion("source", [
+  z
+    .object({
+      source: z.literal("google"),
+      placeId: googlePlaceIdSchema,
+    })
+    .strict(),
+  z
+    .object({
+      source: z.literal("local"),
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+      name: z.string().trim().min(2).max(120).optional(),
+      note: z.string().trim().max(500).optional(),
+    })
+    .strict(),
+]);
+export type PlaceProposalCreate = z.infer<typeof placeProposalCreateSchema>;
+
+export const placeProposalResultSchema = z.object({
+  id: uuidSchema,
+  source: z.enum(["google", "local"]),
+  status: z.literal("pending"),
+  createdAt: isoTimestampSchema,
+});
+export type PlaceProposalResult = z.infer<typeof placeProposalResultSchema>;
+
+export const placeDuplicateRedirectSchema = z.object({
+  spotId: uuidSchema,
+  path: z.string().regex(/^\/spot\/[0-9a-f-]+$/i),
+});
+export type PlaceDuplicateRedirect = z.infer<typeof placeDuplicateRedirectSchema>;
+
+export const placeProposalConflictSchema = z.object({
+  error: z.object({
+    code: z.literal("CONFLICT"),
+    message: z.string(),
+    requestId: z.string().min(1),
+    details: z.object({
+      reason: z.literal("already_registered"),
+      existingSpotId: uuidSchema,
+      redirect: placeDuplicateRedirectSchema,
+      displayName: z.string(),
+      neighborhood: z.string(),
+    }),
+  }),
+});
+export type PlaceProposalConflict = z.infer<typeof placeProposalConflictSchema>;
