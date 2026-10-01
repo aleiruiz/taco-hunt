@@ -10,14 +10,24 @@ import {
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { placeAutocompleteQuerySchema } from "@taco-hunt/contracts";
+import {
+  googlePlaceIdSchema,
+  placeAutocompleteQuerySchema,
+  placesViewportQuerySchema,
+  type PlacesViewportQuery,
+} from "@taco-hunt/contracts";
 import { DATABASE_POOL } from "../database/database.module.js";
 import { RequestLimitService } from "../auth/request-limit.service.js";
 
 const GOOGLE_ATTRIBUTION = "Con la tecnología de Google";
+const GOOGLE_MAPS_ATTRIBUTION = {
+  label: "Google Maps",
+  sourceUrl: "https://www.google.com/maps",
+} as const;
 const GOOGLE_CALLS_SCOPE = "places-google-calls-global";
 const GOOGLE_CALLS_WINDOW_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_CALL_LIMIT = 2_000;
+const MAX_GOOGLE_PHOTO_BYTES = 10 * 1024 * 1024;
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -39,9 +49,14 @@ type GooglePlace = {
   formattedAddress?: unknown;
   shortFormattedAddress?: unknown;
   location?: { latitude?: unknown; longitude?: unknown };
+  addressComponents?: Array<{ longText?: unknown; types?: unknown }>;
   types?: unknown;
   businessStatus?: unknown;
   googleMapsUri?: unknown;
+  photos?: Array<{
+    name?: unknown;
+    authorAttributions?: Array<{ displayName?: unknown; uri?: unknown }>;
+  }>;
 };
 
 type GooglePlacesResponse = { places?: GooglePlace[] };
@@ -57,6 +72,216 @@ export class PlacesService {
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     private readonly limits: RequestLimitService,
   ) {}
+
+  /**
+   * Hydrates only the visible viewport. Google display data is returned to the
+   * caller and never inserted into Taco Hunt tables.
+   */
+  async discoverViewport(rawInput: unknown, viewerId: string | undefined) {
+    const parsed = placesViewportQuerySchema.safeParse(rawInput);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros de viewport inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+
+    const input = parsed.data;
+    const localProposals = await this.findLocalProposals(input, viewerId);
+    if (this.googlePlacesUnavailable()) {
+      return {
+        state: "unavailable" as const,
+        googleResults: [],
+        localProposals,
+        attribution: GOOGLE_MAPS_ATTRIBUTION,
+        message: "La búsqueda de Google no está disponible por ahora.",
+      };
+    }
+
+    try {
+      const places = await this.searchGoogleViewport(input);
+      const googleResults = places
+        .map((place) => toViewportResult(place))
+        .filter((place): place is NonNullable<typeof place> => place !== null);
+      return {
+        state: googleResults.length > 0 ? ("ready" as const) : ("empty" as const),
+        googleResults,
+        localProposals,
+        attribution: GOOGLE_MAPS_ATTRIBUTION,
+        ...(googleResults.length === 0
+          ? { message: "No hay resultados de Google en esta vista." }
+          : {}),
+      };
+    } catch (error) {
+      if (error instanceof GooglePlacesGuardRejectedException) {
+        return {
+          state: "unavailable" as const,
+          googleResults: [],
+          localProposals,
+          attribution: GOOGLE_MAPS_ATTRIBUTION,
+          message: error.message,
+        };
+      }
+      if (error instanceof BadGatewayException || error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      this.logger.error(
+        "Google Places viewport discovery failed",
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException("Google Places no está disponible");
+    }
+  }
+
+  /**
+   * Fetches details and photo metadata on demand. The response contains only
+   * the contract's attribution-safe fields; photo bytes are served through
+   * getPlacePhoto so the Google API key never reaches a client.
+   */
+  async getPlaceDetails(placeId: string, photoBaseUrl: string) {
+    const parsedPlaceId = googlePlaceIdSchema.safeParse(placeId);
+    if (!parsedPlaceId.success) throw new BadRequestException("placeId inválido");
+
+    if (this.googlePlacesUnavailable()) {
+      return {
+        state: "unavailable" as const,
+        message: "Los datos de Google no están disponibles por ahora.",
+      };
+    }
+
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    if (!apiKey) {
+      return {
+        state: "unavailable" as const,
+        message: "Google Places no está configurado.",
+      };
+    }
+
+    this.assertGoogleCallAllowed();
+    try {
+      const endpoint =
+        process.env.GOOGLE_PLACES_DETAILS_URL?.trim() ||
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(parsedPlaceId.data)}`;
+      const response = await fetch(endpoint, {
+        headers: {
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "googleMapsUri",
+            "photos",
+          ].join(","),
+        },
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (response.status === 404) throw new NotFoundException("Lugar no encontrado");
+      if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
+
+      const place = (await response.json()) as GooglePlace;
+      const name = stringValue(place.displayName?.text);
+      if (!name) throw new BadGatewayException("Google Places devolvió datos incompletos");
+
+      const googleMapsUrl = safeGoogleMapsUrl(place.googleMapsUri, parsedPlaceId.data);
+      const photos = (place.photos ?? [])
+        .map((photo) => toGooglePhoto(photo, parsedPlaceId.data, photoBaseUrl, googleMapsUrl))
+        .filter((photo): photo is NonNullable<typeof photo> => photo !== null);
+      return {
+        state: "ready" as const,
+        details: {
+          source: "google" as const,
+          placeId: parsedPlaceId.data,
+          name,
+          formattedAddress: stringValue(place.formattedAddress),
+          googleMapsUrl,
+          attribution: GOOGLE_MAPS_ATTRIBUTION,
+          photosState: photos.length > 0 ? ("available" as const) : ("unavailable" as const),
+          photos,
+        },
+      };
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadGatewayException ||
+        error instanceof GooglePlacesGuardRejectedException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        "Google Places on-demand details failed",
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException("Google Places no está disponible");
+    }
+  }
+
+  /**
+   * Proxies one transient Google photo through the API. The opaque token is
+   * accepted only when it decodes to a photo resource for the requested place.
+   */
+  async getPlacePhoto(placeId: string, photoToken: string) {
+    const parsedPlaceId = googlePlaceIdSchema.safeParse(placeId);
+    if (!parsedPlaceId.success) throw new BadRequestException("placeId inválido");
+    if (!/^[A-Za-z0-9_-]+$/.test(photoToken)) {
+      throw new BadRequestException("Foto inválida");
+    }
+
+    let photoName: string;
+    try {
+      photoName = Buffer.from(photoToken, "base64url").toString("utf8");
+    } catch {
+      throw new BadRequestException("Foto inválida");
+    }
+    const expectedPrefix = `places/${parsedPlaceId.data}/photos/`;
+    if (!photoName.startsWith(expectedPrefix) || photoName.length <= expectedPrefix.length) {
+      throw new NotFoundException("Foto no encontrada");
+    }
+
+    if (this.googlePlacesUnavailable()) {
+      throw new ServiceUnavailableException("Las fotos de Google no están disponibles");
+    }
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+
+    this.assertGoogleCallAllowed();
+    try {
+      const configuredEndpoint = process.env.GOOGLE_PLACES_PHOTO_URL?.trim();
+      const endpointTemplate =
+        configuredEndpoint || "https://places.googleapis.com/v1/{photoName}/media";
+      const endpoint = endpointTemplate.replace("{photoName}", photoName);
+      const url = new URL(endpoint);
+      url.searchParams.set("maxWidthPx", "1200");
+      const response = await fetch(url, {
+        headers: { "X-Goog-Api-Key": apiKey },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (response.status === 404) throw new NotFoundException("Foto no encontrada");
+      if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
+
+      const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim();
+      if (!contentType?.startsWith("image/")) {
+        throw new BadGatewayException("Google Places devolvió un archivo no válido");
+      }
+      const contentLength = Number(response.headers.get("content-length"));
+      if (Number.isFinite(contentLength) && contentLength > MAX_GOOGLE_PHOTO_BYTES) {
+        throw new BadGatewayException("La foto de Google es demasiado grande");
+      }
+      const body = Buffer.from(await response.arrayBuffer());
+      if (body.byteLength > MAX_GOOGLE_PHOTO_BYTES) {
+        throw new BadGatewayException("La foto de Google es demasiado grande");
+      }
+      return { body, contentType };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadGatewayException) {
+        throw error;
+      }
+      this.logger.error(
+        "Google Places photo proxy failed",
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException("Las fotos de Google no están disponibles");
+    }
+  }
 
   async discover(input: PlacesSearchInput) {
     const parsed = placesDiscoverySchema.safeParse(input);
@@ -99,6 +324,75 @@ export class PlacesService {
     }
 
     return { batchId, discovered: places.length, inserted: candidates.length, candidates };
+  }
+
+  private async findLocalProposals(input: PlacesViewportQuery, viewerId: string | undefined) {
+    if (!viewerId) return [];
+    try {
+      const { rows } = await this.pool.query(
+        `select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,status
+         from app_private.spots
+         where status='pending' and created_by=$1
+           and latitude between $2 and $3 and longitude between $4 and $5
+         order by created_at desc limit $6`,
+        [viewerId, input.south, input.north, input.west, input.east, input.limit],
+      );
+      return rows.map((row) => ({
+        source: "taco-hunt" as const,
+        id: row.id as string,
+        name: (row.name as string | null) ?? null,
+        neighborhood: (row.neighborhood as string | null) ?? null,
+        latitude: row.latitude as number,
+        longitude: row.longitude as number,
+        status: row.status as "pending",
+      }));
+    } catch (error) {
+      this.logger.error(
+        "Viewport proposal query failed",
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  private async searchGoogleViewport(input: PlacesViewportQuery): Promise<GooglePlace[]> {
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+    this.assertGoogleCallAllowed();
+
+    const endpoint =
+      process.env.GOOGLE_PLACES_VIEWPORT_URL?.trim() ||
+      "https://places.googleapis.com/v1/places:searchNearby";
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": [
+          "places.id",
+          "places.displayName",
+          "places.shortFormattedAddress",
+          "places.location",
+          "places.addressComponents",
+          "places.googleMapsUri",
+        ].join(","),
+      },
+      body: JSON.stringify({
+        includedTypes: ["mexican_restaurant"],
+        maxResultCount: Math.min(input.limit, 20),
+        languageCode: "es",
+        locationRestriction: {
+          rectangle: {
+            low: { latitude: input.south, longitude: input.west },
+            high: { latitude: input.north, longitude: input.east },
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
+    const payload = (await response.json()) as GooglePlacesResponse;
+    return Array.isArray(payload.places) ? payload.places : [];
   }
 
   async queue(limit = 100) {
@@ -242,7 +536,7 @@ export class PlacesService {
    * per-user rate limits above. See docs/google-places-controls.md.
    */
   private assertGoogleCallAllowed(): void {
-    if (process.env.GOOGLE_PLACES_KILL_SWITCH?.trim().toLowerCase() === "true") {
+    if (this.googlePlacesKillSwitchEnabled()) {
       throw new GooglePlacesGuardRejectedException(
         "Google Places está deshabilitado temporalmente",
       );
@@ -261,6 +555,14 @@ export class PlacesService {
         "Se alcanzó el límite diario de solicitudes a Google Places",
       );
     }
+  }
+
+  private googlePlacesKillSwitchEnabled(): boolean {
+    return process.env.GOOGLE_PLACES_KILL_SWITCH?.trim().toLowerCase() === "true";
+  }
+
+  private googlePlacesUnavailable(): boolean {
+    return this.googlePlacesKillSwitchEnabled() || !process.env.GOOGLE_PLACES_API_KEY?.trim();
   }
 
   private async searchLocalSpots(query: string) {
@@ -414,6 +716,72 @@ function toCandidate(place: GooglePlace) {
       google_maps_uri: stringValue(place.googleMapsUri),
     },
   };
+}
+
+function toViewportResult(place: GooglePlace) {
+  const placeId = stringValue(place.id);
+  const name = stringValue(place.displayName?.text);
+  const latitude = numberValue(place.location?.latitude);
+  const longitude = numberValue(place.location?.longitude);
+  if (!placeId || !name || latitude === null || longitude === null) return null;
+
+  return {
+    source: "google" as const,
+    placeId,
+    name,
+    neighborhood: neighborhoodFromComponents(place.addressComponents),
+    latitude,
+    longitude,
+    googleMapsUrl: safeGoogleMapsUrl(place.googleMapsUri, placeId),
+    attribution: GOOGLE_MAPS_ATTRIBUTION,
+  };
+}
+
+function toGooglePhoto(
+  photo: NonNullable<GooglePlace["photos"]>[number],
+  placeId: string,
+  photoBaseUrl: string,
+  googleMapsUrl: string,
+) {
+  const photoName = stringValue(photo.name);
+  if (!photoName) return null;
+  const token = Buffer.from(photoName, "utf8").toString("base64url");
+  if (token.length > 300) return null;
+  const author = photo.authorAttributions?.[0];
+  const authorAttribution = stringValue(author?.displayName);
+  if (!authorAttribution) return null;
+  const sourceUrl = safeHttpsUrl(author?.uri) ?? googleMapsUrl;
+  return {
+    source: "google" as const,
+    id: token,
+    url: `${photoBaseUrl.replace(/\/+$/, "")}/places/${encodeURIComponent(placeId)}/photos/${token}`,
+    authorAttribution,
+    sourceUrl,
+  };
+}
+
+function safeGoogleMapsUrl(value: unknown, placeId: string): string {
+  try {
+    const url = new URL(stringValue(value) ?? "");
+    if (
+      url.protocol === "https:" &&
+      (url.hostname === "google.com" || url.hostname.endsWith(".google.com"))
+    ) {
+      return url.toString();
+    }
+  } catch {
+    // Fall back to Google's canonical map URL below.
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId)}`;
+}
+
+function safeHttpsUrl(value: unknown): string | null {
+  try {
+    const url = new URL(stringValue(value) ?? "");
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function stringValue(value: unknown): string | null {

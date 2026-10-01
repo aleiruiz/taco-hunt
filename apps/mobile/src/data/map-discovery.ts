@@ -1,11 +1,12 @@
 /**
- * Viewport discovery fixtures for the Phase A map foundation.
+ * Live viewport discovery adapter for the map foundation.
  *
- * These are intentionally smaller than a Google Places response. The mobile
- * UI only needs a display label, a coordinate, and an attribution/source link
- * for a transient candidate. Ratings, reviews, photos, and raw provider
- * payloads do not belong in this adapter or in durable app state.
+ * Google display data is transient and deliberately kept separate from
+ * Taco Hunt-owned proposal pins. The API is the only component that calls
+ * Google Places and includes the attribution required by the response.
  */
+
+import { supabase } from "@/auth/client";
 
 export type MapDiscoveryState = "loading" | "ready" | "empty" | "unavailable" | "offline" | "error";
 
@@ -52,116 +53,101 @@ export const MAP_DISCOVERY_ATTRIBUTION: MapDiscoverySnapshot["attribution"] = {
   sourceUrl: "https://www.google.com/maps",
 };
 
-const FIXTURE_GOOGLE_RESULTS: GoogleDiscoveryResult[] = [
-  {
-    id: "google-fixture-1",
-    name: "Taco Fixture Centro",
-    neighborhood: "Centro",
-    latitude: 25.6718,
-    longitude: -100.3099,
-    sourceUrl: "https://www.google.com/maps/search/?api=1&query=Taco%20Fixture%20Centro%2C%20Monterrey",
-    attributionLabel: "Resultados de Google",
-  },
-  {
-    id: "google-fixture-2",
-    name: "Puesto de Prueba Obispado",
-    neighborhood: "Obispado",
-    latitude: 25.6785,
-    longitude: -100.3451,
-    sourceUrl:
-      "https://www.google.com/maps/search/?api=1&query=Puesto%20de%20Prueba%20Obispado%2C%20Monterrey",
-    attributionLabel: "Resultados de Google",
-  },
-];
+const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
-const FIXTURE_LOCAL_PROPOSALS: TacoHuntProposalPin[] = [
-  {
-    id: "proposal-fixture-1",
-    name: "Propuesta Taco Hunt Norte",
-    neighborhood: "Mitras Centro",
-    latitude: 25.6865,
-    longitude: -100.3372,
-    status: "pending",
-    ownershipLabel: "Propuesta de Taco Hunt",
-  },
-];
+type PlacesViewportResponse = {
+  state: "ready" | "empty" | "unavailable";
+  googleResults: Array<{
+    source: "google";
+    placeId: string;
+    name: string;
+    neighborhood: string | null;
+    latitude: number;
+    longitude: number;
+    googleMapsUrl: string;
+    attribution: { label: string; sourceUrl: string };
+  }>;
+  localProposals: Array<{
+    source: "taco-hunt";
+    id: string;
+    name: string | null;
+    neighborhood: string | null;
+    latitude: number;
+    longitude: number;
+    status: "pending" | "approved";
+  }>;
+  attribution: { label: string; sourceUrl: string };
+  message?: string;
+};
 
-function isInsideViewport(item: { latitude: number; longitude: number }, viewport: DiscoveryViewport) {
-  return (
-    item.latitude <= viewport.north &&
-    item.latitude >= viewport.south &&
-    item.longitude <= viewport.east &&
-    item.longitude >= viewport.west
-  );
-}
-
-function configuredFixtureState(): Exclude<MapDiscoveryState, "loading" | "ready"> | null {
-  const value = process.env.EXPO_PUBLIC_MAP_DISCOVERY_STATE?.trim().toLowerCase();
-  if (value === "empty" || value === "unavailable" || value === "offline" || value === "error") {
-    return value;
+function messageFromResponse(value: unknown): string {
+  if (typeof value === "object" && value !== null && "error" in value) {
+    const error = (value as { error?: unknown }).error;
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
   }
-  return null;
+  return "No pudimos actualizar los resultados de Google.";
 }
 
-/**
- * Simulates the future viewport discovery call. Set
- * EXPO_PUBLIC_MAP_DISCOVERY_STATE to empty, unavailable, offline, or error
- * during manual QA to exercise those UI states without a provider call.
- */
-export function getFixtureMapDiscovery(viewport: DiscoveryViewport): Promise<MapDiscoverySnapshot> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const forcedState = configuredFixtureState();
-      if (forcedState === "empty") {
-        resolve({
-          state: "empty",
-          googleResults: [],
-          localProposals: [],
-          attribution: MAP_DISCOVERY_ATTRIBUTION,
-          message: "No hay resultados de Google en esta vista.",
-        });
-        return;
-      }
-      if (forcedState === "unavailable") {
-        resolve({
-          state: "unavailable",
-          googleResults: [],
-          localProposals: FIXTURE_LOCAL_PROPOSALS.filter((item) => isInsideViewport(item, viewport)),
-          attribution: MAP_DISCOVERY_ATTRIBUTION,
-          message: "La búsqueda de Google no está disponible por ahora.",
-        });
-        return;
-      }
-      if (forcedState === "offline") {
-        resolve({
-          state: "offline",
-          googleResults: [],
-          localProposals: FIXTURE_LOCAL_PROPOSALS.filter((item) => isInsideViewport(item, viewport)),
-          attribution: MAP_DISCOVERY_ATTRIBUTION,
-          message: "Sin conexión. Las propuestas de Taco Hunt siguen visibles.",
-        });
-        return;
-      }
-      if (forcedState === "error") {
-        resolve({
-          state: "error",
-          googleResults: [],
-          localProposals: FIXTURE_LOCAL_PROPOSALS.filter((item) => isInsideViewport(item, viewport)),
-          attribution: MAP_DISCOVERY_ATTRIBUTION,
-          message: "No pudimos actualizar los resultados de Google.",
-        });
-        return;
-      }
-
-      const googleResults = FIXTURE_GOOGLE_RESULTS.filter((item) => isInsideViewport(item, viewport));
-      const localProposals = FIXTURE_LOCAL_PROPOSALS.filter((item) => isInsideViewport(item, viewport));
-      resolve({
-        state: googleResults.length > 0 ? "ready" : "empty",
-        googleResults,
-        localProposals,
-        attribution: MAP_DISCOVERY_ATTRIBUTION,
-        message: googleResults.length > 0 ? undefined : "No hay resultados de Google en esta vista.",
-      });
-    }, 250);
+/** Loads the current visible viewport; no Google payload is cached or persisted on mobile. */
+export async function getFixtureMapDiscovery(
+  viewport: DiscoveryViewport,
+): Promise<MapDiscoverySnapshot> {
+  const params = new URLSearchParams({
+    north: String(viewport.north),
+    south: String(viewport.south),
+    east: String(viewport.east),
+    west: String(viewport.west),
   });
+  const { data: sessionData } = await supabase.auth.getSession();
+  const response = await fetch(`${API}/places/viewport?${params}`, {
+    headers: sessionData.session
+      ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+      : undefined,
+  });
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = undefined;
+    }
+    throw new Error(messageFromResponse(payload));
+  }
+
+  const data = (await response.json()) as PlacesViewportResponse;
+  return {
+    state: data.state,
+    googleResults: data.googleResults.map((result) => ({
+      id: result.placeId,
+      name: result.name,
+      neighborhood: result.neighborhood ?? "Zona no confirmada",
+      latitude: result.latitude,
+      longitude: result.longitude,
+      sourceUrl: result.googleMapsUrl,
+      attributionLabel: "Resultados de Google",
+    })),
+    localProposals: data.localProposals
+      .filter((proposal) => proposal.status === "pending")
+      .map((proposal) => ({
+        id: proposal.id,
+        name: proposal.name ?? "Puesto propuesto",
+        neighborhood: proposal.neighborhood ?? "Zona no confirmada",
+        latitude: proposal.latitude,
+        longitude: proposal.longitude,
+        status: "pending",
+        ownershipLabel: "Propuesta de Taco Hunt",
+      })),
+    attribution: {
+      label: "Google Maps",
+      sourceUrl: data.attribution.sourceUrl,
+    },
+    message: data.message,
+  };
 }
