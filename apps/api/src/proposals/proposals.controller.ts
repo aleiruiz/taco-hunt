@@ -1,5 +1,9 @@
 import { BadRequestException, Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
-import { spotProposalSchema, tacoProposalSchema } from "@taco-hunt/contracts";
+import {
+  placeProposalCreateSchema,
+  spotProposalSchema,
+  tacoProposalSchema,
+} from "@taco-hunt/contracts";
 import { AuthRequiredGuard } from "../auth/auth-required.guard.js";
 import { CurrentProfile } from "../auth/current-profile.decorator.js";
 import type { AuthenticatedProfile } from "../auth/auth.types.js";
@@ -9,6 +13,17 @@ import { ProposalsService } from "./proposals.service.js";
 @UseGuards(AuthRequiredGuard)
 export class ProposalsController {
   constructor(private readonly proposals: ProposalsService) {}
+
+  @Post("/place-proposals")
+  async createPlace(@CurrentProfile() profile: AuthenticatedProfile, @Body() body: unknown) {
+    const parsed = placeProposalCreateSchema.safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException({
+        message: "Propuesta inválida",
+        details: { issues: parsed.error.issues },
+      });
+    return this.proposals.createPlace(profile, parsed.data);
+  }
 
   @Post("/spot-proposals")
   async createSpot(@CurrentProfile() profile: AuthenticatedProfile, @Body() body: unknown) {

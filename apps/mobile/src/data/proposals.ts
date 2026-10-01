@@ -1,8 +1,10 @@
+import type { Session } from "@supabase/supabase-js";
+
 /**
- * Phase A proposal adapters.
+ * Proposal API adapters.
  *
  * Google-owned discovery data is display-only. The future Google submission
- * shape intentionally contains only a place_id; it must not persist Google's
+ * shape intentionally contains only a placeId; it must not persist Google's
  * name, address, coordinates, ratings, reviews, or photos in Taco Hunt.
  * Local proposals are Taco Hunt-owned and use a map pin as their location.
  */
@@ -12,7 +14,7 @@ export type ProposalStatus = "pending" | "approved" | "rejected";
 
 export type SpotProposal = {
   id: string;
-  source: "local";
+  source: ProposalSource;
   name?: string;
   note?: string;
   latitude: number;
@@ -44,12 +46,12 @@ export type RegisteredPlaceMatch = {
 export type ProposalSearchResult = {
   suggestions: GoogleProposalSuggestion[];
   registeredMatch?: RegisteredPlaceMatch;
-  attribution: "Resultados de Google";
+  attribution: string | null;
 };
 
 export type GoogleProposalSubmission = {
   source: "google";
-  place_id: string;
+  placeId: string;
 };
 
 export type LocalProposalSubmission = {
@@ -69,91 +71,162 @@ export type ProposalSubmissionResult = {
   createdAt: string;
 };
 
-const GOOGLE_SUGGESTIONS: GoogleProposalSuggestion[] = [
-  {
-    placeId: "ChIJtrompoFixture",
-    displayName: "Tacos El Trompo",
-    secondaryText: "Mitras Centro · Monterrey",
-  },
-  {
-    placeId: "ChIJplazaFixture",
-    displayName: "Tacos de la Plaza",
-    secondaryText: "Centro · Monterrey",
-  },
-  {
-    placeId: "ChIJnorteFixture",
-    displayName: "Taquería La Norteñita",
-    secondaryText: "Cumbres · Monterrey",
-  },
-];
-
-function wait(milliseconds: number) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+export class ProposalDuplicateError extends Error {
+  constructor(
+    readonly duplicate: RegisteredPlaceMatch,
+    message = "Este lugar ya está registrado en Taco Hunt",
+  ) {
+    super(message);
+    this.name = "ProposalDuplicateError";
+  }
 }
 
-/** Future-shaped autocomplete adapter for T67. */
-export async function searchProposalPlaces(query: string): Promise<ProposalSearchResult> {
-  await wait(350);
-  const normalized = query.trim().toLocaleLowerCase("es-MX");
+const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
-  if (normalized.includes("error")) {
-    throw new Error("No pudimos cargar sugerencias. Intenta de nuevo o coloca un pin en el mapa.");
+type ApiPlaceSuggestion =
+  | {
+      kind: "spot";
+      id: string;
+      name: string;
+      neighborhood: string;
+    }
+  | {
+      kind: "google";
+      placeId: string;
+      text: string;
+      secondaryText: string | null;
+    };
+
+type ApiAutocompleteResponse = {
+  items: ApiPlaceSuggestion[];
+  attribution: string | null;
+  registeredMatch?: RegisteredPlaceMatch;
+};
+
+function messageFromResponse(value: unknown, fallback: string): string {
+  if (typeof value === "object" && value !== null && "error" in value) {
+    const error = (value as { error?: unknown }).error;
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+  }
+  return fallback;
+}
+
+function authHeaders(session: Session) {
+  return { Accept: "application/json", Authorization: `Bearer ${session.access_token}` };
+}
+
+/** T67 live adapter for the authenticated Google/local autocomplete endpoint. */
+export async function searchProposalPlaces(
+  session: Session,
+  query: string,
+): Promise<ProposalSearchResult> {
+  const response = await fetch(`${API}/places/autocomplete?q=${encodeURIComponent(query.trim())}`, {
+    headers: authHeaders(session),
+  });
+  const payload = (await response.json().catch(() => undefined)) as
+    | ApiAutocompleteResponse
+    | { error?: unknown }
+    | undefined;
+  if (!response.ok) {
+    throw new Error(
+      messageFromResponse(
+        payload,
+        "No pudimos cargar sugerencias. Intenta de nuevo o coloca un pin en el mapa.",
+      ),
+    );
   }
 
-  const registeredMatch = normalized.includes("trompo")
-    ? {
-        spotId: "spot-1",
-        displayName: "Tacos El Trompo de Don Beto",
-        neighborhood: "Mitras Centro · Monterrey",
-      }
-    : undefined;
-
-  const suggestions = GOOGLE_SUGGESTIONS.filter((item) =>
-    `${item.displayName} ${item.secondaryText}`.toLocaleLowerCase("es-MX").includes(normalized),
+  const items = payload && Array.isArray((payload as ApiAutocompleteResponse).items)
+    ? (payload as ApiAutocompleteResponse).items
+    : [];
+  const localMatch = items.find((item): item is Extract<ApiPlaceSuggestion, { kind: "spot" }> =>
+    item.kind === "spot",
   );
+  const registeredMatch =
+    (payload as ApiAutocompleteResponse).registeredMatch ??
+    (localMatch
+      ? {
+          spotId: localMatch.id,
+          displayName: localMatch.name,
+          neighborhood: localMatch.neighborhood,
+        }
+      : undefined);
+  const suggestions = items
+    .filter((item): item is Extract<ApiPlaceSuggestion, { kind: "google" }> => item.kind === "google")
+    .map((item) => ({
+      placeId: item.placeId,
+      displayName: item.text,
+      secondaryText: item.secondaryText ?? "Resultados de Google",
+    }));
 
   return {
-    suggestions: suggestions.length > 0 ? suggestions : GOOGLE_SUGGESTIONS.slice(0, 2),
+    suggestions,
     registeredMatch,
-    attribution: "Resultados de Google",
+    attribution: payload ? (payload as ApiAutocompleteResponse).attribution ?? null : null,
   };
 }
 
-/** Future-shaped submission adapter for T67. */
-export async function submitProposalFixture(
+/** T67 live adapter for the moderation-safe place proposal endpoint. */
+export async function submitProposal(
+  session: Session,
   submission: ProposalSubmission,
 ): Promise<ProposalSubmissionResult> {
-  await wait(500);
-
-  if (
-    submission.source === "local" &&
-    `${submission.name ?? ""} ${submission.note ?? ""}`.toLocaleLowerCase("es-MX").includes("error")
-  ) {
-    throw new Error("No se pudo enviar la propuesta. Lo que llenaste sigue aquí.");
+  const response = await fetch(`${API}/place-proposals`, {
+    method: "POST",
+    headers: { ...authHeaders(session), "Content-Type": "application/json" },
+    body: JSON.stringify(submission),
+  });
+  const payload = (await response.json().catch(() => undefined)) as
+    | (ProposalSubmissionResult & {
+        error?: {
+          message?: unknown;
+          details?: {
+            reason?: unknown;
+            existingSpotId?: unknown;
+            redirect?: { spotId?: unknown };
+            displayName?: unknown;
+            neighborhood?: unknown;
+          };
+        };
+      })
+    | undefined;
+  if (!response.ok) {
+    const details = payload?.error?.details;
+    if (
+      response.status === 409 &&
+      details?.reason === "already_registered" &&
+      typeof details.existingSpotId === "string" &&
+      typeof details.displayName === "string" &&
+      typeof details.neighborhood === "string"
+    ) {
+      throw new ProposalDuplicateError({
+        spotId: details.existingSpotId,
+        displayName: details.displayName,
+        neighborhood: details.neighborhood,
+      });
+    }
+    throw new Error(messageFromResponse(payload, "No se pudo enviar la propuesta."));
   }
-
-  return {
-    id: `proposal-fixture-${Date.now()}`,
-    source: submission.source,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
+  return payload as ProposalSubmissionResult;
 }
 
-/** Taco Hunt-owned local proposals only; Google display data is not persisted here. */
-export function getFixtureSpotProposals(): SpotProposal[] {
-  return [
-    {
-      id: "proposal-local-fixture",
-      source: "local",
-      name: "Tacos de la esquina",
-      note: "Junto al parque",
-      latitude: 25.6866,
-      longitude: -100.3161,
-      status: "pending",
-      createdAt: "2026-09-30T18:00:00.000Z",
-    },
-  ];
+export async function listMySpotProposals(session: Session): Promise<SpotProposal[]> {
+  const response = await fetch(`${API}/me/proposals`, { headers: authHeaders(session) });
+  const payload = (await response.json().catch(() => undefined)) as
+    | { spotProposals?: SpotProposal[] }
+    | { error?: unknown }
+    | undefined;
+  if (!response.ok) throw new Error(messageFromResponse(payload, "No pudimos cargar tus propuestas."));
+  return payload && Array.isArray((payload as { spotProposals?: SpotProposal[] }).spotProposals)
+    ? (payload as { spotProposals: SpotProposal[] }).spotProposals
+    : [];
 }
 
 export function getFixtureTacoProposals(): TacoTypeProposal[] {
