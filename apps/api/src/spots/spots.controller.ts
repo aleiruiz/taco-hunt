@@ -87,13 +87,25 @@ export class SpotsController {
     let nearLon: number | undefined;
     if (near) {
       const [latRaw, lonRaw] = near.split(",");
-      nearLat = Number(latRaw);
-      nearLon = Number(lonRaw);
+      const parsedLat = Number(latRaw);
+      const parsedLon = Number(lonRaw);
+      if (
+        !Number.isFinite(parsedLat) ||
+        !Number.isFinite(parsedLon) ||
+        parsedLat < -90 ||
+        parsedLat > 90 ||
+        parsedLon < -180 ||
+        parsedLon > 180
+      ) {
+        throw new BadRequestException({ message: "El parámetro near es inválido" });
+      }
+      nearLat = parsedLat;
+      nearLon = parsedLon;
     }
 
     try {
       const puestoOrder =
-        nearLat !== undefined && nearLon !== undefined ? "distanceKm" : "s.normalized_name";
+        nearLat !== undefined && nearLon !== undefined ? '"distanceKm"' : "s.normalized_name";
       const puestoValues: unknown[] = [pattern];
       let distanceSelect = "null::float8";
       if (nearLat !== undefined && nearLon !== undefined) {
