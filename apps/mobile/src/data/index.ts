@@ -29,3 +29,4 @@ export * as proposalsFixtures from "./proposals";
 export * as progressFixtures from "./progress";
 export * as mediaFixtures from "./media";
 export * as importCandidatesFixtures from "./importCandidates";
+export * as mapDiscoveryFixtures from "./map-discovery";
