@@ -209,7 +209,7 @@ export default function ProposeScreen() {
         <Button
           label="Mis propuestas"
           variant="secondary"
-          onPress={() => router.push("/my-tacos")}
+          onPress={() => setSubmitted(false)}
           style={styles.action}
         />
         <Button label="Proponer otra" variant="ghost" onPress={startOver} style={styles.action} />
@@ -415,35 +415,23 @@ export default function ProposeScreen() {
 
       {step === 2 ? (
         <Card>
-          <Text style={styles.stepTitle}>
-            {source === "google" ? "¿Dónde se pone?" : "Detalles que ayudan"}
-          </Text>
           {source === "google" ? (
             <>
-              <PinMap
-                region={mapRegion}
-                onRegionChange={(region) => {
-                  setLatitude(region.latitude);
-                  setLongitude(region.longitude);
-                }}
-              />
-              <Text style={styles.mapHint}>Pin tomado de Google · puedes corregirlo.</Text>
-              <Button
-                label={locating ? "Buscando…" : "Estoy aquí"}
-                variant="secondary"
-                icon="navigate"
-                loading={locating}
-                onPress={() => void useLocation()}
-                style={styles.inlineAction}
-              />
+              <Text style={styles.stepTitle}>Lugar seleccionado</Text>
+              <View style={styles.selectedCard} accessibilityLiveRegion="polite">
+                <Ionicons name="checkmark-circle" size={20} color={colors.green} />
+                <View style={styles.suggestionCopy}>
+                  <Text style={styles.suggestionTitle}>{selectedGoogle?.displayName}</Text>
+                  <Text style={styles.muted}>Resultados de Google · selección lista</Text>
+                </View>
+              </View>
             </>
           ) : (
-            <Text style={styles.bodyLeft}>
-              Estos datos son opcionales y se quedan con tu propuesta.
-            </Text>
-          )}
-          {source === "local" ? (
             <>
+              <Text style={styles.stepTitle}>Detalles que ayudan</Text>
+              <Text style={styles.bodyLeft}>
+                Estos datos son opcionales y se quedan con tu propuesta.
+              </Text>
               <Text style={styles.label}>Nombre (opcional)</Text>
               <TextInput
                 value={name}
@@ -466,14 +454,6 @@ export default function ProposeScreen() {
                 accessibilityLabel="Nota o referencia opcional"
               />
             </>
-          ) : (
-            <Card tone="highlight" style={styles.googlePrivacyCard}>
-              <Ionicons name="shield-checkmark" size={20} color={colors.green} />
-              <Text style={styles.bodyLeft}>
-                Google se usa solo para encontrar el lugar. Taco Hunt guardará únicamente el
-                place_id.
-              </Text>
-            </Card>
           )}
           <View style={styles.stepFooter}>
             <Button
@@ -774,12 +754,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   mapHint: { color: colors.muted, fontSize: 12, marginTop: spacing.sm },
-  googlePrivacyCard: {
-    marginTop: spacing.lg,
-    flexDirection: "row",
-    gap: spacing.sm,
-    alignItems: "flex-start",
-  },
   label: {
     color: colors.muted,
     ...typography.label,
