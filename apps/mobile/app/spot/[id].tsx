@@ -27,7 +27,8 @@ import {
   type TacoType,
 } from "@/features/proposals/api";
 import { openDirections as openMapDirections } from "@/lib/directions";
-import { getFixtureApprovedPhotos, type Photo } from "@/data/media";
+import type { Photo } from "@/data/media";
+import { listSpotPhotos, uploadSpotPhoto } from "@/features/spotPhotos/api";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Chip } from "@/components/Chip";
@@ -111,29 +112,11 @@ export default function SpotScreen() {
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const uploadTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pendingUploadCompletion = useRef<{
-    asset: ImagePicker.ImagePickerAsset;
-    uploaderId: string;
-    spot: Spot;
-  } | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (uploadTimer.current) clearInterval(uploadTimer.current);
-    };
-  }, []);
   // Guards against a session change (sign-out/sign-in) leaking the previous
-  // identity's in-flight upload into the new one: stop the progress timer,
-  // drop the pending completion, and clear local pending photos so
-  // visibleMyPhotos (already scoped by uploaderId) has nothing stale to
-  // filter through.
+  // identity's in-flight upload into the new one: close any open upload sheet
+  // and clear local pending photos so visibleMyPhotos (already scoped by
+  // uploaderId) has nothing stale to filter through.
   useEffect(() => {
-    if (uploadTimer.current) {
-      clearInterval(uploadTimer.current);
-      uploadTimer.current = null;
-    }
-    pendingUploadCompletion.current = null;
     setUploadOpen(false);
     setUploadBusy(false);
     setMyPhotos([]);
@@ -159,7 +142,26 @@ export default function SpotScreen() {
       if (!response.ok) throw new Error("Request failed");
       const data = (await response.json()) as Spot;
       setSpot(data);
-      setApprovedPhotos(getFixtureApprovedPhotos(data.id, data.name));
+      try {
+        const photos = await listSpotPhotos(data.id);
+        setApprovedPhotos(
+          photos.map((photo) => ({
+            id: photo.id,
+            url: photo.url,
+            uploaderId: "",
+            uploaderName: photo.uploaderName,
+            spotId: data.id,
+            spotName: data.name,
+            status: "approved",
+            createdAt: photo.createdAt,
+          })),
+        );
+      } catch {
+        // Gallery is a non-critical enhancement to the spot screen: a failed
+        // photo fetch should not surface the "offline" error state for the
+        // whole screen, which already loaded successfully.
+        setApprovedPhotos([]);
+      }
     } catch {
       setError("offline");
     } finally {
@@ -270,11 +272,6 @@ export default function SpotScreen() {
     setUploadOpen(true);
   }
   function closeUpload() {
-    if (uploadTimer.current) {
-      clearInterval(uploadTimer.current);
-      uploadTimer.current = null;
-    }
-    pendingUploadCompletion.current = null;
     setUploadBusy(false);
     setUploadOpen(false);
   }
@@ -287,47 +284,48 @@ export default function SpotScreen() {
     setUploadAsset(result.assets[0]);
     setUploadError("");
   }
-  function finishUpload(asset: ImagePicker.ImagePickerAsset, uploaderId: string, targetSpot: Spot) {
-    const pending: Photo = {
-      id: `mine-${Date.now()}`,
-      url: asset.uri,
-      uploaderId,
-      uploaderName: "Tú",
-      spotId: targetSpot.id,
-      spotName: targetSpot.name,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-    setMyPhotos((current) => [pending, ...current]);
-    setUploadBusy(false);
-    setUploadOpen(false);
-    setToast("Foto enviada… un moderador la revisa antes de publicarla.");
-    AccessibilityInfo.announceForAccessibility(
-      "Foto enviada, un moderador la revisa antes de publicarla.",
-    );
-  }
-  function submitUpload() {
+  async function submitUpload() {
     if (!uploadAsset || !spot || !session) return;
-    pendingUploadCompletion.current = { asset: uploadAsset, uploaderId: session.user.id, spot };
+    const uploaderId = session.user.id;
+    const targetSpot = spot;
+    const asset = uploadAsset;
+    const kind = uploadKind;
     setUploadBusy(true);
     setUploadError("");
-    setUploadProgress(0);
-    if (uploadTimer.current) clearInterval(uploadTimer.current);
-    uploadTimer.current = setInterval(() => {
-      setUploadProgress((current) => Math.min(100, current + 20));
-    }, 200);
-  }
-  useEffect(() => {
-    if (uploadProgress < 100 || !pendingUploadCompletion.current) return;
-    if (uploadTimer.current) {
-      clearInterval(uploadTimer.current);
-      uploadTimer.current = null;
+    setUploadProgress(30);
+    try {
+      const created = await uploadSpotPhoto(session, targetSpot.id, asset, kind);
+      setUploadProgress(100);
+      // A sign-out/sign-in during the upload already reset local state (see
+      // the session-change effect above); don't resurrect a photo under the
+      // new identity.
+      if (session.user.id !== uploaderId) return;
+      const pending: Photo = {
+        id: created.id,
+        url: created.url,
+        uploaderId,
+        uploaderName: "Tú",
+        spotId: targetSpot.id,
+        spotName: targetSpot.name,
+        status: created.status,
+        rejectionReason: created.rejectionReason ?? undefined,
+        createdAt: created.createdAt,
+      };
+      setMyPhotos((current) => [pending, ...current]);
+      setUploadBusy(false);
+      setUploadOpen(false);
+      setToast("Foto enviada… un moderador la revisa antes de publicarla.");
+      AccessibilityInfo.announceForAccessibility(
+        "Foto enviada, un moderador la revisa antes de publicarla.",
+      );
+    } catch (error) {
+      setUploadBusy(false);
+      setUploadProgress(0);
+      setUploadError(
+        error instanceof Error ? error.message : "No pudimos subir la foto. Inténtalo de nuevo.",
+      );
     }
-    const { asset, uploaderId, spot: targetSpot } = pendingUploadCompletion.current;
-    pendingUploadCompletion.current = null;
-    finishUpload(asset, uploaderId, targetSpot);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uploadProgress]);
+  }
   function openTacoModal() {
     if (!session) {
       router.push("/sign-in");
@@ -900,7 +898,7 @@ export default function SpotScreen() {
                   variant="accent"
                   disabled={!uploadAsset}
                   loading={uploadBusy}
-                  onPress={submitUpload}
+                  onPress={() => void submitUpload()}
                   style={{ flex: 2 }}
                 />
               </View>

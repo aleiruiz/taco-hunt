@@ -16,7 +16,6 @@ import { colors, radii, spacing, typography } from "@/theme";
 import { PhotoTile } from "@/components/PhotoTile";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/Button";
-import { getFixturePhotos, type Photo } from "@/data/media";
 import { getFixtureImportCandidates, type ImportCandidate } from "@/data/importCandidates";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
@@ -32,6 +31,8 @@ const tabs = [
 ] as const;
 type Queue = (typeof tabs)[number][0];
 type QueueItem = Record<string, unknown> & { id: string };
+// Local tab keys that don't match the API's ?kind= value 1:1.
+const QUEUE_KIND: Partial<Record<Queue, string>> = { standPhotos: "spot-photos" };
 
 export default function AdminScreen() {
   const { session } = useAuth();
@@ -40,7 +41,6 @@ export default function AdminScreen() {
   const [itemsQueue, setItemsQueue] = useState<Queue | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [standPhotos, setStandPhotos] = useState<Photo[]>(() => getFixturePhotos());
   const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>(() =>
     getFixtureImportCandidates(),
   );
@@ -56,18 +56,6 @@ export default function AdminScreen() {
     () => ({ Authorization: `Bearer ${session?.access_token ?? ""}` }),
     [session?.access_token],
   );
-
-  function moderateStandPhoto(photoId: string, decision: "approved" | "rejected") {
-    const photo = standPhotos.find((item) => item.id === photoId);
-    setStandPhotos((current) => current.filter((item) => item.id !== photoId));
-    if (photo) {
-      AccessibilityInfo.announceForAccessibility(
-        decision === "approved"
-          ? `Foto de ${photo.spotName} publicada.`
-          : `Foto de ${photo.spotName} rechazada.`,
-      );
-    }
-  }
 
   function candidatePin(candidate: ImportCandidate) {
     return (
@@ -105,13 +93,14 @@ export default function AdminScreen() {
   }
 
   const load = useCallback(async () => {
-    if (!session || tab === "standPhotos" || tab === "importCandidates") return;
+    if (!session || tab === "importCandidates") return;
     const requestId = ++loadId.current;
     setLoading(true);
     setMessage(null);
     try {
+      const kind = QUEUE_KIND[tab] ?? tab;
       const response = await fetch(
-        `${API}/admin/${tab === "audit" ? "audit" : `queue?kind=${tab}`}`,
+        `${API}/admin/${tab === "audit" ? "audit" : `queue?kind=${kind}`}`,
         { headers },
       );
       if (response.status === 403) throw new Error("No tienes permisos de moderación.");
@@ -299,42 +288,51 @@ export default function AdminScreen() {
             Fotos de puestos pendientes de revisión. Solo quien las subió las ve hasta que se
             aprueben.
           </Text>
-          {standPhotos.length === 0 ? (
+          {loading ? <ActivityIndicator color={colors.red} style={styles.loader} /> : null}
+          {message ? <Text style={styles.notice}>{message}</Text> : null}
+          {!loading && !message && itemsQueue === "standPhotos" && items.length === 0 ? (
             <Text style={styles.empty}>No hay fotos pendientes.</Text>
-          ) : (
-            standPhotos.map((photo) => (
-              <View key={photo.id} style={styles.photoCard}>
-                <PhotoTile
-                  photoUrl={photo.url}
-                  size={120}
-                  accessibilityLabel={`Foto enviada por ${photo.uploaderName} para ${photo.spotName}`}
-                />
-                <View style={styles.photoCardBody}>
-                  <Text style={styles.cardTitle}>{photo.spotName}</Text>
-                  <Text style={styles.body}>Subida por {photo.uploaderName}</Text>
-                  <View style={styles.photoCardBadge}>
-                    <StatusBadge status="pending" />
-                  </View>
-                  <View style={styles.actions}>
-                    <Button
-                      label="Aprobar"
-                      variant="primary"
-                      size="md"
-                      style={styles.photoActionButton}
-                      onPress={() => moderateStandPhoto(photo.id, "approved")}
-                    />
-                    <Button
-                      label="Rechazar"
-                      variant="danger"
-                      size="md"
-                      style={styles.photoActionButton}
-                      onPress={() => moderateStandPhoto(photo.id, "rejected")}
-                    />
+          ) : null}
+          {itemsQueue === "standPhotos"
+            ? items.map((photo) => (
+                <View key={photo.id} style={styles.photoCard}>
+                  <PhotoTile
+                    photoUrl={String(photo.url ?? "")}
+                    size={120}
+                    accessibilityLabel={`Foto enviada por ${String(photo.uploaderName ?? "alguien")} para ${String(photo.spotName ?? "un puesto")}`}
+                  />
+                  <View style={styles.photoCardBody}>
+                    <Text style={styles.cardTitle}>{String(photo.spotName ?? "Puesto")}</Text>
+                    <Text style={styles.body}>
+                      Subida por {String(photo.uploaderName ?? "alguien")}
+                    </Text>
+                    <View style={styles.photoCardBadge}>
+                      <StatusBadge status="pending" />
+                    </View>
+                    <View style={styles.actions}>
+                      <Button
+                        label="Aprobar"
+                        variant="primary"
+                        size="md"
+                        style={styles.photoActionButton}
+                        onPress={() => void run(`/admin/spot-photos/${photo.id}/approve`)}
+                      />
+                      <Button
+                        label="Rechazar"
+                        variant="danger"
+                        size="md"
+                        style={styles.photoActionButton}
+                        onPress={() =>
+                          void run(`/admin/spot-photos/${photo.id}/reject`, {
+                            reason: "Foto no apta para publicación",
+                          })
+                        }
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))
-          )}
+              ))
+            : null}
         </>
       ) : (
         <>
