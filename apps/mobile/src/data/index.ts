@@ -30,3 +30,4 @@ export * as progressFixtures from "./progress";
 export * as mediaFixtures from "./media";
 export * as importCandidatesFixtures from "./importCandidates";
 export * as mapDiscoveryFixtures from "./map-discovery";
+export * as standDetailsFixtures from "./stand-details";
