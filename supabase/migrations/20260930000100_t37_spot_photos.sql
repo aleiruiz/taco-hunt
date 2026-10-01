@@ -23,8 +23,13 @@ create index spot_photos_uploader_idx on app_private.spot_photos(uploader_id);
 -- 20260927000200_media_upload_claims.sql for the review-photo equivalent)
 -- instead of making claimed_review_id polymorphic: a nullable sibling column
 -- keeps the existing review-photo claim/unclaim queries untouched.
+-- on delete cascade (not set null): account deletion cascades
+-- profiles -> spot_photos (uploader_id), and the claim-consistency check
+-- below requires a claimed upload to keep exactly one owner. Deleting the
+-- now-orphaned media_uploads row satisfies that invariant; set null would
+-- instead leave a claimed row with zero owners and fail the check.
 alter table app_private.media_uploads
-  add column claimed_spot_photo_id uuid references app_private.spot_photos(id) on delete set null;
+  add column claimed_spot_photo_id uuid references app_private.spot_photos(id) on delete cascade;
 
 create unique index media_uploads_one_per_spot_photo_idx
   on app_private.media_uploads(claimed_spot_photo_id)
