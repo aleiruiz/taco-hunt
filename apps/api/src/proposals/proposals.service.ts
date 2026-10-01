@@ -29,6 +29,9 @@ export class ProposalsService {
    */
   async createSpot(profile: AuthenticatedProfile, input: SpotProposal) {
     try {
+      if (input.source === "autocomplete" && !input.sourceRef) {
+        throw new ConflictException("La propuesta de autocompletado requiere un place_id");
+      }
       const normalizedName = normalizeName(input.name);
       const candidates = await this.pool.query(duplicateCandidateSql(), [
         normalizedName,
@@ -51,8 +54,8 @@ export class ProposalsService {
 
       const { rows } = await this.pool.query(
         `insert into app_private.spots
-          (name,normalized_name,neighborhood,latitude,longitude,status,created_by,source_type,source_ref,proposal_note)
-         values ($1,$2,$3,$4,$5,'pending',$6,'user',$7,$8)
+          (name,normalized_name,neighborhood,latitude,longitude,status,created_by,source_type,source_ref,google_place_id,proposal_note)
+         values ($1,$2,$3,$4,$5,'pending',$6,'user',$7,$8,$9)
          returning id,name,neighborhood,latitude::float8 as latitude,
            longitude::float8 as longitude,status,created_at as "createdAt"`,
         [
@@ -63,6 +66,7 @@ export class ProposalsService {
           input.longitude,
           profile.id,
           input.sourceRef ? `${input.source}:${input.sourceRef}` : `user:${input.source}`,
+          input.source === "autocomplete" ? input.sourceRef : null,
           input.note ?? null,
         ],
       );
