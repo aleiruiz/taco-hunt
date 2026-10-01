@@ -18,13 +18,24 @@ import type { Pool } from "pg";
 import {
   mapPinsQuerySchema,
   reviewListQuerySchema,
+  searchSuggestQuerySchema,
   spotListQuerySchema,
   uuidSchema,
   type MapCluster,
   type MapPin,
+  type SearchColoniaSuggestion,
+  type SearchPuestoSuggestion,
 } from "@taco-hunt/contracts";
 import { z } from "zod";
 import { DATABASE_POOL } from "../database/database.module.js";
+
+const SEARCH_SUGGEST_LIMIT = 8;
+// No municipality column exists on app_private.spots yet (only free-text
+// neighborhood); every seeded/approved stand today is within the Monterrey
+// metro area per docs/build-spec.md's coverage, matching the fixed string
+// already shown elsewhere (e.g. spot/[id].tsx's pin card). Revisit if/when
+// a real municipality column lands (see docs/data-provenance.md).
+const DEFAULT_MUNICIPALITY = "Monterrey y área metropolitana";
 
 // Per-request limit, not an area cap: the viewport can be anywhere in (and
 // around) the Monterrey metro area with no maximum size. When more approved
@@ -85,6 +96,74 @@ export class SpotsController {
       return { items: rows };
     } catch (error) {
       this.logQueryFailure("Taco type list query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  @Get("/search/suggest")
+  async searchSuggest(@Query() query: Record<string, unknown>) {
+    const parsed = searchSuggestQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    const { q, near } = parsed.data;
+    const pattern = `%${q.toLocaleLowerCase("es-MX").replace(/[\\%_]/g, "\\$&")}%`;
+    let nearLat: number | undefined;
+    let nearLon: number | undefined;
+    if (near) {
+      const [latRaw, lonRaw] = near.split(",");
+      const parsedLat = Number(latRaw);
+      const parsedLon = Number(lonRaw);
+      if (
+        !Number.isFinite(parsedLat) ||
+        !Number.isFinite(parsedLon) ||
+        parsedLat < -90 ||
+        parsedLat > 90 ||
+        parsedLon < -180 ||
+        parsedLon > 180
+      ) {
+        throw new BadRequestException({ message: "El parámetro near es inválido" });
+      }
+      nearLat = parsedLat;
+      nearLon = parsedLon;
+    }
+
+    try {
+      const puestoOrder =
+        nearLat !== undefined && nearLon !== undefined ? '"distanceKm"' : "s.normalized_name";
+      const puestoValues: unknown[] = [pattern];
+      let distanceSelect = "null::float8";
+      if (nearLat !== undefined && nearLon !== undefined) {
+        puestoValues.push(nearLat, nearLon);
+        distanceSelect = `(6371 * 2 * asin(sqrt(least(1, power(sin(radians(s.latitude::float8 - $2) / 2), 2) + cos(radians($2)) * cos(radians(s.latitude::float8)) * power(sin(radians(s.longitude::float8 - $3) / 2), 2)))))`;
+      }
+      const puestosResult = await this.pool.query<
+        SearchPuestoSuggestion & { distanceKm: number | null }
+      >(
+        `select s.id,s.name,s.neighborhood,count(distinct r.id)::int as "reviewCount",(select coalesce(st.display_name,tt.name_es) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r2 on r2.spot_taco_id=st.id and r2.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r2.id) desc,avg((r2.tortilla+r2.filling+r2.salsa+r2.value)/4.0) desc nulls last limit 1) as "bestTaco",${distanceSelect} as "distanceKm" from app_private.spots s left join app_private.spot_tacos st0 on st0.spot_id=s.id and st0.status='approved' left join app_private.taco_types tt0 on tt0.id=st0.taco_type_id and tt0.active left join app_private.reviews r on r.spot_taco_id=st0.id and r.status='visible' and tt0.id is not null where s.status='approved' and s.normalized_name like $1 group by s.id order by ${puestoOrder} limit ${SEARCH_SUGGEST_LIMIT}`,
+        puestoValues,
+      );
+      const puestos: SearchPuestoSuggestion[] = puestosResult.rows.map(
+        ({ distanceKm: _distanceKm, ...row }) => row,
+      );
+
+      const coloniasResult = await this.pool.query<{ name: string; spotCount: number }>(
+        `select s.neighborhood as name,count(*)::int as "spotCount" from app_private.spots s where s.status='approved' and lower(s.neighborhood) like $1 group by s.neighborhood order by "spotCount" desc,s.neighborhood limit ${SEARCH_SUGGEST_LIMIT}`,
+        [pattern],
+      );
+      const colonias: SearchColoniaSuggestion[] = coloniasResult.rows.map((row) => ({
+        id: row.name,
+        name: row.name,
+        municipality: DEFAULT_MUNICIPALITY,
+        spotCount: row.spotCount,
+      }));
+
+      return { colonias, puestos };
+    } catch (error) {
+      this.logQueryFailure("Search suggest query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
     }
   }
