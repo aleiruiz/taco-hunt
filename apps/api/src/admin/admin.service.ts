@@ -359,7 +359,7 @@ export class AdminService {
       await client.query("begin");
       const updated = await client.query(
         `update app_private.import_candidates set state='rejected', review_notes=$2
-         where id=$1 and state='pending'`,
+         where id=$1 and state='pending' and source <> 'google_places'`,
         [id, reason],
       );
       if (!updated.rowCount) throw new NotFoundException("Candidato no encontrado o ya revisado");
@@ -401,7 +401,7 @@ export class AdminService {
       );
       const updated = await client.query(
         `update app_private.import_candidates set state='rejected', review_notes=$2
-         where id=$1 and state='pending'`,
+         where id=$1 and state='pending' and source <> 'google_places'`,
         [id, note],
       );
       if (!updated.rowCount) throw new NotFoundException("Candidato no encontrado o ya revisado");
