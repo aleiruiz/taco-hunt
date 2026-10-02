@@ -237,8 +237,6 @@ export class AdminService {
            ic.source,
            coalesce(
              nullif(ic.original_payload->>'source_ref',''),
-             case when ic.source='google_places' and ic.original_payload->>'place_id' is not null
-               then 'google_places:' || (ic.original_payload->>'place_id') end,
              ''
            ) as "sourceRef",
            ic.license_ref as "licenseRef",
@@ -261,7 +259,7 @@ export class AdminService {
            from unnest(ic.matched_spot_ids) as m(spot_id)
            join app_private.spots s on s.id = m.spot_id
          ) matches on true
-         where ic.state=$1
+         where ic.state=$1 and ic.source <> 'google_places'
          order by ic.created_at asc limit 100`,
         [state],
       );
@@ -283,7 +281,7 @@ export class AdminService {
       const { rows } = await client.query(
         `select id, original_payload as "originalPayload", normalized_name as "normalizedName", source
          from app_private.import_candidates
-         where id=$1 and state='pending'
+         where id=$1 and state='pending' and source <> 'google_places'
          for update`,
         [id],
       );
@@ -305,18 +303,12 @@ export class AdminService {
         (typeof payload.formatted_address === "string" ? payload.formatted_address.trim() : "");
       const neighborhood = (rawNeighborhood || "Monterrey").slice(0, 120);
       const knownSourceTypes = new Set(["user", "owner", "licensed", "fictional"]);
-      // `import_candidates.source` holds either a CSV `source_type` (already one of the
-      // spots enum values) or an importer tag such as `google_places`/`web_research` that
-      // isn't a valid spots.source_type — licensed third-party research/API data maps to
-      // 'licensed' per docs/data-provenance.md.
+      // Only offline, permissioned candidate sources reach this path. Google payload
+      // candidates are retired and excluded above; live Google data is never promoted
+      // from import_candidates into Taco Hunt-owned spots.
       const sourceType = knownSourceTypes.has(candidate.source) ? candidate.source : "licensed";
       const rawSourceRef = typeof payload.source_ref === "string" ? payload.source_ref.trim() : "";
-      const placeId = typeof payload.place_id === "string" ? payload.place_id.trim() : "";
-      const sourceRef = (
-        rawSourceRef ||
-        (candidate.source === "google_places" && placeId ? `google_places:${placeId}` : "") ||
-        `import_candidate:${candidate.id}`
-      );
+      const sourceRef = rawSourceRef || `import_candidate:${candidate.id}`;
 
       const inserted = await client.query(
         `insert into app_private.spots
@@ -333,7 +325,7 @@ export class AdminService {
           approval.longitude,
           sourceType,
           sourceRef,
-          candidate.source === "google_places" && placeId ? placeId : null,
+          null,
           moderator,
           `Aprobado desde el candidato de importación ${candidate.id}`,
         ],
@@ -353,9 +345,6 @@ export class AdminService {
       return { id, state: "approved" as const, spotId };
     } catch (error) {
       if (client) await client.query("rollback").catch(() => undefined);
-      if (isGooglePlaceLinkViolation(error)) {
-        throw new ConflictException("El lugar de Google ya está registrado");
-      }
       if (error instanceof NotFoundException) throw error;
       this.fail("Import candidate approval failed", error);
     } finally {
@@ -370,7 +359,7 @@ export class AdminService {
       await client.query("begin");
       const updated = await client.query(
         `update app_private.import_candidates set state='rejected', review_notes=$2
-         where id=$1 and state='pending'`,
+         where id=$1 and state='pending' and source <> 'google_places'`,
         [id, reason],
       );
       if (!updated.rowCount) throw new NotFoundException("Candidato no encontrado o ya revisado");
@@ -412,7 +401,7 @@ export class AdminService {
       );
       const updated = await client.query(
         `update app_private.import_candidates set state='rejected', review_notes=$2
-         where id=$1 and state='pending'`,
+         where id=$1 and state='pending' and source <> 'google_places'`,
         [id, note],
       );
       if (!updated.rowCount) throw new NotFoundException("Candidato no encontrado o ya revisado");
@@ -695,12 +684,4 @@ function normalizeName(name: string): string {
     .toLocaleLowerCase("es-MX")
     .trim()
     .replace(/\s+/g, " ");
-}
-
-function isGooglePlaceLinkViolation(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) return false;
-  const databaseError = error as { code?: string; constraint?: string };
-  return (
-    databaseError.code === "23505" && databaseError.constraint === "spots_google_place_id_unique_idx"
-  );
 }

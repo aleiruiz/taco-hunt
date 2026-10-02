@@ -24,7 +24,7 @@ const MONTERREY_BOUNDS = { minLat: 24.0, maxLat: 26.2, minLng: -101.5, maxLng: -
 
 function usage() {
   console.error(
-    "Usage: node supabase/scripts/import-candidates.mjs --csv <file> [--batch-id <uuid>] [--report <file>] [--dry-run]",
+    "Usage: node supabase/scripts/import-candidates.mjs --csv <file> [--batch-id <uuid>] [--report <file>] [--dry-run] [--maintenance-only]",
   );
 }
 
@@ -33,6 +33,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
     if (token === "--dry-run") args.dryRun = true;
+    else if (token === "--maintenance-only") args["maintenance-only"] = true;
     else if (token.startsWith("--")) {
       const key = token.slice(2);
       const value = argv[index + 1];
@@ -189,6 +190,9 @@ async function main() {
   const csvBytes = await readFile(resolve(args.csv));
   const csv = new TextDecoder("utf-8", { fatal: true }).decode(csvBytes);
   const rows = validate(parseCsv(csv));
+  if (!args.dryRun && !args["maintenance-only"]) {
+    throw new Error("Applying candidates requires the explicit --maintenance-only flag");
+  }
   const batchId =
     args["batch-id"] ??
     uuidFromHash(

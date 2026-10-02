@@ -3,8 +3,8 @@
  * approval into `spots` (`app_private.import_candidates`; see
  * supabase/migrations/20260927000100 and docs/data-provenance.md).
  *
- * T42 (Phase B) replaces T50's fixture adapter with the real
- * GET/POST /v1/admin/import-candidates endpoints.
+ * This is a maintenance-only queue for offline, permissioned imports. Live
+ * Google discovery never writes to or publishes from import_candidates.
  */
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
