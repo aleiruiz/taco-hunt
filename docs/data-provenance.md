@@ -1,6 +1,6 @@
 # Data provenance and candidate imports
 
-Taco Hunt treats every location as a moderated record, not as automatically publishable imported data. The maintenance-only offline importer stages CSV rows in the private `app_private.import_candidates` table. It accepts only `owner`, `licensed`, `user`, or `fictional` source rows; live Google reads never write Google payloads to this table. A user-selected Google place follows the separate moderated proposal flow through `/spot-proposals`, not `app_private.import_candidates`, and retains only a durable `place_id` link plus Taco Hunt-owned fields. The importer never inserts into `app_private.spots`, never publishes a candidate, and never imports reviews, ratings, or photos.
+Taco Hunt treats every location as a moderated record, not as automatically publishable imported data. The maintenance-only offline importer stages CSV rows in the private `app_private.import_candidates` table. It accepts only `owner`, `licensed`, `user`, or `fictional` source rows; live Google reads never write Google payloads to this table. A Google place selected for autocomplete still follows the moderated proposal flow through `/spot-proposals`, while a Google map result selected for **Calificar tacos** uses the idempotent `/places/review-target` flow and creates the Taco Hunt record as part of starting the user's review. Both flows retain only a durable `google_place_id` link plus Taco Hunt-owned fields. The importer never inserts into `app_private.spots`, never publishes a candidate, and never imports reviews, ratings, or photos.
 
 ## Accepted input
 
@@ -37,6 +37,27 @@ The report is safe to share when it contains no private notes or user identifier
 A moderator must verify the source and license, inspect the proposed match list, check the name, neighborhood, pin, and current status, and record the decision in the moderation workflow. Approval is an explicit action that creates or updates a Taco Hunt spot with `source_type`, `source_ref`, and verification metadata. A candidate with an uncertain license, weak location evidence, or a likely duplicate stays pending or is rejected.
 
 No importer flag bypasses this review. There is no automatic publication path.
+
+## Live Google discovery and fallback photos
+
+The API is the only component that calls Google Places. The mobile map requests
+`/places/viewport` only after the user asks to search the visible area; the server sends
+the text query `tacos` and returns minimal transient place data, attribution, and the
+first photo resource name when Google provides one. The mobile app never sends a Google
+Places request directly and the API never stores the returned display payload.
+
+For a Taco Hunt spot card, the first approved Taco Hunt `spot_photos` image always wins.
+When that gallery is empty and the spot has a durable `google_place_id`, the app asks the
+API for on-demand details and the API proxies the first Google photo through
+`/places/photo`. The resource name, URL, and image bytes are transient; they are not
+stored in the database or represented as a Taco Hunt-owned photo. Google attribution
+remains part of the transient response and UI treatment.
+
+When the user starts rating a Google-discovered place that is not yet in Taco Hunt,
+`POST /places/review-target` validates the selected taco type, creates or recovers an
+approved spot and approved `spot_tacos` row linked by `google_place_id`, and returns the
+normal Taco Hunt review target. This is automatic registration caused by the user's
+rating action, not a proposal and not an import of Google reviews, ratings, or photos.
 
 ## Periodic candidate refresh
 

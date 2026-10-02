@@ -7,16 +7,18 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import {
   googlePlaceIdSchema,
+  googleReviewTargetCreateSchema,
   placeAutocompleteQuerySchema,
   placesViewportQuerySchema,
   type PlacesViewportQuery,
 } from "@taco-hunt/contracts";
 import { DATABASE_POOL } from "../database/database.module.js";
 import { RequestLimitService } from "../auth/request-limit.service.js";
+import { MediaStorageService } from "../media/storage.service.js";
 
 const GOOGLE_ATTRIBUTION = "Con la tecnología de Google";
 const GOOGLE_MAPS_ATTRIBUTION = {
@@ -29,6 +31,7 @@ const DEFAULT_DAILY_CALL_LIMIT = 2_000;
 const PUBLIC_GOOGLE_READ_SCOPE = "places-google-reads-client";
 const PUBLIC_GOOGLE_READ_LIMIT = 30;
 const PUBLIC_GOOGLE_READ_WINDOW_MS = 60_000;
+const VIEWPORT_SEARCH_INSET = 0.15;
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -42,6 +45,7 @@ type GooglePlace = {
   location?: { latitude?: unknown; longitude?: unknown };
   addressComponents?: Array<{ longText?: unknown; types?: unknown }>;
   googleMapsUri?: unknown;
+  photos?: Array<{ name?: unknown }>;
 };
 
 type GooglePlacesResponse = { places?: GooglePlace[] };
@@ -56,6 +60,7 @@ export class PlacesService {
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     private readonly limits: RequestLimitService,
+    private readonly storage: MediaStorageService,
   ) {}
 
   /**
@@ -131,8 +136,9 @@ export class PlacesService {
   }
 
   /**
-   * Fetches attribution-safe place details on demand. Taco Hunt photos are
-   * served only through the moderated gallery, never from Google payloads.
+   * Fetches attribution-safe place details on demand. Google photos are
+   * proxied transiently; persistent Taco Hunt photos come only from the
+   * moderated gallery.
    */
   async getPlaceDetails(placeId: string, viewerId: string | undefined, clientIp: string) {
     const parsedPlaceId = googlePlaceIdSchema.safeParse(placeId);
@@ -162,7 +168,13 @@ export class PlacesService {
       const response = await fetch(endpoint, {
         headers: {
           "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": ["id", "displayName", "formattedAddress", "googleMapsUri"].join(","),
+          "X-Goog-FieldMask": [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "photos",
+            "googleMapsUri",
+          ].join(","),
         },
         signal: AbortSignal.timeout(5_000),
       });
@@ -181,6 +193,9 @@ export class PlacesService {
           placeId: parsedPlaceId.data,
           name,
           formattedAddress: stringValue(place.formattedAddress),
+          ...(stringValue(place.photos?.[0]?.name)
+            ? { photoName: stringValue(place.photos?.[0]?.name) as string }
+            : {}),
           googleMapsUrl,
           attribution: GOOGLE_MAPS_ATTRIBUTION,
         },
@@ -201,26 +216,180 @@ export class PlacesService {
     }
   }
 
+  /**
+   * Registers a Google place at the moment an authenticated user starts a
+   * review. The Google place ID is retained as provenance; the selected Taco
+   * Hunt taco type becomes the first reviewable taco for that spot.
+   */
+  async createGoogleReviewTarget(rawInput: unknown, profileId: string, clientIp: string) {
+    const parsed = googleReviewTargetCreateSchema.safeParse(rawInput);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Datos del lugar para reseña inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+
+    const placeId = parsed.data.placeId;
+    const tacoTypeId = parsed.data.tacoTypeId;
+    const existingSpot = await this.pool.query<{
+      id: string;
+      name: string;
+      neighborhood: string;
+      latitude: number;
+      longitude: number;
+    }>(
+      `select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude
+       from app_private.spots where google_place_id=$1 limit 1`,
+      [placeId],
+    );
+
+    let name: string;
+    let latitude: number;
+    let longitude: number;
+    let neighborhood: string;
+    if (existingSpot.rows[0]) {
+      ({ name, latitude, longitude, neighborhood } = existingSpot.rows[0]);
+    } else {
+      this.consumePublicGoogleReadLimit(profileId, clientIp);
+      if (this.googlePlacesUnavailable()) {
+        throw new ServiceUnavailableException("Google Places no está disponible por ahora");
+      }
+
+      const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+      if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+      this.assertGoogleCallAllowed();
+
+      let place: GooglePlace;
+      try {
+        const endpoint =
+          process.env.GOOGLE_PLACES_DETAILS_URL?.trim() ||
+          `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`;
+        const response = await fetch(endpoint, {
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": ["id", "displayName", "location", "addressComponents"].join(","),
+          },
+          signal: AbortSignal.timeout(5_000),
+        });
+        if (response.status === 404) throw new NotFoundException("Lugar no encontrado");
+        if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
+        place = (await response.json()) as GooglePlace;
+      } catch (error) {
+        if (error instanceof NotFoundException || error instanceof BadGatewayException) throw error;
+        this.logger.error(
+          "Google Places review target lookup failed",
+          error instanceof Error ? error.stack : undefined,
+        );
+        throw new ServiceUnavailableException("Google Places no está disponible");
+      }
+
+      name = stringValue(place.displayName?.text) ?? "";
+      latitude = numberValue(place.location?.latitude) ?? Number.NaN;
+      longitude = numberValue(place.location?.longitude) ?? Number.NaN;
+      neighborhood = neighborhoodFromComponents(place.addressComponents) ?? "Zona no confirmada";
+    }
+
+    if (!name || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new BadGatewayException("Google Places devolvió datos incompletos");
+    }
+    if (!monterreyBounds.safeParse({ latitude, longitude }).success) {
+      throw new BadRequestException("El lugar está fuera de la cobertura de Taco Hunt");
+    }
+    const client = await this.pool.connect();
+    try {
+      await client.query("begin");
+      const tacoType = await client.query<{ id: string; name_es: string }>(
+        "select id,name_es from app_private.taco_types where id=$1 and active",
+        [tacoTypeId],
+      );
+      if (!tacoType.rowCount) throw new NotFoundException("Tipo de taco no encontrado");
+
+      const spot = await client.query<{ id: string; name: string }>(
+        `insert into app_private.spots
+           (name,normalized_name,neighborhood,latitude,longitude,status,created_by,source_type,source_ref,google_place_id)
+         values ($1,$2,$3,$4,$5,'approved',$6,'user',$7,$8)
+         on conflict (google_place_id) where google_place_id is not null
+         do update set status='approved',updated_at=now()
+         returning id,name`,
+        [
+          name,
+          normalizeName(name),
+          neighborhood,
+          latitude,
+          longitude,
+          profileId,
+          `google_places:${placeId}`,
+          placeId,
+        ],
+      );
+      const spotId = spot.rows[0]?.id;
+      if (!spotId) throw new ServiceUnavailableException("No se pudo registrar el lugar");
+
+      const target = await client.query<{ id: string; taco_name: string }>(
+        `insert into app_private.spot_tacos (spot_id,taco_type_id,display_name,status,created_by)
+         values ($1,$2,null,'approved',$3)
+         on conflict (spot_id,taco_type_id)
+         do update set status='approved'
+         returning id,coalesce(display_name,$4) as taco_name`,
+        [spotId, tacoTypeId, profileId, tacoType.rows[0].name_es],
+      );
+      const row = target.rows[0];
+      if (!row) throw new ServiceUnavailableException("No se pudo preparar la reseña");
+
+      await client.query("commit");
+      return {
+        spotTacoId: row.id,
+        spotId,
+        spotName: spot.rows[0].name,
+        tacoName: row.taco_name,
+      };
+    } catch (error) {
+      await this.rollback(client);
+      if (error instanceof NotFoundException || error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+      this.logger.error(
+        "Google review target registration failed",
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new ServiceUnavailableException("No se pudo preparar la reseña");
+    } finally {
+      client.release();
+    }
+  }
+
   private async findLocalProposals(input: PlacesViewportQuery, viewerId: string | undefined) {
     if (!viewerId) return [];
     try {
       const { rows } = await this.pool.query(
-        `select id,name,neighborhood,latitude::float8 as latitude,longitude::float8 as longitude,status
-         from app_private.spots
-         where status='pending' and created_by=$1
-           and latitude between $2 and $3 and longitude between $4 and $5
-         order by created_at desc limit $6`,
+        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,s.status,
+           (select sp.object_key from app_private.spot_photos sp
+            where sp.spot_id=s.id
+              and (sp.status='approved' or (sp.status='pending' and sp.uploader_id=$1))
+            order by case when sp.status='approved' then 0 else 1 end,sp.created_at desc
+            limit 1) as photo_key
+         from app_private.spots s
+         where s.status='pending' and s.created_by=$1
+           and s.latitude between $2 and $3 and s.longitude between $4 and $5
+           order by s.created_at desc limit $6`,
         [viewerId, input.south, input.north, input.west, input.east, input.limit],
       );
-      return rows.map((row) => ({
-        source: "taco-hunt" as const,
-        id: row.id as string,
-        name: (row.name as string | null) ?? null,
-        neighborhood: (row.neighborhood as string | null) ?? null,
-        latitude: row.latitude as number,
-        longitude: row.longitude as number,
-        status: row.status as "pending",
-      }));
+      return await Promise.all(
+        rows.map(async (row) => ({
+          source: "taco-hunt" as const,
+          id: row.id as string,
+          name: (row.name as string | null) ?? null,
+          neighborhood: (row.neighborhood as string | null) ?? null,
+          latitude: row.latitude as number,
+          longitude: row.longitude as number,
+          status: row.status as "pending",
+          photoUrl:
+            row.photo_key && this.storage.enabled
+              ? await this.storage.createSignedUrl(row.photo_key as string)
+              : null,
+        })),
+      );
     } catch (error) {
       this.logger.error(
         "Viewport proposal query failed",
@@ -235,31 +404,37 @@ export class PlacesService {
     if (longitudeSpan > 180) {
       throw new BadRequestException("Viewport demasiado amplio");
     }
+    const searchBounds = centeredViewportBounds(input);
+    const results = await this.searchGoogleViewportArea(searchBounds);
+    const placesById = new Map<string, GooglePlace>();
+    for (const place of results) {
+      const placeId = stringValue(place.id);
+      const latitude = numberValue(place.location?.latitude);
+      const longitude = numberValue(place.location?.longitude);
+      if (
+        !placeId ||
+        latitude === null ||
+        longitude === null ||
+        latitude < searchBounds.south ||
+        latitude > searchBounds.north ||
+        longitude < searchBounds.west ||
+        longitude > searchBounds.east
+      ) {
+        continue;
+      }
+      placesById.set(placeId, place);
+    }
+    return [...placesById.values()];
+  }
+
+  private async searchGoogleViewportArea(input: PlacesViewportQuery): Promise<GooglePlace[]> {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
     this.assertGoogleCallAllowed();
 
     const endpoint =
-      process.env.GOOGLE_PLACES_VIEWPORT_URL?.trim() ||
-      "https://places.googleapis.com/v1/places:searchNearby";
-    const center = {
-      latitude: (input.south + input.north) / 2,
-      longitude: (input.west + input.east) / 2,
-    };
-    const radius = Math.min(
-      50_000,
-      Math.max(
-        100,
-        ...[
-          [input.south, input.west],
-          [input.south, input.east],
-          [input.north, input.west],
-          [input.north, input.east],
-        ].map(([latitude, longitude]) =>
-          haversineDistanceMeters(center.latitude, center.longitude, latitude, longitude),
-        ),
-      ),
-    );
+      process.env.GOOGLE_PLACES_TEXT_SEARCH_URL?.trim() ||
+      "https://places.googleapis.com/v1/places:searchText";
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -271,22 +446,86 @@ export class PlacesService {
           "places.shortFormattedAddress",
           "places.location",
           "places.addressComponents",
+          "places.photos",
           "places.googleMapsUri",
         ].join(","),
       },
       body: JSON.stringify({
-        includedTypes: ["mexican_restaurant"],
-        maxResultCount: Math.min(input.limit, 20),
+        textQuery: "tacos",
+        pageSize: 20,
         languageCode: "es",
+        regionCode: "MX",
+        rankPreference: "DISTANCE",
         locationRestriction: {
-          circle: { center, radius },
+          rectangle: {
+            low: { latitude: input.south, longitude: input.west },
+            high: { latitude: input.north, longitude: input.east },
+          },
         },
       }),
       signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) throw new BadGatewayException("Google Places no respondió correctamente");
+
     const payload = (await response.json()) as GooglePlacesResponse;
     return Array.isArray(payload.places) ? payload.places : [];
+  }
+
+  /**
+   * Proxies a transient Google photo so the Places API key never reaches the
+   * mobile client and the Google display payload is never persisted.
+   */
+  async getPlacePhoto(rawName: string, viewerId: string | undefined, clientIp: string) {
+    const photoName = typeof rawName === "string" ? rawName.trim() : "";
+    if (!photoName || photoName.length > 500 || !/^places\/[^/]+\/photos\/[^/]+$/.test(photoName)) {
+      throw new BadRequestException("Recurso de foto inválido");
+    }
+
+    this.consumePublicGoogleReadLimit(viewerId, clientIp);
+    if (this.googlePlacesUnavailable()) {
+      throw new ServiceUnavailableException("Google Places no está disponible por ahora");
+    }
+
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
+    if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
+    this.assertGoogleCallAllowed();
+
+    const endpoint = new URL(`https://places.googleapis.com/v1/${photoName}/media`);
+    endpoint.searchParams.set("maxWidthPx", "800");
+    endpoint.searchParams.set("skipHttpRedirect", "true");
+    const response = await fetch(endpoint, {
+      headers: { "X-Goog-Api-Key": apiKey },
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) throw new BadGatewayException("Google Places no devolvió la foto");
+
+    const payload = (await response.json()) as { photoUri?: unknown };
+    const photoUri = stringValue(payload.photoUri);
+    if (!photoUri) throw new BadGatewayException("Google Places devolvió una foto incompleta");
+
+    let imageUrl: URL;
+    try {
+      imageUrl = new URL(photoUri);
+    } catch {
+      throw new BadGatewayException("Google Places devolvió una URL de foto inválida");
+    }
+    if (
+      imageUrl.protocol !== "https:" ||
+      !(
+        imageUrl.hostname === "googleusercontent.com" ||
+        imageUrl.hostname.endsWith(".googleusercontent.com")
+      )
+    ) {
+      throw new BadGatewayException("Google Places devolvió una URL de foto no permitida");
+    }
+
+    const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(5_000) });
+    if (!imageResponse.ok) throw new BadGatewayException("No se pudo descargar la foto de Google");
+    const contentType = imageResponse.headers.get("content-type")?.split(";", 1)[0];
+    if (!contentType?.startsWith("image/")) {
+      throw new BadGatewayException("Google Places devolvió un formato de imagen inválido");
+    }
+    return { body: Buffer.from(await imageResponse.arrayBuffer()), contentType };
   }
 
   /**
@@ -444,6 +683,14 @@ export class PlacesService {
     );
   }
 
+  private async rollback(client: PoolClient): Promise<void> {
+    try {
+      await client.query("rollback");
+    } catch {
+      // Preserve the original application error if rollback itself fails.
+    }
+  }
+
   private async searchLocalSpots(query: string) {
     const { rows } = await this.pool.query(
       `select id, name, neighborhood, latitude::float8 as latitude, longitude::float8 as longitude
@@ -529,6 +776,9 @@ function toViewportResult(place: GooglePlace) {
     longitude,
     googleMapsUrl: safeGoogleMapsUrl(place.googleMapsUri, placeId),
     attribution: GOOGLE_MAPS_ATTRIBUTION,
+    ...(stringValue(place.photos?.[0]?.name)
+      ? { photoName: stringValue(place.photos?.[0]?.name) as string }
+      : {}),
   };
 }
 
@@ -547,26 +797,20 @@ function safeGoogleMapsUrl(value: unknown, placeId: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeId)}`;
 }
 
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+function centeredViewportBounds(input: PlacesViewportQuery): PlacesViewportQuery {
+  const latitudeInset = (input.north - input.south) * VIEWPORT_SEARCH_INSET;
+  const longitudeInset = (input.east - input.west) * VIEWPORT_SEARCH_INSET;
+  return {
+    ...input,
+    south: input.south + latitudeInset,
+    north: input.north - latitudeInset,
+    west: input.west + longitudeInset,
+    east: input.east - longitudeInset,
+  };
 }
 
-function haversineDistanceMeters(
-  latitudeA: number,
-  longitudeA: number,
-  latitudeB: number,
-  longitudeB: number,
-): number {
-  const earthRadiusMeters = 6_371_000;
-  const toRadians = (value: number) => (value * Math.PI) / 180;
-  const latitudeDelta = toRadians(latitudeB - latitudeA);
-  const longitudeDelta = toRadians(longitudeB - longitudeA);
-  const latitudeARadians = toRadians(latitudeA);
-  const latitudeBRadians = toRadians(latitudeB);
-  const a =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(latitudeARadians) * Math.cos(latitudeBRadians) * Math.sin(longitudeDelta / 2) ** 2;
-  return earthRadiusMeters * 2 * Math.asin(Math.sqrt(Math.min(1, a)));
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function numberValue(value: unknown): number | null {

@@ -1,6 +1,9 @@
 import type { Session } from "@supabase/supabase-js";
+import { Platform } from "react-native";
 
-const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+const API =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3001/v1" : "http://localhost:3001/v1");
 
 export type TacoType = { id: string; slug: string; nameEs: string };
 export type ProposalStatus = "pending" | "approved" | "rejected";
@@ -22,6 +25,13 @@ export type CreatedTacoProposal = {
   displayName: string | null;
   status: ProposalStatus;
   createdAt: string;
+};
+
+export type GoogleReviewTarget = {
+  spotTacoId: string;
+  spotId: string;
+  spotName: string;
+  tacoName: string;
 };
 
 export class TacoProposalConflictError extends Error {}
@@ -81,4 +91,29 @@ export async function createTacoProposal(
     throw new Error(messageFromResponse(payload));
   }
   return (await response.json()) as CreatedTacoProposal;
+}
+
+export async function createGoogleReviewTarget(
+  session: Session,
+  input: { placeId: string; tacoTypeId: string },
+): Promise<GoogleReviewTarget> {
+  const response = await fetch(`${API}/places/review-target`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = undefined;
+    }
+    throw new Error(messageFromResponse(payload));
+  }
+  return (await response.json()) as GoogleReviewTarget;
 }

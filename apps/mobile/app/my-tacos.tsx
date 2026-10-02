@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link, Stack, useRouter } from "expo-router";
+import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import {
@@ -55,6 +55,7 @@ const MONTHS_ES = [
 export default function MyTacosScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const { tab: requestedTab } = useLocalSearchParams<{ tab?: string }>();
   const [reviews, setReviews] = useState<OwnReview[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -66,6 +67,12 @@ export default function MyTacosScreen() {
   const progress = getFixtureProgress();
   const earnedBadges = progress.badges.filter((badge) => badge.earned);
   const nextBadge = progress.badges.find((badge) => !badge.earned);
+
+  useEffect(() => {
+    if (requestedTab === "favoritos" || requestedTab === "resenas" || requestedTab === "fotos") {
+      setTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   const load = useCallback(async () => {
     if (!session) return;

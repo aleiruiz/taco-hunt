@@ -44,7 +44,7 @@ export function Button({
   const iconSize = size === "lg" ? 20 : 16;
   const variantColors: Record<Variant, string> = {
     primary: colors.green,
-    secondary: colors.ink,
+    secondary: colors.paper,
     danger: colors.dangerText,
     ghost: colors.green,
     accent: colors.redStrong,

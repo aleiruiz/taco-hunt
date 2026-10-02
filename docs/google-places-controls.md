@@ -2,7 +2,8 @@
 
 The API is the only component allowed to call Google Places (see `docs/build-spec.md`'s
 Mapping row): live viewport discovery, mobile autocomplete, on-demand place details, and
-the explicitly scheduled re-verification job for Google-linked spots. The former admin
+the explicitly scheduled re-verification job for Google-linked spots, and transient
+photo proxy requests used by the map card. The former admin
 text-search candidate-discovery and Google-payload staging path is retired; live viewport
 reads are transient,
 while a user-selected place can become a moderated Taco Hunt proposal with a durable
@@ -44,7 +45,7 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
   the endpoint; it does not bound total daily spend.
 - **Global daily call budget** (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, added by this task):
   every outbound Google Places request from `PlacesService` — viewport discovery,
-  autocomplete, and place-details resolution — consumes one unit of a single shared
+  autocomplete, place-details resolution, review-target creation, and photo proxying — consumes one unit of a single shared
   24-hour counter via
   `RequestLimitService`. Once the limit is reached, further calls fail closed
   (autocomplete degrades to local-only results; discovery and resolve return `503`)
@@ -71,6 +72,9 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
   scheduled runs don't spam the moderation queue for the same spot.
 - Autocomplete and resolve are read-only lookups with no server-side storage to
   deduplicate against; their per-user rate limits above are the relevant control.
+- Photo proxy requests are also transient and carry no Google image into Storage or the
+  database. A review-target request first checks the durable `google_place_id`, so
+  retrying a user's rating flow does not create a second Taco Hunt spot.
 
 ## 4. Alerts
 

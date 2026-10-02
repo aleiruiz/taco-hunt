@@ -1,0 +1,8 @@
+diff --git a/android/CMakeLists.txt b/android/CMakeLists.txt
+index 2a9c6f6..4cbf2cb 100644
+--- a/android/CMakeLists.txt
++++ b/android/CMakeLists.txt
+@@ -82,2 +82,2 @@
+ target_link_libraries(worklets android log ReactAndroid::reactnative
+-                      ReactAndroid::jsi fbjni::fbjni)
++                      ReactAndroid::jsi fbjni::fbjni c++_shared)

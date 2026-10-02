@@ -19,5 +19,13 @@ build/
 coverage/
 .task-docker-config/
 
+# Local Android/IDE artifacts generated while building the mobile app
+.gradle-local/
+.idea/
+android/
+apps/mobile/android/
+apps/mobile/android-build.log
+/app.json
+
 # Local orchestrator check-in log (keep on disk; do not commit)
 docs/orchestration-log.md

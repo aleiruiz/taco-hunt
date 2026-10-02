@@ -21,6 +21,7 @@ import { AvatarReviewService } from "./avatar-review.service.js";
 
 interface ProfileRow {
   displayName: string | null;
+  role: AuthenticatedProfile["role"];
   avatarPreset: AuthenticatedProfile["avatarPreset"];
   avatarPhotoKey: string | null;
   avatarPhotoStatus: AuthenticatedProfile["avatarPhotoStatus"];
@@ -206,7 +207,8 @@ export class ProfileController {
 
   private async loadRow(userId: string): Promise<ProfileRow> {
     const { rows } = await this.pool.query<ProfileRow>(
-      `select display_name as "displayName", avatar_preset as "avatarPreset",
+      `select display_name as "displayName", role,
+              avatar_preset as "avatarPreset",
               avatar_photo_key as "avatarPhotoKey", avatar_photo_status as "avatarPhotoStatus"
        from app_private.profiles where id=$1`,
       [userId],
@@ -226,6 +228,7 @@ export class ProfileController {
     return {
       id: userId,
       displayName: row.displayName,
+      role: row.role,
       avatarPreset: row.avatarPreset,
       avatarPhotoUrl,
       avatarPhotoStatus: row.avatarPhotoStatus,

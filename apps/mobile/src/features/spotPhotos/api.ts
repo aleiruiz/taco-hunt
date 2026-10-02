@@ -1,7 +1,10 @@
 import type { Session } from "@supabase/supabase-js";
+import { Platform } from "react-native";
 import { uploadReviewPhoto } from "@/features/contributions/api";
 
-const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+const API =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3001/v1" : "http://localhost:3001/v1");
 
 export type SpotPhotoKind = "tacos" | "puesto" | "menu";
 

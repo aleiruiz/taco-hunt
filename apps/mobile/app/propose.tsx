@@ -631,9 +631,7 @@ function MyProposals({ proposals }: { proposals: SpotProposal[] }) {
         <View key={proposal.id} style={styles.proposalRow}>
           <View style={styles.suggestionCopy}>
             <Text style={styles.suggestionTitle}>
-              {proposal.source === "google"
-                ? "Lugar de Google"
-                : proposal.name || "Pin sin nombre"}
+              {proposal.source === "google" ? "Lugar de Google" : proposal.name || "Pin sin nombre"}
             </Text>
             <Text style={styles.muted}>
               {proposal.source === "google"

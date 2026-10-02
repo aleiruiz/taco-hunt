@@ -1,0 +1,22 @@
+diff --git a/android/CMakeLists.txt b/android/CMakeLists.txt
+index 0000000..0000000 100644
+--- a/android/CMakeLists.txt
++++ b/android/CMakeLists.txt
+@@ -24,5 +24,6 @@
+   react_codegen_rngesturehandler_codegen
+   fbjni
+   jsi
+   reactnative
++  c++_shared
+ )
+diff --git a/android/src/main/jni/CMakeLists.txt b/android/src/main/jni/CMakeLists.txt
+index 0000000..0000000 100644
+--- a/android/src/main/jni/CMakeLists.txt
++++ b/android/src/main/jni/CMakeLists.txt
+@@ -39,5 +39,6 @@
+   ${PACKAGE_NAME}
+   ReactAndroid::reactnative
+   ReactAndroid::jsi
+   fbjni::fbjni
++  c++_shared
+ )

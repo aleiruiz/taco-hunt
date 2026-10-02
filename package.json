@@ -29,5 +29,19 @@
     "prettier": "^3.6.2",
     "supabase": "2.118.0",
     "typescript-eslint": "8.44.0"
+  },
+  "dependencies": {
+    "expo": "~57.0.25",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "react-native-screens@4.26.2": "patches/react-native-screens@4.26.2.patch",
+      "react-native-worklets@0.13.0": "patches/react-native-worklets@0.13.0.patch",
+      "react-native-reanimated@4.7.0": "patches/react-native-reanimated@4.7.0.patch",
+      "expo-modules-core@57.0.19": "patches/expo-modules-core@57.0.19.patch",
+      "react-native-gesture-handler@3.3.0": "patches/react-native-gesture-handler@3.3.0.patch"
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { authConfigured } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
 import { deleteAccount } from "@/features/contributions/api";
+import { getProfile } from "@/data/profile-api";
 import { colors } from "@/theme";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -23,6 +24,21 @@ export default function SettingsScreen() {
   const email = session?.user.email ?? "";
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsAdmin(false);
+    if (!session) return () => undefined;
+    getProfile(session)
+      .then((profile) => {
+        if (!cancelled) setIsAdmin(profile.role === "admin");
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   async function handleSignOut() {
     await signOut();
@@ -107,9 +123,11 @@ export default function SettingsScreen() {
             onPress={() => void handleSignOut()}
             style={styles.button}
           />
-          <Link href="/admin" style={styles.moderationLink}>
-            Abrir panel de moderación
-          </Link>
+          {isAdmin ? (
+            <Link href="/admin" style={styles.moderationLink}>
+              Abrir panel de moderación
+            </Link>
+          ) : null}
           {deleteError ? <Text style={styles.deleteError}>{deleteError}</Text> : null}
           <Button
             label="Eliminar cuenta"

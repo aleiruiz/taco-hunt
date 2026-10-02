@@ -435,6 +435,7 @@ export type AvatarPreset = z.infer<typeof avatarPresetSchema>;
 export const profileSchema = z.object({
   id: uuidSchema,
   displayName: z.string().max(60).nullable(),
+  role: z.enum(["user", "admin"]),
   avatarPreset: avatarPresetSchema,
   avatarPhotoUrl: z.string().url().nullable(),
   avatarPhotoStatus: spotPhotoStatusSchema.nullable(),
@@ -561,6 +562,24 @@ export const durablePlaceLinkSchema = z.object({
 });
 export type DurablePlaceLink = z.infer<typeof durablePlaceLinkSchema>;
 
+// Rating an undiscovered Google place creates its Taco Hunt record as part of
+// starting the review. The user still chooses the taco type before creation.
+export const googleReviewTargetCreateSchema = z
+  .object({
+    placeId: googlePlaceIdSchema,
+    tacoTypeId: uuidSchema,
+  })
+  .strict();
+export type GoogleReviewTargetCreate = z.infer<typeof googleReviewTargetCreateSchema>;
+
+export const googleReviewTargetSchema = z.object({
+  spotTacoId: uuidSchema,
+  spotId: uuidSchema,
+  spotName: z.string().min(1),
+  tacoName: z.string().min(1),
+});
+export type GoogleReviewTarget = z.infer<typeof googleReviewTargetSchema>;
+
 // Google viewport results are hydrated for the current map request only.
 export const googleViewportResultSchema = z.object({
   source: z.literal("google"),
@@ -569,6 +588,9 @@ export const googleViewportResultSchema = z.object({
   neighborhood: z.string().nullable(),
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
+  // The API proxies this transient Google photo resource so the API key never
+  // reaches the mobile client.
+  photoName: z.string().trim().min(1).optional(),
   googleMapsUrl: z.string().url(),
   attribution: googleAttributionSchema,
 });
@@ -585,6 +607,7 @@ export const localProposalPinSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   status: z.enum(["pending", "approved"]),
+  photoUrl: z.string().url().nullable(),
 });
 export type LocalProposalPin = z.infer<typeof localProposalPinSchema>;
 
@@ -631,6 +654,7 @@ export const googlePlaceDetailsSchema = z.object({
   placeId: googlePlaceIdSchema,
   name: z.string(),
   formattedAddress: z.string().nullable(),
+  photoName: z.string().trim().min(1).optional(),
   googleMapsUrl: z.string().url(),
   attribution: googleAttributionSchema,
 });

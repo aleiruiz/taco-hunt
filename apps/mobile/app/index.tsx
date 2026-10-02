@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Animated,
   FlatList,
-  Linking,
+  Image,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import { Link, type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import TacoHuntTaco from "@/assets/taco-hunt-taco.svg";
 import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -23,7 +25,9 @@ import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { IconButton } from "@/components/IconButton";
 import { Avatar } from "@/components/Avatar";
+import { AccountSidebar } from "@/components/AccountSidebar";
 import { getProfile, type AvatarPreset } from "@/data/profile-api";
+import { listSpotPhotos } from "@/features/spotPhotos/api";
 import {
   getFixtureMapDiscovery,
   MAP_DISCOVERY_ATTRIBUTION,
@@ -61,6 +65,8 @@ type SpotDetail = {
   id: string;
   name: string;
   neighborhood: string;
+  googlePlaceId?: string;
+  photoUrl?: string | null;
   tacos?: Taco[];
   reviews?: Review[];
 };
@@ -84,15 +90,31 @@ type MapCluster = {
   bounds: { north: number; south: number; east: number; west: number };
 };
 type MapPinsResponse = { pins: MapPin[]; clusters: MapCluster[] };
+type GooglePlaceDetailsResponse = {
+  state: "ready" | "unavailable";
+  details?: { photoName?: string };
+};
 const API_COVERAGE = { north: 27, south: 25, east: -99, west: -101.5 };
-const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
-// Native builds receive both Google SDK keys through app.config.js. The
-// provider remains environment-selectable so an iOS build can opt into Apple
-// Maps while a key is being provisioned; Google is the default foundation.
+const LOCAL_MAP_DELTA = 0.02;
+const DEFAULT_MAP_REGION: Region = {
+  latitude: 25.6866,
+  longitude: -100.3161,
+  latitudeDelta: LOCAL_MAP_DELTA,
+  longitudeDelta: LOCAL_MAP_DELTA,
+};
+// Follow the platform defaults from the build spec: Apple Maps on iOS and
+// Google Maps on Android. An environment override keeps local/device testing
+// explicit without requiring a native Google Maps key on iOS.
+const configuredMapProvider = process.env.EXPO_PUBLIC_MAPS_PROVIDER?.trim().toLowerCase();
 const MAP_PROVIDER =
-  process.env.EXPO_PUBLIC_MAPS_PROVIDER?.trim().toLowerCase() === "apple"
+  configuredMapProvider === "apple"
     ? undefined
-    : PROVIDER_GOOGLE;
+    : configuredMapProvider === "google" || Platform.OS === "android"
+      ? PROVIDER_GOOGLE
+      : undefined;
+const API =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3001/v1" : "http://localhost:3001/v1");
 const AREAS: Area[] = [
   { label: "Monterrey", north: 25.78, south: 25.6, east: -100.2, west: -100.4 },
   { label: "San Pedro", north: 25.72, south: 25.62, east: -100.3, west: -100.45 },
@@ -100,6 +122,19 @@ const AREAS: Area[] = [
   { label: "Guadalupe", north: 25.72, south: 25.62, east: -100.15, west: -100.27 },
   { label: "Apodaca", north: 25.82, south: 25.72, east: -100.08, west: -100.23 },
 ];
+
+async function getGoogleFallbackPhotoUrl(placeId: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${API}/places/${encodeURIComponent(placeId)}/details`);
+    if (!response.ok) return null;
+    const data = (await response.json()) as GooglePlaceDetailsResponse;
+    return data.details?.photoName
+      ? `${API}/places/photo?name=${encodeURIComponent(data.details.photoName)}`
+      : null;
+  } catch {
+    return null;
+  }
+}
 function clipAreaToApiCoverage(area: Area): Area | null {
   const north = Math.min(API_COVERAGE.north, area.north);
   const south = Math.max(API_COVERAGE.south, area.south);
@@ -130,6 +165,186 @@ function regionToViewportBounds(region: Region, marginFactor = 0.25): Area | nul
   });
 }
 
+type MarkerPressHandler = (id: string) => void | Promise<void>;
+
+const CustomMarkerContent = memo(function CustomMarkerContent() {
+  return (
+    <View collapsable={false} style={styles.markerWrap}>
+      <View style={styles.marker}>
+        <TacoHuntTaco width={24} height={18} />
+      </View>
+    </View>
+  );
+});
+
+const TacoMapMarker = memo(function TacoMapMarker({
+  pin,
+  onPress,
+}: {
+  pin: MapPin;
+  onPress: MarkerPressHandler;
+}) {
+  return (
+    <Marker
+      coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+      accessibilityLabel={`${pin.name}, ${pin.neighborhood}`}
+      onPress={() => void onPress(pin.id)}
+      tracksViewChanges={false}
+    >
+      <CustomMarkerContent />
+    </Marker>
+  );
+});
+
+const ClusterMapMarker = memo(
+  function ClusterMapMarker({
+    cluster,
+    onPress,
+  }: {
+    cluster: MapCluster;
+    onPress: (cluster: MapCluster) => void;
+  }) {
+    return (
+      <Marker
+        coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
+        accessibilityLabel={`${cluster.count} puestos agrupados`}
+        onPress={() => onPress(cluster)}
+        tracksViewChanges={false}
+      >
+        <View style={styles.clusterBubble}>
+          <Text style={styles.clusterBubbleText}>{cluster.count}</Text>
+        </View>
+      </Marker>
+    );
+  },
+  (previous, next) =>
+    previous.cluster.count === next.cluster.count &&
+    previous.cluster.latitude === next.cluster.latitude &&
+    previous.cluster.longitude === next.cluster.longitude &&
+    previous.cluster.bounds.north === next.cluster.bounds.north &&
+    previous.cluster.bounds.south === next.cluster.bounds.south &&
+    previous.cluster.bounds.east === next.cluster.bounds.east &&
+    previous.cluster.bounds.west === next.cluster.bounds.west &&
+    previous.onPress === next.onPress,
+);
+
+const GoogleMapMarker = memo(function GoogleMapMarker({
+  result,
+  onPress,
+}: {
+  result: GoogleDiscoveryResult;
+  onPress: (result: GoogleDiscoveryResult) => void;
+}) {
+  return (
+    <Marker
+      coordinate={{ latitude: result.latitude, longitude: result.longitude }}
+      accessibilityLabel={`${result.attributionLabel}: ${result.name}, ${result.neighborhood}`}
+      onPress={() => onPress(result)}
+      tracksViewChanges={false}
+    >
+      <View
+        collapsable={false}
+        style={styles.googleMarker}
+        accessibilityLabel={`${result.attributionLabel}: ${result.name}`}
+      >
+        <TacoHuntTaco width={24} height={18} />
+      </View>
+    </Marker>
+  );
+});
+
+const ProposalMapMarker = memo(function ProposalMapMarker({
+  proposal,
+  onPress,
+}: {
+  proposal: TacoHuntProposalPin;
+  onPress: (proposal: TacoHuntProposalPin) => void;
+}) {
+  return (
+    <Marker
+      coordinate={{ latitude: proposal.latitude, longitude: proposal.longitude }}
+      accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}, ${proposal.neighborhood}, en revisión`}
+      onPress={() => onPress(proposal)}
+      tracksViewChanges={false}
+    >
+      <View
+        style={styles.proposalMarker}
+        accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}`}
+      >
+        <TacoHuntTaco width={24} height={18} />
+      </View>
+    </Marker>
+  );
+});
+
+const MapPreviewCard = ({
+  title,
+  neighborhood,
+  kicker,
+  detail,
+  photoUrl,
+  primaryLabel,
+  primaryIcon,
+  onPrimary,
+  onClose,
+  children,
+}: {
+  title: string;
+  neighborhood: string;
+  kicker: string;
+  detail?: string;
+  photoUrl?: string | null;
+  primaryLabel?: string;
+  primaryIcon?: keyof typeof Ionicons.glyphMap;
+  onPrimary?: () => void;
+  onClose: () => void;
+  children?: ReactNode;
+}) => (
+  <Card style={styles.mapPreviewCard}>
+    {photoUrl ? (
+      <Image
+        source={{ uri: photoUrl }}
+        style={styles.mapPreviewImage}
+        resizeMode="cover"
+        accessibilityLabel={`Foto de ${title}`}
+      />
+    ) : (
+      <View style={styles.mapPreviewImageFallback} accessibilityLabel="Foto no disponible">
+        <TacoHuntTaco width={48} height={36} />
+      </View>
+    )}
+    <View style={styles.mapPreviewBody}>
+      <View style={styles.cardHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.mapPreviewKicker}>{kicker}</Text>
+          <Text style={styles.previewTitle}>{title}</Text>
+          <Text style={styles.previewNeighborhood}>{neighborhood}</Text>
+        </View>
+        <IconButton icon="close" label="Cerrar tarjeta" size={32} onPress={onClose} />
+      </View>
+      {detail ? <Text style={styles.mapPreviewDetail}>{detail}</Text> : null}
+      {children}
+      <View style={styles.mapPreviewActions}>
+        {onPrimary && primaryLabel ? (
+          <Button
+            label={primaryLabel}
+            variant="accent"
+            icon={primaryIcon}
+            onPress={onPrimary}
+            style={styles.mapPreviewAction}
+          />
+        ) : null}
+        <Button
+          label="Cerrar"
+          variant="secondary"
+          onPress={onClose}
+          style={styles.mapPreviewAction}
+        />
+      </View>
+    </View>
+  </Card>
+);
+
 export default function ExploreScreen() {
   const [items, setItems] = useState<Spot[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -149,19 +364,23 @@ export default function ExploreScreen() {
   const [spotError, setSpotError] = useState("");
   const router = useRouter();
   const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [headerAvatarPreset, setHeaderAvatarPreset] = useState<AvatarPreset>("pastor");
   const [headerAvatarPhotoUrl, setHeaderAvatarPhotoUrl] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accountSidebarOpen, setAccountSidebarOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     setHeaderAvatarPreset("pastor");
     setHeaderAvatarPhotoUrl(null);
+    setIsAdmin(false);
     if (!session) return () => undefined;
     getProfile(session)
       .then((profile) => {
         if (cancelled) return;
         setHeaderAvatarPreset(profile.avatarPreset);
         setHeaderAvatarPhotoUrl(profile.avatarPhotoUrl);
+        setIsAdmin(profile.role === "admin");
       })
       .catch(() => undefined);
     return () => {
@@ -185,14 +404,20 @@ export default function ExploreScreen() {
     localProposals: [],
     attribution: MAP_DISCOVERY_ATTRIBUTION,
   });
-  const [mapDiscoveryLoading, setMapDiscoveryLoading] = useState(true);
+  const [mapDiscoveryLoading, setMapDiscoveryLoading] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<TacoHuntProposalPin | null>(null);
+  const [selectedGoogleResult, setSelectedGoogleResult] = useState<GoogleDiscoveryResult | null>(
+    null,
+  );
   const mapPinsCacheRef = useRef<Map<string, MapPin>>(new Map());
+  const mapGoogleResultsCacheRef = useRef<Map<string, GoogleDiscoveryResult>>(new Map());
+  const mapProposalCacheRef = useRef<Map<string, TacoHuntProposalPin>>(new Map());
   const mapRef = useRef<MapView>(null);
   const currentRegionRef = useRef<Region | null>(null);
   const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapFetchSeqRef = useRef(0);
   const mapDiscoveryFetchSeqRef = useRef(0);
+  const initialMapDiscoveryRequestedRef = useRef(false);
   const activeTypeRef = useRef<TacoType | null>(null);
 
   // Keep refs synchronized with current state to avoid closure issues in async callbacks
@@ -306,7 +531,15 @@ export default function ExploreScreen() {
       }
       setArea(areaAtLocation);
       if (mode === "mapa") {
-        animateCameraToArea(areaAtLocation);
+        mapRef.current?.animateToRegion(
+          {
+            latitude,
+            longitude,
+            latitudeDelta: LOCAL_MAP_DELTA,
+            longitudeDelta: LOCAL_MAP_DELTA,
+          },
+          400,
+        );
       } else {
         await load(query, activeType, areaAtLocation);
       }
@@ -319,7 +552,46 @@ export default function ExploreScreen() {
 
   // Initial camera only — once the map is interactive, panning/zooming is
   // uncontrolled and viewport pins follow via onRegionChangeComplete below.
-  const mapRegion = useMemo<Region>(() => areaToRegion(area), [area]);
+  const mapRegion = useMemo<Region>(
+    () => (area.label === "Monterrey" ? DEFAULT_MAP_REGION : areaToRegion(area)),
+    [area],
+  );
+
+  // Do not prompt for location on launch. If the user has already granted
+  // permission, center the first viewport on their last known position; new
+  // users keep the compact Monterrey fallback until they tap "Mi ubicación".
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const permission = await Location.getForegroundPermissionsAsync();
+      if (permission.status !== "granted") return;
+      const position =
+        (await Location.getLastKnownPositionAsync()) ??
+        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+      if (cancelled) return;
+      const { latitude, longitude } = position.coords;
+      if (
+        latitude < API_COVERAGE.south ||
+        latitude > API_COVERAGE.north ||
+        longitude < API_COVERAGE.west ||
+        longitude > API_COVERAGE.east
+      ) {
+        return;
+      }
+      mapRef.current?.animateToRegion(
+        {
+          latitude,
+          longitude,
+          latitudeDelta: LOCAL_MAP_DELTA,
+          longitudeDelta: LOCAL_MAP_DELTA,
+        },
+        350,
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchMapPins = useCallback(async (region: Region) => {
     const bounds = regionToViewportBounds(region);
@@ -375,39 +647,41 @@ export default function ExploreScreen() {
     setSelectedProposal(null);
     if (!bounds) {
       setMapDiscoveryLoading(false);
-      setMapDiscovery({
+      setMapDiscovery((current) => ({
+        ...current,
         state: "unavailable",
-        googleResults: [],
-        localProposals: [],
-        attribution: MAP_DISCOVERY_ATTRIBUTION,
         message: "La búsqueda de Google no está disponible en esta zona.",
-      });
+      }));
       return;
     }
     setMapDiscoveryLoading(true);
-    setMapDiscovery((current) => ({
-      ...current,
-      state: "empty",
-      googleResults: [],
-      localProposals: [],
-      message: "Buscando lugares cercanos…",
-    }));
+    // Keep the current markers visible while the next viewport is loading.
+    // Clearing them here makes every pan unmount and remount their native icon views.
+    setMapDiscovery((current) => ({ ...current, message: "Buscando lugares cercanos…" }));
     try {
       const snapshot = await getFixtureMapDiscovery(bounds);
       if (seq === mapDiscoveryFetchSeqRef.current) {
-        setMapDiscovery(snapshot);
+        const googleResultsCache = mapGoogleResultsCacheRef.current;
+        const proposalCache = mapProposalCacheRef.current;
+        for (const result of snapshot.googleResults) googleResultsCache.set(result.id, result);
+        for (const proposal of snapshot.localProposals) proposalCache.set(proposal.id, proposal);
+        setMapDiscovery({
+          ...snapshot,
+          // Keep every place discovered during this session mounted while new
+          // viewport results are added to the caches.
+          googleResults: Array.from(googleResultsCache.values()),
+          localProposals: Array.from(proposalCache.values()),
+        });
         setMapDiscoveryLoading(false);
       }
     } catch {
       if (seq === mapDiscoveryFetchSeqRef.current) {
         setMapDiscoveryLoading(false);
-        setMapDiscovery({
+        setMapDiscovery((current) => ({
+          ...current,
           state: "error",
-          googleResults: [],
-          localProposals: [],
-          attribution: MAP_DISCOVERY_ATTRIBUTION,
           message: "No pudimos actualizar los resultados de Google.",
-        });
+        }));
       }
     }
   }, []);
@@ -418,10 +692,9 @@ export default function ExploreScreen() {
       if (regionDebounceRef.current) clearTimeout(regionDebounceRef.current);
       regionDebounceRef.current = setTimeout(() => {
         void fetchMapPins(region);
-        void fetchMapDiscovery(region);
       }, 300);
     },
-    [fetchMapDiscovery, fetchMapPins],
+    [fetchMapPins],
   );
 
   useEffect(() => {
@@ -438,8 +711,12 @@ export default function ExploreScreen() {
     mapPinsCacheRef.current = new Map();
     setMapPins([]);
     setMapClusters([]);
-    void fetchMapPins(currentRegionRef.current ?? mapRegion);
-    void fetchMapDiscovery(currentRegionRef.current ?? mapRegion);
+    const region = currentRegionRef.current ?? mapRegion;
+    void fetchMapPins(region);
+    if (!initialMapDiscoveryRequestedRef.current) {
+      initialMapDiscoveryRequestedRef.current = true;
+      void fetchMapDiscovery(region);
+    }
     // mapRegion intentionally excluded: it should only seed the very first fetch,
     // not re-trigger when `area` changes list-mode state while map mode is active.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -486,8 +763,13 @@ export default function ExploreScreen() {
     setActiveType(null);
     void load("", null, area);
   };
+  const searchPlacesInCurrentArea = useCallback(() => {
+    void fetchMapDiscovery(currentRegionRef.current ?? mapRegion);
+  }, [fetchMapDiscovery, mapRegion]);
 
   const handleMarkerPress = useCallback(async (spotId: string) => {
+    setSelectedGoogleResult(null);
+    setSelectedProposal(null);
     setSelectedSpotId(spotId);
     selectedSpotIdRef.current = spotId;
     setSelectedSpot(null);
@@ -509,9 +791,21 @@ export default function ExploreScreen() {
     }
 
     try {
-      const response = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
+      const [response, photos] = await Promise.all([
+        fetch(`${API}/spots/${encodeURIComponent(spotId)}`),
+        listSpotPhotos(spotId).catch(() => []),
+      ]);
       if (!response.ok) throw new Error("Failed to fetch spot");
-      const spot = (await response.json()) as SpotDetail;
+      const spotPayload = (await response.json()) as SpotDetail;
+      const tacoHuntPhotoUrl = photos[0]?.url ?? null;
+      const googlePhotoUrl =
+        !tacoHuntPhotoUrl && spotPayload.googlePlaceId
+          ? await getGoogleFallbackPhotoUrl(spotPayload.googlePlaceId)
+          : null;
+      const spot = {
+        ...spotPayload,
+        photoUrl: tacoHuntPhotoUrl ?? googlePhotoUrl,
+      };
 
       // Only update state if this spot is still the selected one (prevent stale responses)
       if (selectedSpotIdRef.current === spotId) {
@@ -562,47 +856,18 @@ export default function ExploreScreen() {
   }, []);
 
   const handleProposalPress = useCallback((proposal: TacoHuntProposalPin) => {
+    setSelectedGoogleResult(null);
     setSelectedProposal(proposal);
     setSelectedSpotId(null);
     selectedSpotIdRef.current = null;
   }, []);
 
-  const CustomMarkerContent = ({ hasReviews }: { hasReviews: boolean }) => (
-    <View style={styles.markerWrap}>
-      <View style={styles.marker}>
-        <Text style={{ fontSize: 24 }}>🌮</Text>
-      </View>
-      {!hasReviews && (
-        <View style={styles.markerSparkle} accessibilityLabel="Sin reseñas todavía">
-          <Ionicons name="sparkles" size={12} color={colors.paper} />
-        </View>
-      )}
-    </View>
-  );
-
-  const openSourceLink = useCallback(async (url: string) => {
-    try {
-      await Linking.openURL(url);
-    } catch {
-      setMapDiscovery((current) => ({
-        ...current,
-        state: "error",
-        message: "No pudimos abrir Google Maps. Puedes intentarlo de nuevo.",
-      }));
-    }
+  const handleGoogleMarkerPress = useCallback((result: GoogleDiscoveryResult) => {
+    setSelectedSpotId(null);
+    selectedSpotIdRef.current = null;
+    setSelectedProposal(null);
+    setSelectedGoogleResult(result);
   }, []);
-
-  const googleMarkerContent = ({ result }: { result: GoogleDiscoveryResult }) => (
-    <View style={styles.googleMarker} accessibilityLabel={`${result.attributionLabel}: ${result.name}`}>
-      <Ionicons name="search" size={16} color={colors.paper} />
-    </View>
-  );
-
-  const proposalMarkerContent = ({ proposal }: { proposal: TacoHuntProposalPin }) => (
-    <View style={styles.proposalMarker} accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}`}>
-      <Ionicons name="time-outline" size={17} color={colors.ink} />
-    </View>
-  );
 
   const modeToggle = (
     <View style={styles.modeRow}>
@@ -678,7 +943,7 @@ export default function ExploreScreen() {
       accessibilityRole="button"
       accessibilityLabel={session ? "Mi cuenta" : "Entrar"}
       style={styles.profileButton}
-      onPress={() => router.push("/settings")}
+      onPress={() => setAccountSidebarOpen(true)}
     >
       {session ? (
         <Avatar
@@ -713,94 +978,26 @@ export default function ExploreScreen() {
     </View>
   );
   const mapPinTotal = mapPins.length + mapClusters.reduce((total, c) => total + c.count, 0);
-  const discoveryTitle = mapDiscoveryLoading
-    ? "Buscando lugares cercanos…"
-    : mapDiscovery.state === "ready"
-      ? `${mapDiscovery.googleResults.length} resultado${mapDiscovery.googleResults.length === 1 ? "" : "s"} de Google`
-      : mapDiscovery.state === "empty"
-        ? "Sin resultados de Google"
-        : mapDiscovery.state === "unavailable"
-          ? "Google no disponible"
-          : mapDiscovery.state === "offline"
-            ? "Google sin conexión"
-            : "No se pudo actualizar Google";
-  const discoveryMessage = mapDiscoveryLoading
-    ? "Los puestos y propuestas de Taco Hunt siguen cargando por separado."
-    : mapDiscovery.message;
-  const discoveryCard = (
-    <Card
-      style={styles.discoveryCard}
-      accessibilityLabel={`Descubrimiento externo. ${discoveryTitle}. ${discoveryMessage ?? ""}`}
-      accessibilityLiveRegion="polite"
-    >
-      <View style={styles.discoveryHeader}>
-        <View style={styles.discoveryHeadingIcon}>
-          {mapDiscoveryLoading ? (
-            <ActivityIndicator size="small" color={colors.green} />
-          ) : (
-            <Ionicons name="globe-outline" size={16} color={colors.green} />
-          )}
-        </View>
-        <Text style={styles.discoveryTitle}>{discoveryTitle}</Text>
-      </View>
-      {discoveryMessage ? <Text style={styles.discoveryMessage}>{discoveryMessage}</Text> : null}
-      <View style={styles.discoveryLegendRow}>
-        <View style={[styles.discoveryLegendDot, styles.googleLegendDot]} />
-        <Text style={styles.discoveryLegendText}>Resultados de Google</Text>
-        <Text style={styles.discoveryLegendCount}>{mapDiscovery.googleResults.length}</Text>
-      </View>
-      {mapDiscovery.localProposals.length > 0 ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${mapDiscovery.localProposals.length} propuesta${mapDiscovery.localProposals.length === 1 ? "" : "s"} de Taco Hunt en revisión`}
-          onPress={() => handleProposalPress(mapDiscovery.localProposals[0])}
-          style={styles.discoveryLegendRow}
-        >
-          <View style={[styles.discoveryLegendDot, styles.proposalLegendDot]} />
-          <Text style={styles.discoveryLegendText}>Propuestas de Taco Hunt · en revisión</Text>
-          <Text style={styles.discoveryLegendCount}>{mapDiscovery.localProposals.length}</Text>
-        </Pressable>
-      ) : null}
-      <Pressable
-        accessibilityRole="link"
-        accessibilityLabel="Abrir fuente de Google Maps"
-        onPress={() => void openSourceLink(mapDiscovery.attribution.sourceUrl)}
-        style={styles.discoverySourceLink}
-      >
-        <Ionicons name="open-outline" size={14} color={colors.green} />
-        <Text style={styles.discoverySourceLinkText}>Ver fuente en Google Maps</Text>
-      </Pressable>
-      {!mapDiscoveryLoading &&
-      (mapDiscovery.state === "unavailable" ||
-        mapDiscovery.state === "offline" ||
-        mapDiscovery.state === "error") ? (
+  const visiblePlaceTotal =
+    mapPinTotal + mapDiscovery.googleResults.length + mapDiscovery.localProposals.length;
+  const discoveryError =
+    !mapDiscoveryLoading &&
+    (mapDiscovery.state === "unavailable" ||
+      mapDiscovery.state === "offline" ||
+      mapDiscovery.state === "error") ? (
+      <View style={styles.discoveryError} accessibilityLiveRegion="polite">
+        <Text style={styles.discoveryErrorText}>
+          {mapDiscovery.message ?? "No pudimos actualizar los lugares cercanos."}
+        </Text>
         <Button
           label="Reintentar"
           variant="ghost"
           icon="refresh"
           accessibilityLabel="Reintentar búsqueda de Google"
           onPress={() => void fetchMapDiscovery(currentRegionRef.current ?? mapRegion)}
-          style={styles.discoveryRetry}
         />
-      ) : null}
-      {selectedProposal ? (
-        <View style={styles.proposalDetail}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.proposalDetailTitle}>{selectedProposal.name}</Text>
-            <Text style={styles.proposalDetailText}>
-              {selectedProposal.neighborhood} · En revisión por Taco Hunt
-            </Text>
-          </View>
-          <IconButton
-            icon="close"
-            label="Cerrar propuesta seleccionada"
-            size={32}
-            onPress={() => setSelectedProposal(null)}
-          />
-        </View>
-      ) : null}
-    </Card>
-  );
+      </View>
+    ) : null;
 
   const filterPanel = panelOpen && (
     <>
@@ -893,49 +1090,24 @@ export default function ExploreScreen() {
           showsUserLocation={false}
         >
           {mapPins.map((pin) => (
-            <Marker
-              key={pin.id}
-              coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-              accessibilityLabel={`${pin.name}, ${pin.neighborhood}`}
-              onPress={() => void handleMarkerPress(pin.id)}
-            >
-              {/* MapPin has no reviewCount (see packages/contracts mapPinSchema), so the
-                  "sin reseñas" sparkle badge from the fixture-era marker isn't shown here;
-                  flagged as a gap in the PR. */}
-              <CustomMarkerContent hasReviews />
-            </Marker>
+            <TacoMapMarker key={pin.id} pin={pin} onPress={handleMarkerPress} />
           ))}
           {mapClusters.map((cluster, index) => (
-            <Marker
-              key={`cluster-${index}-${cluster.latitude.toFixed(4)}-${cluster.longitude.toFixed(4)}`}
-              coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
-              accessibilityLabel={`${cluster.count} puestos agrupados`}
-              onPress={() => handleClusterPress(cluster)}
-            >
-              <View style={styles.clusterBubble}>
-                <Text style={styles.clusterBubbleText}>{cluster.count}</Text>
-              </View>
-            </Marker>
+            <ClusterMapMarker
+              key={`cluster-${index}-${cluster.latitude.toFixed(4)}-${cluster.longitude.toFixed(4)}-${cluster.count}`}
+              cluster={cluster}
+              onPress={handleClusterPress}
+            />
           ))}
           {mapDiscovery.googleResults.map((result) => (
-            <Marker
-              key={result.id}
-              coordinate={{ latitude: result.latitude, longitude: result.longitude }}
-              accessibilityLabel={`${result.attributionLabel}: ${result.name}, ${result.neighborhood}`}
-              onPress={() => void openSourceLink(result.sourceUrl)}
-            >
-              {googleMarkerContent({ result })}
-            </Marker>
+            <GoogleMapMarker key={result.id} result={result} onPress={handleGoogleMarkerPress} />
           ))}
           {mapDiscovery.localProposals.map((proposal) => (
-            <Marker
+            <ProposalMapMarker
               key={proposal.id}
-              coordinate={{ latitude: proposal.latitude, longitude: proposal.longitude }}
-              accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}, ${proposal.neighborhood}, en revisión`}
-              onPress={() => handleProposalPress(proposal)}
-            >
-              {proposalMarkerContent({ proposal })}
-            </Marker>
+              proposal={proposal}
+              onPress={handleProposalPress}
+            />
           ))}
         </MapView>
         <View style={styles.mapOverlay} pointerEvents="box-none">
@@ -943,7 +1115,7 @@ export default function ExploreScreen() {
             {searchPill}
             {profileButton}
           </View>
-          {renderSummaryRow(mapPinTotal)}
+          {renderSummaryRow(visiblePlaceTotal)}
           {filterPanel}
         </View>
         <View style={styles.bottomControls} pointerEvents="box-none">
@@ -956,6 +1128,14 @@ export default function ExploreScreen() {
             <Text style={styles.listPillText}>Lista</Text>
           </Pressable>
           <View style={styles.bottomRightControls}>
+            <Button
+              label="Buscar taquerías aquí"
+              variant="secondary"
+              icon="search"
+              loading={mapDiscoveryLoading}
+              onPress={searchPlacesInCurrentArea}
+              style={styles.mapDiscoveryButton}
+            />
             <IconButton
               icon="navigate"
               label={locating ? "Buscando ubicación…" : "Usar mi ubicación"}
@@ -965,7 +1145,10 @@ export default function ExploreScreen() {
             />
             <Pressable
               accessibilityRole="button"
-              style={[styles.addButton, selectedSpotId && styles.addButtonCompact]}
+              style={[
+                styles.addButton,
+                (selectedSpotId || selectedGoogleResult) && styles.addButtonCompact,
+              ]}
               onPress={() => router.push("/propose")}
             >
               <Ionicons name="add" size={22} color={colors.paper} />
@@ -978,7 +1161,43 @@ export default function ExploreScreen() {
             <ActivityIndicator color={colors.red} />
           </View>
         )}
-        {discoveryCard}
+        {discoveryError}
+        {selectedProposal ? (
+          <View style={styles.proposalDetailOverlay}>
+            <MapPreviewCard
+              title={selectedProposal.name}
+              neighborhood={selectedProposal.neighborhood}
+              kicker="Propuesta de Taco Hunt"
+              detail="En revisión por Taco Hunt"
+              photoUrl={selectedProposal.photoUrl}
+              onClose={() => setSelectedProposal(null)}
+            />
+          </View>
+        ) : null}
+        {selectedGoogleResult ? (
+          <View style={styles.googlePreviewSheet}>
+            <MapPreviewCard
+              title={selectedGoogleResult.name}
+              neighborhood={selectedGoogleResult.neighborhood}
+              kicker="Lugar encontrado en Google Maps"
+              detail="Califica sus tacos y lo registraremos automáticamente en Taco Hunt."
+              photoUrl={selectedGoogleResult.photoUrl}
+              primaryLabel="Calificar tacos"
+              primaryIcon="star-outline"
+              onPrimary={() => {
+                router.push({
+                  pathname: "/review/new",
+                  params: {
+                    googlePlaceId: selectedGoogleResult.id,
+                    spotName: selectedGoogleResult.name,
+                  },
+                });
+                setSelectedGoogleResult(null);
+              }}
+              onClose={() => setSelectedGoogleResult(null)}
+            />
+          </View>
+        ) : null}
         {!mapPinsLoading && mapPinsError ? (
           <Pressable
             accessibilityRole="button"
@@ -989,15 +1208,6 @@ export default function ExploreScreen() {
             <Text style={styles.muted}>{mapPinsError} Toca para reintentar.</Text>
           </Pressable>
         ) : null}
-        {!mapPinsLoading && !mapPinsError && mapPinTotal === 0 && mapDiscovery.localProposals.length === 0 && (
-          <View accessibilityLabel="Sin puestos para mostrar en el mapa" style={styles.mapEmpty}>
-            <Ionicons name="location-outline" size={42} color={colors.red} />
-            <Text style={styles.mapEmptyTitle}>Todavía no hay puestos en el mapa</Text>
-            <Text style={styles.muted}>
-              Prueba otra zona o quita el filtro de taco para ver más lugares.
-            </Text>
-          </View>
-        )}
         {selectedSpotId && (
           <Animated.View
             style={[
@@ -1014,22 +1224,29 @@ export default function ExploreScreen() {
               },
             ]}
           >
-            <Card style={styles.previewCard}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.previewTitle}>{selectedSpot?.name}</Text>
-                  <Text style={styles.previewNeighborhood}>{selectedSpot?.neighborhood}</Text>
-                </View>
-                <Pressable
-                  onPress={() => closeSheet()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cerrar tarjeta"
-                  style={styles.closeButton}
-                >
-                  <Ionicons name="close" size={20} color={colors.ink} />
-                </Pressable>
-              </View>
-
+            <MapPreviewCard
+              title={selectedSpot?.name ?? "Cargando puesto…"}
+              neighborhood={selectedSpot?.neighborhood ?? ""}
+              kicker="Puesto en Taco Hunt"
+              photoUrl={selectedSpot?.photoUrl}
+              primaryLabel={selectedSpot?.tacos?.length ? "Calificar tacos" : undefined}
+              primaryIcon="star-outline"
+              onPrimary={() => {
+                const taco = selectedSpot?.tacos?.[0];
+                if (!taco || !selectedSpot || !selectedSpotId) return;
+                if (closeSheet()) {
+                  router.push({
+                    pathname: "/review/new",
+                    params: {
+                      spotTacoId: taco.id,
+                      spotName: selectedSpot.name,
+                      tacoName: taco.name,
+                    },
+                  } as Href);
+                }
+              }}
+              onClose={() => closeSheet()}
+            >
               {spotLoading ? (
                 <View style={{ marginTop: spacing.md, alignItems: "center" }}>
                   <ActivityIndicator color={colors.red} />
@@ -1043,9 +1260,8 @@ export default function ExploreScreen() {
                     // Fallback: if spot is not in current items list, derive best taco from selectedSpot.tacos
                     const bestTaco =
                       spotFromList?.bestTaco ||
-                      selectedSpot?.tacos?.reduce((best, current) => {
+                      selectedSpot.tacos?.reduce((best, current) => {
                         if (!best) return current;
-                        // Treat null/undefined score as lowest (never rank first)
                         const bestScore = best.score ?? -Infinity;
                         const currentScore = current.score ?? -Infinity;
                         return currentScore > bestScore ? current : best;
@@ -1072,25 +1288,22 @@ export default function ExploreScreen() {
                       </Text>
                     </View>
                   )}
-
-                  <Pressable
-                    onPress={() => {
-                      if (closeSheet()) {
-                        router.push({
-                          pathname: "/spot/[id]",
-                          params: { id: selectedSpotId },
-                        } as Href);
-                      }
-                    }}
-                    style={styles.previewViewButton}
-                  >
-                    <Text style={styles.previewViewText}>Ver puesto completo</Text>
-                  </Pressable>
                 </>
               ) : null}
-            </Card>
+            </MapPreviewCard>
           </Animated.View>
         )}
+        <AccountSidebar
+          visible={accountSidebarOpen}
+          signedIn={Boolean(session)}
+          email={session?.user.email ?? undefined}
+          isAdmin={isAdmin}
+          avatarPreset={headerAvatarPreset}
+          avatarPhotoUrl={headerAvatarPhotoUrl}
+          onClose={() => setAccountSidebarOpen(false)}
+          onNavigate={(path) => router.push(path as Href)}
+          onSignOut={() => void signOut()}
+        />
       </View>
     );
   }
@@ -1170,7 +1383,7 @@ export default function ExploreScreen() {
           >
             <Pressable accessibilityRole="link" style={styles.card}>
               <View style={styles.taco}>
-                <Text style={{ fontSize: 25 }}>🌮</Text>
+                <TacoHuntTaco width={24} height={18} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{item.name}</Text>
@@ -1185,6 +1398,17 @@ export default function ExploreScreen() {
             </Pressable>
           </Link>
         )}
+      />
+      <AccountSidebar
+        visible={accountSidebarOpen}
+        signedIn={Boolean(session)}
+        email={session?.user.email ?? undefined}
+        isAdmin={isAdmin}
+        avatarPreset={headerAvatarPreset}
+        avatarPhotoUrl={headerAvatarPhotoUrl}
+        onClose={() => setAccountSidebarOpen(false)}
+        onNavigate={(path) => router.push(path as Href)}
+        onSignOut={() => void signOut()}
       />
     </View>
   );
@@ -1354,6 +1578,11 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     gap: spacing.md,
   },
+  mapDiscoveryButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    ...elevation.float,
+  },
   addButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1371,23 +1600,23 @@ const styles = StyleSheet.create({
   },
   addButtonText: { color: colors.paper, fontWeight: "800", fontSize: 13 },
   googleMarker: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: colors.green,
-    borderWidth: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.red,
+    borderWidth: 3,
     borderColor: colors.paper,
     alignItems: "center",
     justifyContent: "center",
     ...elevation.float,
   },
   proposalMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.goldSoft,
-    borderWidth: 2,
-    borderColor: colors.pendingText,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.red,
+    borderWidth: 3,
+    borderColor: colors.paper,
     alignItems: "center",
     justifyContent: "center",
     ...elevation.float,
@@ -1398,6 +1627,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.red,
+    borderWidth: 3,
+    borderColor: colors.paper,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -1411,7 +1642,7 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: spacing.sm,
     borderRadius: 22,
-    backgroundColor: colors.red,
+    backgroundColor: colors.ink,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -1520,6 +1751,22 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...elevation.float,
   },
+  discoveryError: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.lg + sizes.locateButton + spacing.md + sizes.fab + spacing.md,
+    padding: spacing.sm,
+    borderRadius: radii.lg,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.dangerText,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    ...elevation.float,
+  },
+  discoveryErrorText: { flex: 1, color: colors.dangerText, fontSize: 12, lineHeight: 17 },
   discoveryHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1558,7 +1805,11 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   googleLegendDot: { backgroundColor: colors.green },
-  proposalLegendDot: { backgroundColor: colors.gold, borderWidth: 1, borderColor: colors.pendingText },
+  proposalLegendDot: {
+    backgroundColor: colors.gold,
+    borderWidth: 1,
+    borderColor: colors.pendingText,
+  },
   discoveryLegendText: {
     flex: 1,
     color: colors.ink,
@@ -1597,15 +1848,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.line,
   },
-  proposalDetailTitle: {
-    color: colors.ink,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  proposalDetailText: {
-    color: colors.pendingText,
-    fontSize: 11,
-    marginTop: 2,
+  proposalDetailOverlay: {
+    position: "absolute",
+    left: spacing.lg,
+    right: spacing.lg,
+    bottom: spacing.lg + sizes.locateButton + spacing.md + sizes.fab + spacing.md,
   },
   mapErrorCard: {
     position: "absolute",
@@ -1659,6 +1906,54 @@ const styles = StyleSheet.create({
   previewCard: {
     marginHorizontal: 0,
   },
+  mapPreviewCard: {
+    padding: 0,
+    overflow: "hidden",
+    ...elevation.sheet,
+  },
+  mapPreviewImage: {
+    width: "100%",
+    height: 116,
+    backgroundColor: colors.tacoTile,
+  },
+  mapPreviewImageFallback: {
+    height: 116,
+    backgroundColor: colors.tacoTile,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mapPreviewBody: {
+    padding: spacing.md,
+  },
+  mapPreviewKicker: {
+    ...typography.kicker,
+    color: colors.redStrong,
+    marginBottom: spacing.xs,
+  },
+  mapPreviewDetail: {
+    color: colors.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: spacing.md,
+  },
+  mapPreviewActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  mapPreviewAction: {
+    flex: 1,
+  },
+  googlePreviewSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  googlePreviewSource: { color: colors.muted, fontSize: 12, marginTop: spacing.md },
+  googlePreviewButton: { marginTop: spacing.md },
   cardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",

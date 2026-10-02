@@ -1,6 +1,6 @@
 # Street Taco Discovery App Build Specification
 
-Version 1.1 — 27 September 2026  
+Version 1.2 — 2 October 2026
 Owner: Alei Ruiz  
 Initial market: Monterrey metropolitan area, Mexico  
 Audience: implementation agent building an open source portfolio project
@@ -23,9 +23,9 @@ The delivery is complete when another developer can clone the repository, run th
 | Authentication         | Supabase Auth email/password for v1. Mobile talks to Supabase only for registration, sign-in, reset and token refresh; all product data goes through the API.                       |
 | Images                 | Supabase Storage for deployed media; API receives, validates, strips metadata, resizes, and stores one image per review. Local filesystem or a mock storage adapter in development. |
 | Hosting                | Containerized API on Google Cloud Run with request-based billing and minimum instances zero; Supabase free tier for DB/Auth/Storage while viable.                                   |
-| Mapping                | `react-native-maps` with Apple Maps on iOS and Google Maps SDK on Android. Do not invoke Google Places, geocoding, route, tile, or web map APIs.                                    |
+| Mapping                | `react-native-maps` with Apple Maps on iOS and Google Maps SDK on Android. The mobile app never invokes Google Places directly; the API handles explicit `tacos` viewport searches, transient details/photo proxying, review-target creation, and linked-place re-verification. |
 | Location               | Foreground only, on explicit user action; no stored location history or background permission.                                                                                      |
-| Data rights            | Original, permissioned, or properly licensed location data only. No imported reviews or photos from Google Maps or other apps.                                                      |
+| Data rights            | Original, permissioned, or properly licensed Taco Hunt location data and photos only. Google photos may be proxied transiently with attribution as a fallback, but are never persisted or presented as Taco Hunt-owned media. No imported reviews or ratings. |
 | Main architecture goal | Readable, tested product logic across mobile, API, persistence, moderation, and deployment. Avoid artificial microservices.                                                         |
 
 Do not replace the API with direct Supabase table access or Edge Functions. Keep server-only database and Storage credentials off the mobile app. The app may include Supabase's publishable client key exclusively for Auth.
@@ -36,11 +36,11 @@ Do not replace the API with direct Supabase table access or Edge Functions. Keep
 
 Launch into a list of approved stands in Monterrey. The app initially uses a preset city center; show a clear **Use my location** action. When permission is denied, list/map/search continue to work with manual area selection. Users can search by name and neighborhood, filter by taco type, toggle map/list, open a stand detail, save a favorite only after sign-in, and open directions in an installed map application.
 
-Each stand detail displays its name, neighborhood, map pin, optional photo, last verified date, taco types known to be sold, rating count, and taco-specific rating summaries. Unknown hours say **Horario no confirmado**; unknown prices say **Precio no confirmado**. Do not invent opening status, menu, or photos.
+Each stand detail displays its name, neighborhood, map pin, optional photo, last verified date, taco types known to be sold, rating count, and taco-specific rating summaries. The map card prefers the first approved Taco Hunt photo, then the first Google Places photo transiently for a linked place, then fallback artwork. Unknown hours say **Horario no confirmado**; unknown prices say **Precio no confirmado**. Do not invent opening status, menu, or photos.
 
 ### 3.2 Rate a taco
 
-The user chooses a stand and an existing taco type offered there. If there are no verified taco types, they may propose one; the proposal is pending moderation. Posting requires sign-in. Rate tortilla, filling, salsa, and value with an integer 1–5 each. Optional fields: price paid in MXN, up to 500 characters of text, and one photo. A user can edit or delete their own review. Only one active review per `(user, stand, taco type)` is allowed. An automatic retry must not create another review.
+The user chooses a stand and an existing taco type offered there. For a Google map result not yet in Taco Hunt, **Calificar tacos** asks for a taco type and automatically creates or recovers the Taco Hunt stand and taco target when the user starts the review; it is not a proposal and does not send the user to Google Maps. If an existing Taco Hunt stand has no verified taco types, the user may propose one; the proposal is pending moderation. Posting requires sign-in. Rate tortilla, filling, salsa, and value with an integer 1–5 each. Optional fields: price paid in MXN, up to 500 characters of text, and one photo. A user can edit or delete their own review. Only one active review per `(user, stand, taco type)` is allowed. An automatic retry must not create another review.
 
 ### 3.3 Favorites and passport
 
@@ -146,9 +146,13 @@ Base URL `/v1`. JSON uses camelCase at the API boundary; storage uses snake_case
 | Route                       | Query or response behavior                                                                                                                                                                                                                               |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /v1/spots`             | Query `north,south,east,west` optionally, `q`, `tacoType`, `cursor`, `limit` default 20 max 50. Return approved spots only. Limit bounding-box area to avoid full-table scraping; default Monterrey area. Return `{items:[SpotSummary],nextCursor:string | null}`. |
+| `GET /v1/spots/map`         | Return compact approved pins and server-side clusters for the viewport. The mobile map merges stable IDs as the camera moves and keeps pins already loaded. |
 | `GET /v1/spots/:id`         | Return approved stand, approved taco types, aggregate counts, limited visible reviews, source verification date. 404 for pending/rejected.                                                                                                               |
 | `GET /v1/spots/:id/reviews` | `tacoType`, `cursor`, `limit` max 30; return visible reviews only.                                                                                                                                                                                       |
 | `GET /v1/taco-types`        | Return active types and localized display names.                                                                                                                                                                                                         |
+| `GET /v1/places/viewport`   | Explicitly search the visible map rectangle for `tacos`, returning transient Google place data, attribution, first photo resource name when available, and Taco Hunt local records. |
+| `GET /v1/places/:placeId/details` | On-demand transient Google details and first photo resource name; no Google display payload is persisted. |
+| `GET /v1/places/photo?name=...` | Proxy a validated Google photo while keeping the API key server-side; do not store the image in Taco Hunt. |
 | `GET /s/:spotId`            | Safe HTML preview for an approved stand; 404 otherwise. This path is outside `/v1`.                                                                                                                                                                      |
 | `GET /healthz`              | 200 when the process can serve requests; do not expose secrets or user information.                                                                                                                                                                      |
 
@@ -159,6 +163,7 @@ Base URL `/v1`. JSON uses camelCase at the API boundary; storage uses snake_case
 | Route                     | Request and behavior                                                                                                                                                                                                                           |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /v1/spot-proposals` | `{name,neighborhood,latitude,longitude,note?}`. Check duplicates within 100 m, return 409 with candidate IDs when strong match; otherwise return 201 with pending ID.                                                                          |
+| `POST /v1/places/review-target` | Authenticated `{placeId,tacoTypeId}`. Create or recover an approved Taco Hunt spot linked by `google_place_id` and its approved taco target for the normal review form. Idempotent and used only when a user starts rating a Google result. |
 | `POST /v1/taco-proposals` | `{spotId,tacoTypeId,displayName?}`; return pending record for moderator.                                                                                                                                                                       |
 | `POST /v1/reviews`        | `{spotTacoId,tortilla,filling,salsa,value,pricePaidMxn?,body?,photoUploadId?}`. Return 201 on create or 409 with existing review ID; never silently replace an earlier review. Unique DB constraint handles races.                             |
 | `PATCH /v1/reviews/:id`   | Partial edits to author-owned scores/body/price/photo only. Reject `userId`, `status`, `role` and foreign identifiers.                                                                                                                         |
@@ -177,7 +182,7 @@ Errors use `{error:{code:string,message:string,requestId:string,details?:object}
 
 Use one private Storage bucket for user-submitted photos and a public or private bucket for owner-approved stand images; choose private throughout if simplifying permissions. The API accepts an image, checks decoded content rather than extension, rejects corrupt or oversized files, strips EXIF location and other metadata, resizes and compresses it, generates a random key, and links it only to the authenticated uploader's review. A temporary `media_uploads` record is owned by the user and can be claimed exactly once by a review in an API transaction. Provide a local CLI command to list and delete old unclaimed objects; do not rely on an unstated background worker. Public review responses can include short-lived signed read URLs for **visible** images; never return pending or hidden photo URLs. Signed URLs can remain valid until expiry after moderation, so keep TTL short (e.g. five minutes). A hidden review is removed from public API immediately; media object cleanup is documented.
 
-Use placeholder artwork or owner-created photos for seeded stands. Do not fetch business photos or ratings from Google Places. Image egress, more than database rows, is the likely first free-tier constraint.
+Use placeholder artwork or owner-created photos for seeded stands. The card uses the first approved Taco Hunt `spot_photos` image; only when that gallery is empty may it proxy the first Google Places photo transiently for a linked place, with attribution. Do not persist the Google resource name, URL, bytes, ratings, or reviews. Image egress, more than database rows, is the likely first free-tier constraint.
 
 ## 10. Seed ingestion and provenance
 

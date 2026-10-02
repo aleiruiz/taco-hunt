@@ -1,0 +1,12 @@
+diff --git a/android/cmake/main.cmake b/android/cmake/main.cmake
+index 0000000..0000000 100644
+--- a/android/cmake/main.cmake
++++ b/android/cmake/main.cmake
+@@ -63,6 +63,7 @@
+   ${LOG_LIB}
+   android
+   ${JSEXECUTOR_LIB}
+   ${NEW_ARCHITECTURE_DEPENDENCIES}
+   expo-modules-jsi
++  c++_shared
+ )

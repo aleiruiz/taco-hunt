@@ -7,6 +7,7 @@
  */
 
 import { supabase } from "@/auth/client";
+import { Platform } from "react-native";
 
 export type MapDiscoveryState = "loading" | "ready" | "empty" | "unavailable" | "offline" | "error";
 
@@ -24,6 +25,7 @@ export interface GoogleDiscoveryResult {
   latitude: number;
   longitude: number;
   sourceUrl: string;
+  photoUrl: string | null;
   attributionLabel: "Resultados de Google";
 }
 
@@ -35,6 +37,7 @@ export interface TacoHuntProposalPin {
   longitude: number;
   status: "pending";
   ownershipLabel: "Propuesta de Taco Hunt";
+  photoUrl: string | null;
 }
 
 export interface MapDiscoverySnapshot {
@@ -53,7 +56,9 @@ export const MAP_DISCOVERY_ATTRIBUTION: MapDiscoverySnapshot["attribution"] = {
   sourceUrl: "https://www.google.com/maps",
 };
 
-const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+const API =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3001/v1" : "http://localhost:3001/v1");
 
 type PlacesViewportResponse = {
   state: "ready" | "empty" | "unavailable";
@@ -65,6 +70,7 @@ type PlacesViewportResponse = {
     latitude: number;
     longitude: number;
     googleMapsUrl: string;
+    photoName?: string;
     attribution: { label: string; sourceUrl: string };
   }>;
   localProposals: Array<{
@@ -75,6 +81,7 @@ type PlacesViewportResponse = {
     latitude: number;
     longitude: number;
     status: "pending" | "approved";
+    photoUrl: string | null;
   }>;
   attribution: { label: string; sourceUrl: string };
   message?: string;
@@ -131,6 +138,9 @@ export async function getFixtureMapDiscovery(
       latitude: result.latitude,
       longitude: result.longitude,
       sourceUrl: result.googleMapsUrl,
+      photoUrl: result.photoName
+        ? `${API}/places/photo?name=${encodeURIComponent(result.photoName)}`
+        : null,
       attributionLabel: "Resultados de Google",
     })),
     localProposals: data.localProposals
@@ -143,6 +153,7 @@ export async function getFixtureMapDiscovery(
         longitude: proposal.longitude,
         status: "pending",
         ownershipLabel: "Propuesta de Taco Hunt",
+        photoUrl: proposal.photoUrl,
       })),
     attribution: {
       label: "Google Maps",

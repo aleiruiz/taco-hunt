@@ -749,6 +749,54 @@ paths:
         "400": { $ref: "#/components/responses/ApiError" }
         "429": { $ref: "#/components/responses/ApiError" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/places/photo:
+    get:
+      operationId: getGooglePlacePhoto
+      summary: Sirve la foto principal transitoria de un lugar de Google
+      description: >-
+        El API usa el recurso de foto de Google y mantiene la clave fuera del
+        cliente. El recurso no se guarda en Taco Hunt.
+      parameters:
+        - {
+            in: query,
+            name: name,
+            required: true,
+            schema: { type: string, minLength: 1, maxLength: 500 },
+          }
+      responses:
+        "200": { description: Imagen de Google, content: { image/*: {} } }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "429": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/places/review-target:
+    post:
+      operationId: createGoogleReviewTarget
+      summary: Registra un lugar de Google al iniciar una reseña
+      description: >-
+        Crea o recupera el puesto vinculado al place_id y el tipo de taco
+        seleccionado para que la reseña pueda continuar en Taco Hunt.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [placeId, tacoTypeId]
+              properties:
+                placeId: { $ref: "#/components/schemas/GooglePlaceId" }
+                tacoTypeId: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Destino de reseña listo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoogleReviewTarget" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "404": { $ref: "#/components/responses/ApiError" }
+        "429": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
   /v1/places/{placeId}/details:
     get:
       operationId: getGooglePlaceDetails
@@ -756,8 +804,9 @@ paths:
       description: >-
         Los detalles se hidratan sólo para esta respuesta. No se almacenan como
         datos de directorio de Taco Hunt; la atribución de Google y el enlace
-        a Google Maps deben permanecer visibles. Las fotos mostradas en la
-        aplicación provienen únicamente de la galería moderada de Taco Hunt.
+        a Google Maps deben permanecer visibles. Las fotos de Google se sirven
+        sólo de forma transitoria mediante el endpoint de foto; las fotos
+        persistentes de Taco Hunt provienen de su galería moderada.
       parameters:
         - {
             in: path,
@@ -1420,6 +1469,14 @@ components:
       minLength: 1
       maxLength: 300
       description: Durable Google place_id link; no Google display payload is persisted.
+    GoogleReviewTarget:
+      type: object
+      required: [spotTacoId, spotId, spotName, tacoName]
+      properties:
+        spotTacoId: { type: string, format: uuid }
+        spotId: { type: string, format: uuid }
+        spotName: { type: string }
+        tacoName: { type: string }
     GoogleAttribution:
       type: object
       required: [label, sourceUrl]
@@ -1445,11 +1502,17 @@ components:
         neighborhood: { type: [string, "null"] }
         latitude: { type: number, minimum: -90, maximum: 90 }
         longitude: { type: number, minimum: -180, maximum: 180 }
+        photoName:
+          {
+            type: string,
+            minLength: 1,
+            description: Transient Google photo resource name; never persist it,
+          }
         googleMapsUrl: { type: string, format: uri }
         attribution: { $ref: "#/components/schemas/GoogleAttribution" }
     LocalProposalPin:
       type: object
-      required: [source, id, name, neighborhood, latitude, longitude, status]
+      required: [source, id, name, neighborhood, latitude, longitude, status, photoUrl]
       properties:
         source: { const: taco-hunt }
         id: { type: string, format: uuid }
@@ -1458,6 +1521,7 @@ components:
         latitude: { type: number, minimum: -90, maximum: 90 }
         longitude: { type: number, minimum: -180, maximum: 180 }
         status: { type: string, enum: [pending, approved] }
+        photoUrl: { type: [string, "null"], format: uri }
     PlacesViewportResponse:
       type: object
       required: [state, googleResults, localProposals, attribution]
@@ -1480,6 +1544,12 @@ components:
         placeId: { $ref: "#/components/schemas/GooglePlaceId" }
         name: { type: string }
         formattedAddress: { type: [string, "null"] }
+        photoName:
+          {
+            type: string,
+            minLength: 1,
+            description: Transient Google photo resource name; never persist it,
+          }
         googleMapsUrl: { type: string, format: uri }
         attribution: { $ref: "#/components/schemas/GoogleAttribution" }
     GooglePlaceDetailsResponse:
@@ -1678,10 +1748,11 @@ components:
       enum: [pastor, masa, cilantro, tortilla, salsa, comal, aguacate, horchata]
     Profile:
       type: object
-      required: [id, displayName, avatarPreset, avatarPhotoUrl, avatarPhotoStatus]
+      required: [id, displayName, role, avatarPreset, avatarPhotoUrl, avatarPhotoStatus]
       properties:
         id: { type: string, format: uuid }
         displayName: { type: [string, "null"], maxLength: 60 }
+        role: { type: string, enum: [user, admin] }
         avatarPreset: { $ref: "#/components/schemas/AvatarPreset" }
         avatarPhotoUrl: { type: [string, "null"], format: uri }
         avatarPhotoStatus: { type: [string, "null"], enum: [pending, approved, rejected] }

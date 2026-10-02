@@ -22,6 +22,7 @@ export type AvatarPreset =
 export type Profile = {
   id: string;
   displayName: string | null;
+  role: "user" | "admin";
   avatarPreset: AvatarPreset;
   avatarPhotoUrl: string | null;
   avatarPhotoStatus: "pending" | "approved" | "rejected" | null;

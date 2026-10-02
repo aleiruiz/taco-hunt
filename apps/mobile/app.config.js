@@ -7,13 +7,16 @@ module.exports = () => ({
   },
   ios: {
     ...(appJson.expo.ios ?? {}),
+    bundleIdentifier: "com.aleiruiz.tacohunt",
     infoPlist: {
       ...(appJson.expo.ios?.infoPlist ?? {}),
       LSApplicationQueriesSchemes: ["comgooglemaps", "maps"],
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   plugins: [
     ...appJson.expo.plugins,
+    "./plugins/withAndroidCxxShared",
     [
       "react-native-maps",
       {
