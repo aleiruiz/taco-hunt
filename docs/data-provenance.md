@@ -1,6 +1,6 @@
 # Data provenance and candidate imports
 
-Taco Hunt treats every location as a moderated record, not as automatically publishable imported data. The maintenance-only offline importer stages CSV rows in the private `app_private.import_candidates` table. It accepts only original, permissioned, licensed, user, owner, or fictional source rows; live Google discovery never writes Google payloads to this table. The importer never inserts into `app_private.spots`, never publishes a candidate, and never imports reviews, ratings, or photos.
+Taco Hunt treats every location as a moderated record, not as automatically publishable imported data. The maintenance-only offline importer stages CSV rows in the private `app_private.import_candidates` table. It accepts only original, permissioned, licensed, user, owner, or fictional source rows; live Google reads never write Google payloads to this table. A user-selected Google place follows the separate moderated proposal flow and retains only a durable `place_id` link plus Taco Hunt-owned fields. The importer never inserts into `app_private.spots`, never publishes a candidate, and never imports reviews, ratings, or photos.
 
 ## Accepted input
 

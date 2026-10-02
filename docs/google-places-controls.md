@@ -1,10 +1,13 @@
 # Google Places cost and safety controls (T24)
 
 The API is the only component allowed to call Google Places (see `docs/build-spec.md`'s
-Mapping row): admin candidate discovery (T17), mobile autocomplete (T21), and periodic
-re-verification of Google-sourced spots (T23). This page covers the controls that keep
-that usage bounded and reversible in an emergency. Nothing here is enforced by mobile
-code — the app never calls Google Places directly.
+Mapping row): live viewport discovery, mobile autocomplete, on-demand place details, and
+the explicitly scheduled re-verification job for Google-linked spots. The former admin
+candidate-discovery and Google-payload staging path is retired; live reads are transient,
+while a user-selected place can become a moderated Taco Hunt proposal with a durable
+`place_id` link. This page covers the controls that keep Google usage bounded and
+reversible in an emergency. Nothing here is enforced by mobile code — the app never calls
+Google Places directly.
 
 ## 1. Restricted API key
 
@@ -39,8 +42,9 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
   (`apps/api/src/places/places.service.ts`). This stops a single client from hammering
   the endpoint; it does not bound total daily spend.
 - **Global daily call budget** (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, added by this task):
-  every outbound Google Places request from the API — discovery, autocomplete, and
-  place-details resolution — consumes one unit of a single shared 24-hour counter via
+  every outbound Google Places request from `PlacesService` — viewport discovery,
+  autocomplete, and place-details resolution — consumes one unit of a single shared
+  24-hour counter via
   `RequestLimitService`. Once the limit is reached, further calls fail closed
   (autocomplete degrades to local-only results; discovery and resolve return `503`)
   until the window resets. Default is 2,000 calls/day if the env var is unset or
@@ -50,8 +54,8 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
   effective ceiling is `GOOGLE_PLACES_DAILY_CALL_LIMIT × instance count`. Keep
   `max-instances` low (see `docs/build-spec.md` section 12) or move to a shared store
   (e.g. a Postgres counter) if that stops being acceptable.
-- **Batch job** (`apps/api/scripts/refresh-place-candidates.ts`, T23): bounded per run
-  by `PLACES_REFRESH_LIMIT` (max 200, default 25) plus a per-call delay
+- **Batch job** (`apps/api/scripts/refresh-place-candidates.ts`): independently bounded
+  per run by `PLACES_REFRESH_LIMIT` (max 200, default 25) plus a per-call delay
   (`PLACES_REFRESH_DELAY_MS`). Run it on a schedule you control (cron/manual), not
   continuously, so its calls stay a known, small addition to the daily budget above.
 
@@ -93,7 +97,7 @@ the process if your platform doesn't hot-reload env vars) to immediately stop ev
 outbound Google Places call:
 
 - `PlacesService.assertGoogleCallAllowed()` throws before any `fetch` to Google —
-  discovery and resolve return `503`, autocomplete silently degrades to local-only
+  viewport discovery and resolve return `503`, autocomplete silently degrades to local-only
   results (same behavior as when `GOOGLE_PLACES_API_KEY` is unset).
 - `apps/api/scripts/refresh-place-candidates.ts` refuses to run at all when the switch
   is set.
