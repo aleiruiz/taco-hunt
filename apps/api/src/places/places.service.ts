@@ -27,6 +27,9 @@ const GOOGLE_MAPS_ATTRIBUTION = {
 const GOOGLE_CALLS_SCOPE = "places-google-calls-global";
 const GOOGLE_CALLS_WINDOW_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DAILY_CALL_LIMIT = 2_000;
+const PUBLIC_GOOGLE_READ_SCOPE = "places-google-reads-client";
+const PUBLIC_GOOGLE_READ_LIMIT = 30;
+const PUBLIC_GOOGLE_READ_WINDOW_MS = 60_000;
 
 const monterreyBounds = z.object({
   latitude: z.number().min(25.3).max(26.1),
@@ -72,7 +75,7 @@ export class PlacesService {
    * Hydrates only the visible viewport. Google display data is returned to the
    * caller and never inserted into Taco Hunt tables.
    */
-  async discoverViewport(rawInput: unknown, viewerId: string | undefined) {
+  async discoverViewport(rawInput: unknown, viewerId: string | undefined, clientIp: string) {
     const parsed = placesViewportQuerySchema.safeParse(rawInput);
     if (!parsed.success) {
       throw new BadRequestException({
@@ -82,6 +85,7 @@ export class PlacesService {
     }
 
     const input = parsed.data;
+    this.consumePublicGoogleReadLimit(viewerId, clientIp);
     const localProposals = await this.findLocalProposals(input, viewerId);
     if (this.googlePlacesUnavailable()) {
       return {
@@ -143,10 +147,11 @@ export class PlacesService {
    * Fetches attribution-safe place details on demand. Taco Hunt photos are
    * served only through the moderated gallery, never from Google payloads.
    */
-  async getPlaceDetails(placeId: string) {
+  async getPlaceDetails(placeId: string, viewerId: string | undefined, clientIp: string) {
     const parsedPlaceId = googlePlaceIdSchema.safeParse(placeId);
     if (!parsedPlaceId.success) throw new BadRequestException("placeId inválido");
 
+    this.consumePublicGoogleReadLimit(viewerId, clientIp);
     if (this.googlePlacesUnavailable()) {
       return {
         state: "unavailable" as const,
@@ -508,6 +513,16 @@ export class PlacesService {
 
   private googlePlacesUnavailable(): boolean {
     return this.googlePlacesKillSwitchEnabled() || !process.env.GOOGLE_PLACES_API_KEY?.trim();
+  }
+
+  private consumePublicGoogleReadLimit(viewerId: string | undefined, clientIp: string): void {
+    const key = viewerId ? `user:${viewerId}` : `ip:${clientIp || "unknown"}`;
+    this.limits.consume(
+      PUBLIC_GOOGLE_READ_SCOPE,
+      key,
+      PUBLIC_GOOGLE_READ_LIMIT,
+      PUBLIC_GOOGLE_READ_WINDOW_MS,
+    );
   }
 
   private async searchLocalSpots(query: string) {

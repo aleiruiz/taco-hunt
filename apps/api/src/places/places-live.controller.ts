@@ -17,13 +17,13 @@ export class PlacesLiveController {
         details: { issues: parsed.error.issues },
       });
     }
-    return this.places.discoverViewport(parsed.data, request.user?.id);
+    return this.places.discoverViewport(parsed.data, request.user?.id, request.ip);
   }
 
   @Get("/:placeId/details")
   details(@Param("placeId") rawPlaceId: string, @Req() request: ApiRequest) {
     const placeId = googlePlaceIdSchema.safeParse(rawPlaceId);
     if (!placeId.success) throw new BadRequestException("placeId inválido");
-    return this.places.getPlaceDetails(placeId.data);
+    return this.places.getPlaceDetails(placeId.data, request.user?.id, request.ip);
   }
 }
