@@ -124,7 +124,11 @@ export class PlacesService {
           message: error.message,
         };
       }
-      if (error instanceof BadGatewayException || error instanceof ServiceUnavailableException) {
+      if (
+        error instanceof BadGatewayException ||
+        error instanceof BadRequestException ||
+        error instanceof ServiceUnavailableException
+      ) {
         throw error;
       }
       this.logger.error(
