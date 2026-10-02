@@ -1,6 +1,6 @@
 # Data provenance and candidate imports
 
-Taco Hunt treats every location as a moderated record, not as automatically publishable imported data. The offline importer stages CSV rows in the private `app_private.import_candidates` table. It never inserts into `app_private.spots`, never publishes a candidate, and never imports reviews, ratings, or photos.
+Taco Hunt treats every location as a moderated record, not as automatically publishable imported data. The maintenance-only offline importer stages CSV rows in the private `app_private.import_candidates` table. It accepts only original, permissioned, licensed, user, owner, or fictional source rows; live Google discovery never writes Google payloads to this table. The importer never inserts into `app_private.spots`, never publishes a candidate, and never imports reviews, ratings, or photos.
 
 ## Accepted input
 
@@ -12,7 +12,7 @@ name,latitude,longitude,neighborhood,source_type,source_ref,license,last_verifie
 
 `name` and `neighborhood` retain the original human-readable values. `source_type`, `source_ref`, and `license` are required for attribution and rights review. Coordinates are limited to the documented Monterrey contribution bounds. Names are normalized only for matching; the original row remains in `original_payload`.
 
-Allowed source material is original, permissioned, or properly licensed location data. Do not copy Google Maps or competitor reviews, ratings, or photos. If OpenStreetMap data is used, keep its attribution and ODbL obligations attached to the candidate and review the resulting database obligations before approval. User submissions remain private until moderation.
+Allowed source material is original, permissioned, or properly licensed location data. Do not copy Google Maps or competitor reviews, ratings, or photos. The importer rejects `google_places` as a source type. If OpenStreetMap data is used, keep its attribution and ODbL obligations attached to the candidate and review the resulting database obligations before approval. User submissions remain private until moderation.
 
 ## Run a staging import
 
@@ -25,7 +25,7 @@ node supabase/scripts/import-candidates.mjs --csv .\path\to\candidates.csv --dry
 With the local Supabase stack running, stage the validated rows:
 
 ```powershell
-node supabase/scripts/import-candidates.mjs --csv .\path\to\candidates.csv --report .\candidate-report.txt
+node supabase/scripts/import-candidates.mjs --csv .\path\to\candidates.csv --report .\candidate-report.txt --maintenance-only
 ```
 
 The script uses a deterministic candidate ID, so rerunning the same batch updates the same private candidates rather than creating duplicates. Use `--batch-id <uuid>` when a source owner needs a stable batch identifier. The script computes approved-spot matches within 100 meters and stores only the candidate IDs in `matched_spot_ids`; it does not choose a match or merge records.

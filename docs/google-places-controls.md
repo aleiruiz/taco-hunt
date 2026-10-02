@@ -57,11 +57,9 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
 
 ## 3. Deduplication
 
-- Discovery candidates are deduplicated at the database level: a unique index on
-  `import_candidates ((original_payload->>'place_id')) where source = 'google_places'`
-  (`supabase/migrations/20260928000100_t17_places_candidates.sql`) makes a repeat
-  discovery of the same place a no-op insert, so re-running discovery over the same
-  area never re-creates candidates or re-spends review effort.
+- The retired Google discovery-to-`import_candidates` path is no longer available. The
+  historical unique index on Google place IDs remains for existing rows, but no live
+  route or maintenance importer creates new Google payload candidates.
 - The refresh job dedupes its own findings by tagging reports with `[places-refresh]`
   and checking for an existing untagged report before filing a new one, so repeated
   scheduled runs don't spam the moderation queue for the same spot.
@@ -106,7 +104,7 @@ the call sites above. Unset the variable (or remove it) to resume normal operati
 
 ## Environment variables added by this task
 
-| Variable                          | Default | Effect                                                                 |
-| ---------------------------------- | ------- | ----------------------------------------------------------------------- |
-| `GOOGLE_PLACES_KILL_SWITCH`        | unset   | `"true"` disables all outbound Google Places calls immediately.        |
-| `GOOGLE_PLACES_DAILY_CALL_LIMIT`   | `2000`  | Shared 24h budget across discovery, autocomplete and resolve, per API instance. |
+| Variable                         | Default | Effect                                                                          |
+| -------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `GOOGLE_PLACES_KILL_SWITCH`      | unset   | `"true"` disables all outbound Google Places calls immediately.                 |
+| `GOOGLE_PLACES_DAILY_CALL_LIMIT` | `2000`  | Shared 24h budget across discovery, autocomplete and resolve, per API instance. |

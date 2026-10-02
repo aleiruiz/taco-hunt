@@ -31,7 +31,7 @@ const tabs = [
   ["reports", "Reportes"],
   ["photos", "Fotos"],
   ["standPhotos", "Fotos de puestos"],
-  ["importCandidates", "Candidatos"],
+  ["importCandidates", "Importaciones"],
   ["duplicates", "Duplicados"],
   ["audit", "Bitácora"],
 ] as const;
@@ -234,8 +234,8 @@ export default function AdminScreen() {
       {tab === "importCandidates" ? (
         <>
           <Text style={styles.body}>
-            Puestos investigados por el equipo (web_research), en espera de revisión antes de
-            publicarse en el mapa.
+            Importaciones offline con procedencia documentada, en espera de revisión antes de
+            publicarse en el mapa. Los datos de Google se descubren en vivo y no se importan aquí.
           </Text>
           {candidatesLoading ? (
             <ActivityIndicator color={colors.red} style={styles.loader} />
