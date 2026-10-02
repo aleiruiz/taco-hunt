@@ -3,7 +3,8 @@
 The API is the only component allowed to call Google Places (see `docs/build-spec.md`'s
 Mapping row): live viewport discovery, mobile autocomplete, on-demand place details, and
 the explicitly scheduled re-verification job for Google-linked spots. The former admin
-candidate-discovery and Google-payload staging path is retired; live reads are transient,
+text-search candidate-discovery and Google-payload staging path is retired; live viewport
+reads are transient,
 while a user-selected place can become a moderated Taco Hunt proposal with a durable
 `place_id` link. This page covers the controls that keep Google usage bounded and
 reversible in an emergency. Nothing here is enforced by mobile code — the app never calls
@@ -54,10 +55,11 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
   effective ceiling is `GOOGLE_PLACES_DAILY_CALL_LIMIT × instance count`. Keep
   `max-instances` low (see `docs/build-spec.md` section 12) or move to a shared store
   (e.g. a Postgres counter) if that stops being acceptable.
-- **Batch job** (`apps/api/scripts/refresh-place-candidates.ts`): independently bounded
+- **Batch job** (`apps/api/scripts/refresh-place-candidates.ts`): uses direct `fetch`
+  calls, does not consume the `PlacesService` daily counter, and is independently bounded
   per run by `PLACES_REFRESH_LIMIT` (max 200, default 25) plus a per-call delay
   (`PLACES_REFRESH_DELAY_MS`). Run it on a schedule you control (cron/manual), not
-  continuously, so its calls stay a known, small addition to the daily budget above.
+  continuously, so its calls stay a known, small addition to Google usage.
 
 ## 3. Deduplication
 
