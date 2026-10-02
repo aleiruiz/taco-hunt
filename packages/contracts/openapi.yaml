@@ -752,11 +752,12 @@ paths:
   /v1/places/{placeId}/details:
     get:
       operationId: getGooglePlaceDetails
-      summary: Obtiene detalles y fotos de Google bajo demanda
+      summary: Obtiene detalles de Google bajo demanda
       description: >-
-        Los detalles y fotos se hidratan sólo para esta respuesta. No se
-        almacenan como datos de directorio de Taco Hunt; la atribución de
-        Google y el enlace a Google Maps deben permanecer visibles.
+        Los detalles se hidratan sólo para esta respuesta. No se almacenan como
+        datos de directorio de Taco Hunt; la atribución de Google y el enlace
+        a Google Maps deben permanecer visibles. Las fotos mostradas en la
+        aplicación provienen únicamente de la galería moderada de Taco Hunt.
       parameters:
         - {
             in: path,
@@ -766,7 +767,7 @@ paths:
           }
       responses:
         "200":
-          description: Estado actual de los detalles y fotos de Google
+          description: Estado actual de los detalles de Google
           content:
             application/json:
               schema: { $ref: "#/components/schemas/GooglePlaceDetailsResponse" }
@@ -1470,20 +1471,9 @@ components:
           items: { $ref: "#/components/schemas/LocalProposalPin" }
         attribution: { $ref: "#/components/schemas/GoogleAttribution" }
         message: { type: string }
-    GooglePlacePhoto:
-      type: object
-      required: [source, id, url, authorAttribution, sourceUrl]
-      description: Transient Google photo reference; Taco Hunt must not store the photo bytes.
-      properties:
-        source: { const: google }
-        id: { type: string, minLength: 1, maxLength: 300 }
-        url: { type: string, format: uri }
-        authorAttribution: { type: string, minLength: 1, maxLength: 500 }
-        sourceUrl: { type: string, format: uri }
     GooglePlaceDetails:
       type: object
-      required:
-        [source, placeId, name, formattedAddress, googleMapsUrl, attribution, photosState, photos]
+      required: [source, placeId, name, formattedAddress, googleMapsUrl, attribution]
       description: Transient Google details hydrated on demand; not a persistent directory record.
       properties:
         source: { const: google }
@@ -1492,10 +1482,6 @@ components:
         formattedAddress: { type: [string, "null"] }
         googleMapsUrl: { type: string, format: uri }
         attribution: { $ref: "#/components/schemas/GoogleAttribution" }
-        photosState: { type: string, enum: [available, unavailable] }
-        photos:
-          type: array
-          items: { $ref: "#/components/schemas/GooglePlacePhoto" }
     GooglePlaceDetailsResponse:
       type: object
       required: [state]

@@ -1,22 +1,16 @@
 /**
- * T63 fixture adapters for the stand page.
+ * T63 data adapters for the stand page.
  *
- * Google-owned details and photos are transient display data. They stay in a
- * separate type from Taco Hunt-owned photos so the Phase B adapter can replace
- * each source without changing the screen or accidentally persisting Google
- * media in the community gallery.
+ * Google-owned details/photos remain transient and separate from the
+ * Taco Hunt-owned moderated gallery. The API performs all Google calls.
  */
 
-export type GooglePlaceDetailsResultState = "ready" | "unavailable" | "error";
-export type GooglePlacePhotosState = "available" | "unavailable";
+import { supabase } from "@/auth/client";
+import { listSpotPhotos, uploadSpotPhoto, type SpotPhotoKind } from "@/features/spotPhotos/api";
 
-export interface GooglePlacePhoto {
-  source: "google";
-  id: string;
-  url: string;
-  authorAttribution: string;
-  sourceUrl: string;
-}
+const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+
+export type GooglePlaceDetailsResultState = "ready" | "unavailable" | "error";
 
 export interface GooglePlaceDetails {
   source: "google";
@@ -25,8 +19,6 @@ export interface GooglePlaceDetails {
   address: string;
   googleMapsUrl: string;
   attributionLabel: "Google Maps";
-  photosState: GooglePlacePhotosState;
-  photos: GooglePlacePhoto[];
 }
 
 export interface GooglePlaceDetailsResult {
@@ -35,81 +27,84 @@ export interface GooglePlaceDetailsResult {
   message?: string;
 }
 
-const GOOGLE_PHOTO_FIXTURES: GooglePlacePhoto[] = [
-  {
-    source: "google",
-    id: "google-photo-fixture-1",
-    url: "https://placehold.co/720x480/302723/FFFAF1?text=Google+Place+Photo",
-    authorAttribution: "Atribución de foto de Google (fixture)",
-    sourceUrl: "https://www.google.com/maps",
-  },
-  {
-    source: "google",
-    id: "google-photo-fixture-2",
-    url: "https://placehold.co/720x480/C23A1E/FFFAF1?text=Google+Place+Photo",
-    authorAttribution: "Atribución de foto de Google (fixture)",
-    sourceUrl: "https://www.google.com/maps",
-  },
-];
+type PlaceDetailsResponse = {
+  state: GooglePlaceDetailsResultState;
+  details?: {
+    source: "google";
+    placeId: string;
+    name: string;
+    formattedAddress: string | null;
+    googleMapsUrl: string;
+    attribution: { label: string; sourceUrl: string };
+  };
+  message?: string;
+};
 
-function configuredGoogleDetailsState(): GooglePlaceDetailsResultState {
-  const value = process.env.EXPO_PUBLIC_T63_GOOGLE_DETAILS_STATE?.trim().toLowerCase();
-  if (value === "unavailable" || value === "error") return value;
-  return "ready";
+function messageFromResponse(value: unknown): string {
+  if (typeof value === "object" && value !== null && "error" in value) {
+    const error = (value as { error?: unknown }).error;
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+  }
+  return "No pudimos actualizar los datos de Google.";
 }
 
-function configuredGooglePhotosState(): GooglePlacePhotosState {
-  const value = process.env.EXPO_PUBLIC_T63_GOOGLE_PHOTOS_STATE?.trim().toLowerCase();
-  return value === "unavailable" ? "unavailable" : "available";
-}
+/** Fetches the durable place link, then hydrates Google details on demand. */
+export async function getFixtureGooglePlaceDetails(
+  spotId: string,
+): Promise<GooglePlaceDetailsResult> {
+  const spotResponse = await fetch(`${API}/spots/${encodeURIComponent(spotId)}`);
+  if (!spotResponse.ok) {
+    let payload: unknown;
+    try {
+      payload = await spotResponse.json();
+    } catch {
+      payload = undefined;
+    }
+    throw new Error(messageFromResponse(payload));
+  }
+  const spot = (await spotResponse.json()) as { googlePlaceId?: unknown };
+  if (typeof spot.googlePlaceId !== "string" || !spot.googlePlaceId.trim()) {
+    return {
+      state: "unavailable",
+      message: "Este puesto todavía no tiene datos de Google vinculados.",
+    };
+  }
 
-/**
- * Simulates the future authenticated API call for on-demand Google details.
- * The API, not the mobile app, will call Google Places in Phase B.
- *
- * Manual QA can set EXPO_PUBLIC_T63_GOOGLE_DETAILS_STATE to `unavailable` or
- * `error`, and EXPO_PUBLIC_T63_GOOGLE_PHOTOS_STATE to `unavailable`.
- */
-export function getFixtureGooglePlaceDetails(spotId: string): Promise<GooglePlaceDetailsResult> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const state = configuredGoogleDetailsState();
-      if (state === "unavailable") {
-        resolve({
-          state,
-          message: "Los datos de Google no están disponibles por ahora.",
-        });
-        return;
-      }
-      if (state === "error") {
-        resolve({
-          state,
-          message: "No pudimos actualizar los datos de Google.",
-        });
-        return;
-      }
-
-      const photosState = configuredGooglePhotosState();
-      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spotId)}`;
-      resolve({
-        state,
-        details: {
-          source: "google",
-          placeId: `google-place-${spotId}`,
-          name: "Puesto de Prueba Google",
-          address: "Dirección disponible al consultar Google Maps",
-          googleMapsUrl,
-          attributionLabel: "Google Maps",
-          photosState,
-          photos: photosState === "available" ? GOOGLE_PHOTO_FIXTURES : [],
-        },
-      });
-    }, 300);
-  });
+  const response = await fetch(`${API}/places/${encodeURIComponent(spot.googlePlaceId)}/details`);
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = undefined;
+    }
+    throw new Error(messageFromResponse(payload));
+  }
+  const data = (await response.json()) as PlaceDetailsResponse;
+  if (!data.details) return { state: data.state, message: data.message };
+  return {
+    state: data.state,
+    message: data.message,
+    details: {
+      source: "google",
+      placeId: data.details.placeId,
+      name: data.details.name,
+      address: data.details.formattedAddress ?? "Dirección no confirmada",
+      googleMapsUrl: data.details.googleMapsUrl,
+      attributionLabel: "Google Maps",
+    },
+  };
 }
 
 export type TacoHuntPhotoModerationStatus = "pending" | "approved" | "rejected";
-export type TacoHuntPhotoKind = "tacos" | "puesto" | "menu";
+export type TacoHuntPhotoKind = SpotPhotoKind;
 export type TacoHuntPhotoFixtureMode =
   "empty" | "pending" | "rejected" | "published" | "uploading" | "error";
 
@@ -135,127 +130,55 @@ export interface TacoHuntPhotoGalleryFixture {
   uploadMessage?: string;
 }
 
-let fixtureUploadSequence = 0;
-
-function nextFixtureUploadId(spotId: string): string {
-  fixtureUploadSequence += 1;
-  return `${spotId}-taco-hunt-upload-${Date.now()}-${fixtureUploadSequence}`;
-}
-
-function configuredTacoHuntPhotoMode(): TacoHuntPhotoFixtureMode | null {
-  const value = process.env.EXPO_PUBLIC_T63_TACO_HUNT_PHOTO_MODE?.trim().toLowerCase();
-  if (
-    value === "empty" ||
-    value === "pending" ||
-    value === "rejected" ||
-    value === "published" ||
-    value === "uploading" ||
-    value === "error"
-  ) {
-    return value;
-  }
-  return null;
-}
-
-export function getFixtureTacoHuntPhotoMode(): TacoHuntPhotoFixtureMode {
-  return configuredTacoHuntPhotoMode() ?? "empty";
-}
-
-/**
- * Phase A fixture adapter for the Taco Hunt-owned gallery. Setting the env var
- * lets QA exercise empty, pending, rejected, published, uploading, and error
- * moderation states without any API or Storage data.
- */
-export function getFixtureTacoHuntPhotoGallery(
+/** Loads only the public, approved Taco Hunt gallery. Pending photos stay uploader-only. */
+export async function getFixtureTacoHuntPhotoGallery(
   spotId: string,
   spotName: string,
-  uploaderId = "user-123",
+  _uploaderId = "user-123",
 ): Promise<TacoHuntPhotoGalleryFixture> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const mode = configuredTacoHuntPhotoMode() ?? "empty";
-      const base = {
-        source: "taco-hunt" as const,
-        spotId,
-        spotName,
-        uploaderId,
-        uploaderName: "Tú",
-        kind: "tacos" as const,
-        createdAt: "2026-10-01T12:00:00.000Z",
-      };
-      const approved: TacoHuntPhoto[] =
-        mode === "published"
-          ? [
-              {
-                ...base,
-                id: `${spotId}-taco-hunt-approved`,
-                url: "https://placehold.co/480x480/276C4F/FFFAF1?text=Taco+Hunt",
-                status: "approved",
-              },
-            ]
-          : [];
-      const mineStatus: TacoHuntPhotoModerationStatus =
-        mode === "published" ? "approved" : mode === "rejected" ? "rejected" : "pending";
-      const mine: TacoHuntPhoto[] =
-        mode === "pending" || mode === "rejected" || mode === "published"
-          ? [
-              {
-                ...base,
-                id: `${spotId}-taco-hunt-${mode}`,
-                url: "https://placehold.co/480x480/FCEBC8/302723?text=Mi+foto",
-                status: mineStatus,
-                rejectionReason:
-                  mode === "rejected"
-                    ? "La foto necesita mostrar mejor el puesto o la comida."
-                    : undefined,
-              },
-            ]
-          : [];
-
-      resolve({
-        source: "taco-hunt",
-        mode,
-        approved,
-        mine,
-        uploadMessage:
-          mode === "error" ? "No pudimos preparar la foto. Inténtalo de nuevo." : undefined,
-      });
-    }, 150);
-  });
+  const photos = await listSpotPhotos(spotId);
+  const approved = photos.map((photo) => ({
+    source: "taco-hunt" as const,
+    id: photo.id,
+    url: photo.url,
+    uploaderId: "",
+    uploaderName: photo.uploaderName,
+    spotId,
+    spotName,
+    kind: photo.kind,
+    status: "approved" as const,
+    createdAt: photo.createdAt,
+  }));
+  return {
+    source: "taco-hunt",
+    mode: approved.length > 0 ? "published" : "empty",
+    approved,
+    mine: [],
+  };
 }
 
-export function createFixtureTacoHuntPhoto(
+/** Uploads through the existing processed-photo pipeline and claims the upload for the spot. */
+export async function createFixtureTacoHuntPhoto(
   spotId: string,
   spotName: string,
-  uploaderId: string,
+  _uploaderId: string,
   localUri: string,
   kind: TacoHuntPhotoKind,
 ): Promise<TacoHuntPhoto> {
-  const uploadId = nextFixtureUploadId(spotId);
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const mode = configuredTacoHuntPhotoMode();
-      if (mode === "error") {
-        reject(new Error("No pudimos subir la foto. Inténtalo de nuevo."));
-        return;
-      }
-      const status: TacoHuntPhotoModerationStatus = mode === "rejected" ? "rejected" : "pending";
-      resolve({
-        source: "taco-hunt",
-        id: uploadId,
-        url: localUri,
-        uploaderId,
-        uploaderName: "Tú",
-        spotId,
-        spotName,
-        kind,
-        status,
-        rejectionReason:
-          status === "rejected"
-            ? "La foto necesita mostrar mejor el puesto o la comida."
-            : undefined,
-        createdAt: new Date().toISOString(),
-      });
-    }, 450);
-  });
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) throw new Error("Se requiere iniciar sesión para subir una foto.");
+  const photo = await uploadSpotPhoto(data.session, spotId, { uri: localUri }, kind);
+  return {
+    source: "taco-hunt",
+    id: photo.id,
+    url: photo.url,
+    uploaderId: photo.uploaderId,
+    uploaderName: photo.uploaderName,
+    spotId,
+    spotName,
+    kind: photo.kind,
+    status: photo.status,
+    ...(photo.rejectionReason ? { rejectionReason: photo.rejectionReason } : {}),
+    createdAt: photo.createdAt,
+  };
 }

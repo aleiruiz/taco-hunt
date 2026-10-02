@@ -110,7 +110,6 @@ export default function SpotScreen() {
   const [approvedPhotos, setApprovedPhotos] = useState<TacoHuntPhoto[]>([]);
   const [myPhotos, setMyPhotos] = useState<TacoHuntPhoto[]>([]);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [googleGalleryOpen, setGoogleGalleryOpen] = useState(false);
   const [googleDetails, setGoogleDetails] = useState<GooglePlaceDetails | null>(null);
   const [googleDetailsState, setGoogleDetailsState] = useState<
     "idle" | "loading" | "ready" | "unavailable" | "error"
@@ -140,7 +139,6 @@ export default function SpotScreen() {
     setGoogleDetails(null);
     setGoogleDetailsState("idle");
     setGoogleDetailsMessage("");
-    setGoogleGalleryOpen(false);
     return () => {
       googleRequestId.current += 1;
     };
@@ -640,56 +638,6 @@ export default function SpotScreen() {
                 )}
               </Card>
 
-              {googleDetailsState === "ready" && googleDetails && (
-                <View>
-                  <Text style={styles.section}>Fotos de Google</Text>
-                  {googleDetails.photosState === "available" && googleDetails.photos.length > 0 ? (
-                    <>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.photoStrip}
-                      >
-                        {googleDetails.photos.map((photo) => (
-                          <PhotoTile
-                            key={photo.id}
-                            photoUrl={photo.url}
-                            size={96}
-                            accessibilityLabel={`Foto de Google, ${photo.authorAttribution}`}
-                            onPress={() => setGoogleGalleryOpen(true)}
-                          />
-                        ))}
-                      </ScrollView>
-                      <Text style={styles.googleAttribution}>
-                        Fotos de Google · {googleDetails.photos[0].authorAttribution}.
-                      </Text>
-                      <Button
-                        label="Ver fuente en Google Maps"
-                        variant="ghost"
-                        icon="open-outline"
-                        accessibilityRole="link"
-                        accessibilityLabel="Ver la fuente de las fotos de Google en Google Maps"
-                        onPress={() => openGoogleSource(googleDetails.photos[0].sourceUrl)}
-                        style={styles.googleSourceLink}
-                      />
-                    </>
-                  ) : (
-                    <Card tone="dashed" style={styles.googlePhotoUnavailable}>
-                      <Ionicons name="images-outline" size={24} color={colors.muted} />
-                      <View style={styles.googlePhotoUnavailableCopy}>
-                        <Text style={styles.googleUnavailableTitle}>
-                          Fotos de Google no disponibles
-                        </Text>
-                        <Text style={styles.body}>
-                          No guardamos ni copiamos fotos de Google. Puedes compartir una foto propia
-                          con la comunidad de Taco Hunt.
-                        </Text>
-                      </View>
-                    </Card>
-                  )}
-                </View>
-              )}
-
               <Text style={styles.section}>Fotos de Taco Hunt</Text>
               <Text style={styles.photoSourceNote}>
                 Fotos subidas por la comunidad y revisadas por Taco Hunt.
@@ -1014,45 +962,6 @@ export default function SpotScreen() {
             </ScrollView>
           </View>
         </Modal>
-        <Modal
-          visible={googleGalleryOpen}
-          animationType="slide"
-          onRequestClose={() => setGoogleGalleryOpen(false)}
-        >
-          <View style={styles.galleryScreen}>
-            <View style={styles.galleryHeader}>
-              <IconButton
-                icon="close"
-                label="Cerrar galería de Google"
-                onPress={() => setGoogleGalleryOpen(false)}
-              />
-              <Text style={styles.modalTitle}>Fotos de Google</Text>
-            </View>
-            <ScrollView contentContainerStyle={styles.googleGalleryContent}>
-              {googleDetails?.photos.map((photo) => (
-                <View key={photo.id} style={styles.googleGalleryItem}>
-                  <Image
-                    source={{ uri: photo.url }}
-                    style={styles.googleGalleryImage}
-                    accessibilityLabel={`Foto de Google, ${photo.authorAttribution}`}
-                  />
-                  <Text style={styles.googleAttribution}>{photo.authorAttribution}</Text>
-                </View>
-              ))}
-              {googleDetails?.photos[0] && (
-                <Button
-                  label="Abrir fuente en Google Maps"
-                  variant="ghost"
-                  icon="open-outline"
-                  accessibilityRole="link"
-                  accessibilityLabel="Abrir la fuente de estas fotos en Google Maps"
-                  onPress={() => openGoogleSource(googleDetails.photos[0].sourceUrl)}
-                  style={styles.googleSourceLink}
-                />
-              )}
-            </ScrollView>
-          </View>
-        </Modal>
         <Modal visible={uploadOpen} animationType="slide" transparent onRequestClose={closeUpload}>
           <View style={styles.modalBackdrop}>
             <View style={styles.modalSheet}>
@@ -1208,14 +1117,6 @@ const styles = StyleSheet.create({
   },
   googleSourceLinkText: { color: colors.green, fontSize: 13, fontWeight: "800" },
   googleAttribution: { color: colors.muted, fontSize: 11, lineHeight: 17 },
-  googlePhotoUnavailable: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.md,
-    marginTop: spacing.sm,
-  },
-  googlePhotoUnavailableCopy: { flex: 1, gap: spacing.xs },
-  googleUnavailableTitle: { color: colors.ink, fontSize: 14, fontWeight: "800" },
   photoSourceNote: { ...typography.body, color: colors.muted, marginTop: -spacing.sm },
   label: { color: colors.ink, fontSize: 14, fontWeight: "800", marginTop: spacing.md },
   photoStrip: { gap: spacing.sm, paddingVertical: spacing.xs },
@@ -1274,13 +1175,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   galleryImage: { width: "48%", aspectRatio: 1, borderRadius: radii.md },
-  googleGalleryContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.lg,
-  },
-  googleGalleryItem: { gap: spacing.xs },
-  googleGalleryImage: { width: "100%", aspectRatio: 1.5, borderRadius: radii.md },
   uploadPreviewWrap: { alignItems: "center", marginTop: spacing.sm },
   uploadRulesCard: { marginTop: spacing.md },
   uploadProgressWrap: { marginTop: spacing.md, gap: spacing.xs },
