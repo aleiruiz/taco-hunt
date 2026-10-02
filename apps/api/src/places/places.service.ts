@@ -97,7 +97,14 @@ export class PlacesService {
       const places = await this.searchGoogleViewport(input);
       const googleResults = places
         .map((place) => toViewportResult(place))
-        .filter((place): place is NonNullable<typeof place> => place !== null);
+        .filter((place): place is NonNullable<typeof place> => place !== null)
+        .filter(
+          (place) =>
+            place.latitude >= input.south &&
+            place.latitude <= input.north &&
+            place.longitude >= input.west &&
+            place.longitude <= input.east,
+        );
       return {
         state: googleResults.length > 0 ? ("ready" as const) : ("empty" as const),
         googleResults,
