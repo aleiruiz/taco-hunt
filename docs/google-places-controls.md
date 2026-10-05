@@ -44,8 +44,11 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
   30 autocomplete requests and 20 resolve requests per user per minute
   (`apps/api/src/places/places.service.ts`). Viewport discovery, place details, photo
   proxying, and review-target creation (when it needs a Google lookup) share a separate limit of 30 requests per minute
-  per signed-in user, or per client IP when signed out. These stop a single client from
-  hammering the endpoints; they do not bound total daily spend.
+  per signed-in user, or per client IP when signed out (review-target creation requires
+  sign-in, so it always uses the per-user bucket). These stop a single client from
+  hammering the endpoints; they do not bound total daily spend. Like the daily budget
+  below, these buckets live in a process-local map, so each limit applies per API
+  instance.
 - **Global daily call budget** (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, added by this task):
   every outbound Google Places request from `PlacesService` — viewport discovery,
   autocomplete, place-details resolution, review-target creation, and photo proxying — consumes one unit of a single shared
