@@ -43,8 +43,8 @@ export class AccountController {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly media: MediaStorageService,
-    private readonly supabaseAdmin: SupabaseAdminService,
+    @Inject(MediaStorageService) private readonly media: MediaStorageService,
+    @Inject(SupabaseAdminService) private readonly supabaseAdmin: SupabaseAdminService,
   ) {}
 
   /**

@@ -34,8 +34,8 @@ export class ProfileController {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly storage: MediaStorageService,
-    private readonly avatarReview: AvatarReviewService,
+    @Inject(MediaStorageService) private readonly storage: MediaStorageService,
+    @Inject(AvatarReviewService) private readonly avatarReview: AvatarReviewService,
   ) {}
 
   @Get("/me")

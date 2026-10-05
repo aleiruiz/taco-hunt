@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+  Inject,
+} from "@nestjs/common";
 import type { ApiRequest } from "./auth.types.js";
 import { JwtVerifierService } from "./jwt-verifier.service.js";
 import { ProfileService } from "./profile.service.js";
@@ -6,8 +12,8 @@ import { ProfileService } from "./profile.service.js";
 @Injectable()
 export class AuthContextGuard implements CanActivate {
   constructor(
-    private readonly verifier: JwtVerifierService,
-    private readonly profiles: ProfileService,
+    @Inject(JwtVerifierService) private readonly verifier: JwtVerifierService,
+    @Inject(ProfileService) private readonly profiles: ProfileService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

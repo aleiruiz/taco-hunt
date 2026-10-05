@@ -39,8 +39,8 @@ export class ReviewPhotosController {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly storage: MediaStorageService,
-    private readonly processor: ReviewPhotoProcessor,
+    @Inject(MediaStorageService) private readonly storage: MediaStorageService,
+    @Inject(ReviewPhotoProcessor) private readonly processor: ReviewPhotoProcessor,
   ) {}
 
   @Post("review-photos")

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Post, UseGuards, Inject } from "@nestjs/common";
 import { reportSchema } from "@taco-hunt/contracts";
 import { AuthRequiredGuard } from "../auth/auth-required.guard.js";
 import { CurrentProfile } from "../auth/current-profile.decorator.js";
@@ -8,7 +8,7 @@ import { ReportsService } from "./reports.service.js";
 @Controller()
 @UseGuards(AuthRequiredGuard)
 export class ReportsController {
-  constructor(private readonly reports: ReportsService) {}
+  constructor(@Inject(ReportsService) private readonly reports: ReportsService) {}
 
   @Post("/reports")
   async create(@CurrentProfile() profile: AuthenticatedProfile, @Body() body: unknown) {
