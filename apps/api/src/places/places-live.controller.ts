@@ -9,6 +9,7 @@ import {
   Req,
   Res,
   UseGuards,
+  Inject,
 } from "@nestjs/common";
 import type { FastifyReply } from "fastify";
 import { googlePlaceIdSchema, placesViewportQuerySchema } from "@taco-hunt/contracts";
@@ -21,7 +22,7 @@ import { PlacesService } from "./places.service.js";
 /** Public, transient Google Places reads used by map and stand detail screens. */
 @Controller("/places")
 export class PlacesLiveController {
-  constructor(private readonly places: PlacesService) {}
+  constructor(@Inject(PlacesService) private readonly places: PlacesService) {}
 
   @Get("/viewport")
   viewport(@Query() query: Record<string, unknown>, @Req() request: ApiRequest) {

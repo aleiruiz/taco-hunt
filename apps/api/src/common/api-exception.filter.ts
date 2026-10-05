@@ -5,6 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  Inject,
 } from "@nestjs/common";
 import { HttpAdapterHost } from "@nestjs/core";
 import { randomUUID } from "node:crypto";
@@ -23,7 +24,7 @@ const codeByStatus: Partial<Record<number, string>> = {
 export class ApiExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiExceptionFilter.name);
 
-  constructor(private readonly adapterHost: HttpAdapterHost) {}
+  constructor(@Inject(HttpAdapterHost) private readonly adapterHost: HttpAdapterHost) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();

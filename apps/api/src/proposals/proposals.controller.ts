@@ -1,4 +1,12 @@
-import { BadRequestException, Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  UseGuards,
+  Inject,
+} from "@nestjs/common";
 import {
   placeProposalCreateSchema,
   spotProposalSchema,
@@ -12,7 +20,7 @@ import { ProposalsService } from "./proposals.service.js";
 @Controller()
 @UseGuards(AuthRequiredGuard)
 export class ProposalsController {
-  constructor(private readonly proposals: ProposalsService) {}
+  constructor(@Inject(ProposalsService) private readonly proposals: ProposalsService) {}
 
   @Post("/place-proposals")
   async createPlace(@CurrentProfile() profile: AuthenticatedProfile, @Body() body: unknown) {

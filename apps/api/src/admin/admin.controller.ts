@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   UseGuards,
+  Inject,
 } from "@nestjs/common";
 import { z } from "zod";
 import {
@@ -80,7 +81,7 @@ const duplicateQuerySchema = z.object({
 @Controller("/admin")
 @UseGuards(AdminGuard)
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(@Inject(AdminService) private readonly admin: AdminService) {}
 
   @Get("/queue")
   queue(@Query("kind") kindValue: string) {

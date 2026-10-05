@@ -59,8 +59,8 @@ export class PlacesService {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly limits: RequestLimitService,
-    private readonly storage: MediaStorageService,
+    @Inject(RequestLimitService) private readonly limits: RequestLimitService,
+    @Inject(MediaStorageService) private readonly storage: MediaStorageService,
   ) {}
 
   /**

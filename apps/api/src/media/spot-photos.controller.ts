@@ -37,7 +37,7 @@ export class SpotPhotosController {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly storage: MediaStorageService,
+    @Inject(MediaStorageService) private readonly storage: MediaStorageService,
   ) {}
 
   /**

@@ -58,7 +58,7 @@ export class ReviewsController {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly media: MediaStorageService,
+    @Inject(MediaStorageService) private readonly media: MediaStorageService,
   ) {}
 
   @Post("/reviews")
