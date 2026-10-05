@@ -20,6 +20,7 @@ import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, spacing, radii, sizes, elevation, typography } from "@/theme";
+import { placeCountLabel } from "@/lib/format";
 import { Chip } from "@/components/Chip";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -434,6 +435,12 @@ export default function ExploreScreen() {
   const [selectedGoogleResult, setSelectedGoogleResult] = useState<GoogleDiscoveryResult | null>(
     null,
   );
+  // A taco filter hides Google results and proposals, so drop any card selected from them.
+  useEffect(() => {
+    if (!activeType) return;
+    setSelectedGoogleResult(null);
+    setSelectedProposal(null);
+  }, [activeType]);
   const mapPinsCacheRef = useRef<Map<string, MapPin>>(new Map());
   const mapGoogleResultsCacheRef = useRef<Map<string, GoogleDiscoveryResult>>(new Map());
   const mapProposalCacheRef = useRef<Map<string, TacoHuntProposalPin>>(new Map());
@@ -1040,13 +1047,19 @@ export default function ExploreScreen() {
         <Ionicons name="chevron-down" size={12} color={colors.ink} />
       </Pressable>
       <View style={styles.countPill}>
-        <Text style={styles.countPillText}>{count} puestos</Text>
+        <Text style={styles.countPillText}>{placeCountLabel(count)}</Text>
       </View>
     </View>
   );
   const mapPinTotal = mapPins.length + mapClusters.reduce((total, c) => total + c.count, 0);
-  const visiblePlaceTotal =
-    mapPinTotal + mapDiscovery.googleResults.length + mapDiscovery.localProposals.length;
+  // Google results and pending proposals carry no taco types, so a taco filter cannot
+  // match them: hide them instead of implying they sell the selected taco.
+  const shownGoogleResults = activeType ? [] : mapDiscovery.googleResults;
+  const shownLocalProposals = activeType ? [] : mapDiscovery.localProposals;
+  const hiddenForTacoFilter = activeType
+    ? mapDiscovery.googleResults.length + mapDiscovery.localProposals.length
+    : 0;
+  const visiblePlaceTotal = mapPinTotal + shownGoogleResults.length + shownLocalProposals.length;
   const discoveryError =
     !mapDiscoveryLoading &&
     (mapDiscovery.state === "unavailable" ||
@@ -1134,7 +1147,7 @@ export default function ExploreScreen() {
         <View style={styles.panelFooter}>
           <Button label="Limpiar" variant="ghost" onPress={clearFilters} style={{ flex: 1 }} />
           <Button
-            label={`Ver ${items.length} puestos`}
+            label={`Ver ${placeCountLabel(mode === "mapa" ? visiblePlaceTotal : items.length)}`}
             variant="primary"
             onPress={() => setPanelOpen(false)}
             style={{ flex: 2 }}
@@ -1166,10 +1179,10 @@ export default function ExploreScreen() {
               onPress={handleClusterPress}
             />
           ))}
-          {mapDiscovery.googleResults.map((result) => (
+          {shownGoogleResults.map((result) => (
             <GoogleMapMarker key={result.id} result={result} onPress={handleGoogleMarkerPress} />
           ))}
-          {mapDiscovery.localProposals.map((proposal) => (
+          {shownLocalProposals.map((proposal) => (
             <ProposalMapMarker
               key={proposal.id}
               proposal={proposal}
@@ -1183,6 +1196,12 @@ export default function ExploreScreen() {
             {profileButton}
           </View>
           {renderSummaryRow(visiblePlaceTotal)}
+          {hiddenForTacoFilter > 0 && !panelOpen ? (
+            <Text style={styles.filterNote} accessibilityLiveRegion="polite">
+              Con el filtro de {activeType?.nameEs} solo mostramos puestos de Taco Hunt que lo
+              venden.
+            </Text>
+          ) : null}
           {filterPanel}
         </View>
         <View style={styles.bottomControls} pointerEvents="box-none">
@@ -1195,14 +1214,17 @@ export default function ExploreScreen() {
             <Text style={styles.listPillText}>Lista</Text>
           </Pressable>
           <View style={styles.bottomRightControls}>
-            <Button
-              label="Buscar taquerías aquí"
-              variant="secondary"
-              icon="search"
-              loading={mapDiscoveryLoading}
-              onPress={searchPlacesInCurrentArea}
-              style={styles.mapDiscoveryButton}
-            />
+            {/* Google results stay hidden under a taco filter, so searching would show nothing. */}
+            {activeType ? null : (
+              <Button
+                label="Buscar taquerías aquí"
+                variant="secondary"
+                icon="search"
+                loading={mapDiscoveryLoading}
+                onPress={searchPlacesInCurrentArea}
+                style={styles.mapDiscoveryButton}
+              />
+            )}
             <IconButton
               icon="navigate"
               label={locating ? "Buscando ubicación…" : "Usar mi ubicación"}
@@ -1580,6 +1602,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   countPillText: { color: colors.paper, fontWeight: "800", fontSize: 12 },
+  filterNote: {
+    ...typography.caption,
+    alignSelf: "flex-start",
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paper,
+    color: colors.ink,
+    overflow: "hidden",
+  },
   panel: {
     marginTop: spacing.sm,
     backgroundColor: colors.paper,
