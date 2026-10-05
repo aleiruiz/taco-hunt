@@ -383,8 +383,9 @@ export default function ExploreScreen() {
     ? pickPreviewTaco(selectedSpot, items.find((item) => item.id === selectedSpotId)?.bestTaco)
     : undefined;
   const router = useRouter();
-  const { clearFilterAt, searchLat, searchLon } = useLocalSearchParams<{
+  const { clearFilterAt, searchAt, searchLat, searchLon } = useLocalSearchParams<{
     clearFilterAt?: string;
+    searchAt?: string;
     searchLat?: string;
     searchLon?: string;
   }>();
@@ -773,7 +774,7 @@ export default function ExploreScreen() {
     pendingSearchRegionRef.current = nextRegion;
     void fetchMapPins(nextRegion);
     void fetchMapDiscovery(nextRegion);
-  }, [fetchMapDiscovery, fetchMapPins, searchLat, searchLon]);
+  }, [fetchMapDiscovery, fetchMapPins, searchAt, searchLat, searchLon]);
 
   useFocusEffect(
     useCallback(() => {

@@ -39,6 +39,7 @@ export default function SearchScreen() {
   const [placesAttribution, setPlacesAttribution] = useState<string | null>(null);
   const [recent, setRecent] = useState<string[]>([]);
   const [retryToken, setRetryToken] = useState(0);
+  const [resolveError, setResolveError] = useState(false);
   const requestId = useRef(0);
   const { session } = useAuth();
 
@@ -59,27 +60,38 @@ export default function SearchScreen() {
     }
     const currentRequest = ++requestId.current;
     setStatus("loading");
+    setResolveError(false);
     const timer = setTimeout(() => {
-      Promise.all([fetchSearchSuggest(trimmed), fetchAutocomplete(session, trimmed)])
-        .then(([result, places]) => {
+      // Each source degrades on its own: a Places outage still shows Taco Hunt stands, and
+      // the error state only appears when both sources fail.
+      Promise.allSettled([fetchSearchSuggest(trimmed), fetchAutocomplete(session, trimmed)]).then(
+        ([suggest, places]) => {
           if (requestId.current !== currentRequest) return;
-          setColonias(result.colonias);
-          setPuestos(result.puestos);
-          setDirecciones(places.items.filter((item) => item.kind === "google"));
-          setPlacesAttribution(places.attribution);
-          const hasResults =
-            result.colonias.length > 0 || result.puestos.length > 0 || places.items.length > 0;
+          if (suggest.status === "rejected" && places.status === "rejected") {
+            setColonias([]);
+            setPuestos([]);
+            setDirecciones([]);
+            setPlacesAttribution(null);
+            setStatus("error");
+            AccessibilityInfo.announceForAccessibility(
+              "No pudimos buscar. Lo que escribiste sigue aquí.",
+            );
+            return;
+          }
+          const colonias = suggest.status === "fulfilled" ? suggest.value.colonias : [];
+          const puestos = suggest.status === "fulfilled" ? suggest.value.puestos : [];
+          const direcciones =
+            places.status === "fulfilled"
+              ? places.value.items.filter((item) => item.kind === "google")
+              : [];
+          setColonias(colonias);
+          setPuestos(puestos);
+          setDirecciones(direcciones);
+          setPlacesAttribution(places.status === "fulfilled" ? places.value.attribution : null);
+          const hasResults = colonias.length > 0 || puestos.length > 0 || direcciones.length > 0;
           setStatus(hasResults ? "success" : "empty");
-        })
-        .catch(() => {
-          if (requestId.current !== currentRequest) return;
-          setDirecciones([]);
-          setPlacesAttribution(null);
-          setStatus("error");
-          AccessibilityInfo.announceForAccessibility(
-            "No pudimos buscar. Lo que escribiste sigue aquí.",
-          );
-        });
+        },
+      );
     }, 350);
     return () => clearTimeout(timer);
   }, [query, retryToken, session]);
@@ -98,6 +110,7 @@ export default function SearchScreen() {
       router.push(`/spot/${item.id}`);
     } else if (item.type === "direccion") {
       const placeId = item.id.replace(/^google:/, "");
+      setResolveError(false);
       try {
         const resolved = await resolvePlace(session, placeId);
         // navigate (not replace) returns to the existing map screen with new params, so its
@@ -108,10 +121,13 @@ export default function SearchScreen() {
             searchLat: String(resolved.latitude),
             searchLon: String(resolved.longitude),
             searchLabel: resolved.formattedAddress ?? resolved.name,
+            // Unique per selection, so picking the same address again still moves the map.
+            searchAt: String(Date.now()),
           },
         });
       } catch {
-        setStatus("error");
+        // Keep the suggestions on screen so the user can pick another one.
+        setResolveError(true);
         AccessibilityInfo.announceForAccessibility(
           "No pudimos ubicar esa dirección. Intenta con otra sugerencia.",
         );
@@ -220,6 +236,11 @@ export default function SearchScreen() {
 
         {status === "success" && (
           <>
+            {resolveError && (
+              <Text style={styles.resolveErrorText} accessibilityRole="alert">
+                No pudimos ubicar esa dirección. Intenta con otra sugerencia.
+              </Text>
+            )}
             {direccionItems.length > 0 && (
               <View accessibilityRole="list">
                 <Text style={styles.sectionLabel}>DIRECCIONES Y ZONAS</Text>
@@ -417,4 +438,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   retryButton: { minWidth: 160 },
+  resolveErrorText: {
+    ...typography.body,
+    color: colors.dangerText,
+    marginBottom: spacing.md,
+  },
 });
