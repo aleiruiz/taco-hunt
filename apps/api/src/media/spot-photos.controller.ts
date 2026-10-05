@@ -9,13 +9,18 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   ServiceUnavailableException,
   UseGuards,
 } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
+import { z } from "zod";
 import {
+  personalPageQuerySchema,
   spotPhotoCreateSchema,
   uuidSchema,
+  type OwnSpotPhoto,
+  type OwnSpotPhotoPage,
   type PublicSpotPhoto,
   type SpotPhoto,
 } from "@taco-hunt/contracts";
@@ -26,6 +31,28 @@ import { DATABASE_POOL } from "../database/database.module.js";
 import { MediaStorageService } from "./storage.service.js";
 
 const spotPhotoCreateRequestSchema = spotPhotoCreateSchema.strict();
+
+const ownSpotPhotoCursorSchema = z.object({
+  createdAt: z.string().datetime({ offset: true, precision: 6 }),
+  id: uuidSchema,
+});
+
+function encodeCursor(value: z.infer<typeof ownSpotPhotoCursorSchema>): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function decodeCursor(
+  value: string | undefined,
+): z.infer<typeof ownSpotPhotoCursorSchema> | undefined {
+  if (!value) return undefined;
+  try {
+    return ownSpotPhotoCursorSchema.parse(
+      JSON.parse(Buffer.from(value, "base64url").toString("utf8")),
+    );
+  } catch {
+    throw new BadRequestException({ message: "Cursor inválido" });
+  }
+}
 
 // No display name on file is a valid, if plain, public identity: the
 // gallery still needs *some* uploader label.
@@ -81,6 +108,90 @@ export class SpotPhotosController {
       return { items };
     } catch (error) {
       this.logQueryFailure("Public spot photo gallery query failed", error);
+      throw new ServiceUnavailableException("Servicio temporalmente no disponible");
+    }
+  }
+
+  /**
+   * The signed-in uploader's own stand photos in every moderation state, newest
+   * first, for the profile's "Fotos" tab. Each item carries a short-lived signed
+   * URL; photos whose URL cannot be signed are skipped, like the public gallery.
+   */
+  @Get("/me/spot-photos")
+  @UseGuards(AuthRequiredGuard)
+  async listOwnSpotPhotos(
+    @CurrentProfile() profile: AuthenticatedProfile,
+    @Query() query: Record<string, unknown>,
+  ): Promise<OwnSpotPhotoPage> {
+    const parsed = personalPageQuerySchema.safeParse(query);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Parámetros inválidos",
+        details: { issues: parsed.error.issues },
+      });
+    }
+    const after = decodeCursor(parsed.data.cursor);
+    const values: unknown[] = [profile.id, FALLBACK_UPLOADER_NAME];
+    let pageFilter = "";
+    if (after) {
+      values.push(after.createdAt, after.id);
+      pageFilter = "and (sp.created_at,sp.id) < ($3::timestamptz,$4::uuid)";
+    }
+    values.push(parsed.data.limit + 1);
+
+    try {
+      const { rows } = await this.pool.query<{
+        id: string;
+        object_key: string;
+        uploaderName: string;
+        kind: OwnSpotPhoto["kind"];
+        status: OwnSpotPhoto["status"];
+        rejectionReason: string | null;
+        createdAt: string;
+        spotId: string;
+        spotName: string;
+      }>(
+        `select sp.id,sp.object_key,coalesce(p.display_name,$2) as "uploaderName",sp.kind,sp.status,
+                sp.rejection_reason as "rejectionReason",
+                to_char(sp.created_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAt",
+                s.id as "spotId",s.name as "spotName"
+         from app_private.spot_photos sp
+         join app_private.profiles p on p.id = sp.uploader_id
+         join app_private.spots s on s.id = sp.spot_id
+         where sp.uploader_id=$1 ${pageFilter}
+         order by sp.created_at desc, sp.id desc
+         limit $${values.length}`,
+        values,
+      );
+      const more = rows.length > parsed.data.limit;
+      const page = rows.slice(0, parsed.data.limit);
+      const items: OwnSpotPhoto[] = [];
+      for (const row of page) {
+        const url = this.storage.enabled
+          ? await this.storage.createSignedUrl(row.object_key)
+          : null;
+        if (!url) continue;
+        items.push({
+          id: row.id,
+          url,
+          uploaderId: profile.id,
+          uploaderName: row.uploaderName,
+          kind: row.kind,
+          status: row.status,
+          rejectionReason: row.rejectionReason,
+          createdAt: row.createdAt,
+          spotId: row.spotId,
+          spotName: row.spotName,
+        });
+      }
+      const last = page.at(-1);
+      return {
+        items,
+        nextCursor: more && last ? encodeCursor({ createdAt: last.createdAt, id: last.id }) : null,
+      };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logQueryFailure("Own spot photos query failed", error);
       throw new ServiceUnavailableException("Servicio temporalmente no disponible");
     }
   }

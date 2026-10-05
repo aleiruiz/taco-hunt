@@ -419,6 +419,17 @@ export const adminSpotPhotoSchema = spotPhotoSchema.extend({
 });
 export type AdminSpotPhoto = z.infer<typeof adminSpotPhotoSchema>;
 
+// T78 — GET /v1/me/spot-photos: the signed-in uploader's own stand photos in every
+// moderation state (newest first), for the profile's "Fotos" tab and stat.
+export const ownSpotPhotoSchema = adminSpotPhotoSchema;
+export type OwnSpotPhoto = z.infer<typeof ownSpotPhotoSchema>;
+
+export const ownSpotPhotoPageSchema = z.object({
+  items: z.array(ownSpotPhotoSchema),
+  nextCursor: cursorTokenSchema.nullable(),
+});
+export type OwnSpotPhotoPage = z.infer<typeof ownSpotPhotoPageSchema>;
+
 // T40 — GET/PATCH /v1/me, swaps T41's and T32's fixture adapters.
 export const avatarPresetSchema = z.enum([
   "pastor",

@@ -281,6 +281,32 @@ paths:
         "400": { $ref: "#/components/responses/ApiError" }
         "401": { $ref: "#/components/responses/ApiError" }
         "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /v1/me/spot-photos:
+    get:
+      operationId: listOwnSpotPhotos
+      summary: Lista las fotos de puestos propias en cualquier estado de moderación
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - {
+            in: query,
+            name: cursor,
+            description: Cursor opaco descendente retornado en la página anterior.,
+            schema: { type: string, maxLength: 512 },
+          }
+        - {
+            in: query,
+            name: limit,
+            schema: { type: integer, minimum: 1, maximum: 50, default: 20 },
+          }
+      responses:
+        "200":
+          description: Fotos propias (con URL firmada de corta duración) y cursor siguiente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnSpotPhotoPage" }
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
   /v1/me/favorites:
     get:
       operationId: listOwnFavorites
@@ -1736,6 +1762,20 @@ components:
       required: [items]
       properties:
         items: { type: array, items: { $ref: "#/components/schemas/PublicSpotPhoto" } }
+    OwnSpotPhoto:
+      allOf:
+        - $ref: "#/components/schemas/SpotPhoto"
+        - type: object
+          required: [spotId, spotName]
+          properties:
+            spotId: { type: string, format: uuid }
+            spotName: { type: string }
+    OwnSpotPhotoPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/OwnSpotPhoto" } }
+        nextCursor: { type: [string, "null"], maxLength: 512 }
     SpotPhotoCreate:
       type: object
       required: [photoUploadId]
