@@ -430,6 +430,12 @@ export default function ExploreScreen() {
   const [selectedGoogleResult, setSelectedGoogleResult] = useState<GoogleDiscoveryResult | null>(
     null,
   );
+  // A taco filter hides Google results and proposals, so drop any card selected from them.
+  useEffect(() => {
+    if (!activeType) return;
+    setSelectedGoogleResult(null);
+    setSelectedProposal(null);
+  }, [activeType]);
   const mapPinsCacheRef = useRef<Map<string, MapPin>>(new Map());
   const mapGoogleResultsCacheRef = useRef<Map<string, GoogleDiscoveryResult>>(new Map());
   const mapProposalCacheRef = useRef<Map<string, TacoHuntProposalPin>>(new Map());
