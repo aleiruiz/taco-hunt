@@ -100,7 +100,9 @@ export default function SearchScreen() {
       const placeId = item.id.replace(/^google:/, "");
       try {
         const resolved = await resolvePlace(session, placeId);
-        router.replace({
+        // navigate (not replace) returns to the existing map screen with new params, so its
+        // mounted map can animate; a fresh screen's map isn't ready to move yet.
+        router.navigate({
           pathname: "/",
           params: {
             searchLat: String(resolved.latitude),

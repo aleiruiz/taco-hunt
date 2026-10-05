@@ -24,7 +24,13 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env.PORT ?? 3001);
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true, trustProxy: getTrustProxyHops() }),
+    new FastifyAdapter({
+      logger: true,
+      trustProxy: getTrustProxyHops(),
+      // Google place IDs for addresses (e.g. /places/:placeId/resolve) run ~150 characters,
+      // beyond Fastify's default 100-character route parameter limit (414 otherwise).
+      maxParamLength: 512,
+    }),
   );
 
   await app.register(multipart, {
