@@ -216,7 +216,8 @@
       "external": ["E03", "E04"],
       "pr": null,
       "headSha": null,
-      "coderabbitReviewedSha": null
+      "coderabbitReviewedSha": null,
+      "note": "Blocked on T15 and external inputs E03/E04; requires owner authorization to activate resources or spend."
     },
     "T25": {
       "status": "merged",
@@ -267,7 +268,7 @@
       "coderabbitReviewedSha": "83b598a"
     },
     "T45": {
-      "pr": 34,
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/34",
       "headSha": "cc46dc4",
       "coderabbitReviewedSha": "cc46dc4",
       "status": "merged",
@@ -283,7 +284,7 @@
       "coderabbitReviewedSha": "e05528e"
     },
     "T46": {
-      "pr": 35,
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/35",
       "headSha": "5b61874",
       "coderabbitReviewedSha": "5b61874",
       "status": "merged",
@@ -299,7 +300,7 @@
       "coderabbitReviewedSha": "9f0bdef"
     },
     "T47": {
-      "pr": 36,
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/36",
       "headSha": "666a323",
       "coderabbitReviewedSha": "666a323",
       "status": "merged",
@@ -307,7 +308,7 @@
       "note": "Phase A. Add-a-taquería entry points and 3-step flow (design §3) on existing endpoints; gaps fixture-backed. CodeRabbit review round 1 (head 7027b50) found 5 real issues: taco-type chips discarded silently by submit(), manual mode could submit default city-center coords with no confirmation, Proponer otra didn't reset the map pin, error banner ignored the real server message, step gates accepted 1-char names against the schema's min(2). Fixed as 20f07e8. Round 2 found 1 more: switching the source toggle (autocomplete/manual) kept the other mode's name/neighborhood/sourceRef, so a submission could mix a manual name with a stale Google sourceRef. Fixed as 666a323, which came back with no actionable findings. Merged as f592e59."
     },
     "T48": {
-      "pr": 37,
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/37",
       "headSha": "dbb25ef",
       "coderabbitReviewedSha": "dbb25ef",
       "status": "merged",
@@ -387,7 +388,7 @@
       "status": "merged",
       "dependsOn": [],
       "note": "Owner-approved exception to UI-first. Fix POST /v1/reviews 503: drop tt from FOR SHARE OF (taco_hunt_api has SELECT only on taco_types). CI green, CodeRabbit reviewed head 1d9f174 with no actionable findings (one documented low/inferred security note accepted). Merged 2026-09-29T19:33:20Z as f8b095e.",
-      "pr": 33,
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/33",
       "headSha": "1d9f174",
       "coderabbitReviewedSha": "1d9f174"
     },
@@ -400,12 +401,12 @@
       "coderabbitReviewedSha": "832c0d0"
     },
     "T34": {
-      "status": "pr-open",
+      "status": "merged",
       "dependsOn": ["T33", "T46"],
-      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI. Implemented by another concurrent process (state was stale showing ready/pr:null - PR already existed when checked). CodeRabbit found 2 Minor issues (cached singleton pins not excluded when a later response returns them as a cluster, causing duplicate markers/inflated counts; hardcoded #000 shadow color on the new clusterBubble style instead of a theme token) - both fixed and manually verified present in code at head 48d586e, not just trusting the auto-tag. CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md.",
+      "note": "Phase B. Wire viewport pin loading on camera idle (id-keyed cache, never all at once) into T46's UI. Implemented by another concurrent process (state was stale showing ready/pr:null - PR already existed when checked). CodeRabbit found 2 Minor issues (cached singleton pins not excluded when a later response returns them as a cluster, causing duplicate markers/inflated counts; hardcoded #000 shadow color on the new clusterBubble style instead of a theme token) - both fixed and manually verified present in code at head 48d586e, not just trusting the auto-tag. CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md. Merged 2026-10-01T05:34:08Z. Last CodeRabbit review covers an earlier commit, not the merged head.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/50",
       "headSha": "48d586ea77d5982ca5edf9a1b77ee8c822ca140f",
-      "coderabbitReviewedSha": "48d586ea77d5982ca5edf9a1b77ee8c822ca140f"
+      "coderabbitReviewedSha": "ff75d34888c3eb25fc2148eec87612206d024d4d"
     },
     "T52": {
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/48",
@@ -416,20 +417,20 @@
       "note": "Phase B. GET /v1/search/suggest: all approved stands/neighborhoods, no area cap, haversine proximity ranking when near given, fixed municipality string pending a real column. Implemented by the orchestrator in-session. CodeRabbit round 1 (head f43b32b) found 2 issues: near coordinates weren't range-validated, and an unquoted distanceKm ORDER BY alias (Postgres folds to lowercase) 503'd every near-ranked request - both fixed, head 352f391. Hit a merge conflict with T33 in spots.controller.ts after T33 merged first; resolved on the branch (combined imports/consts), head be1f1df. CodeRabbit's only remaining ask (add integration tests) was declined per CLAUDE.md's no-tests-unless-requested policy. CI green, no open threads. Merged as fa64f92."
     },
     "T37": {
-      "status": "pr-open",
+      "status": "merged",
       "dependsOn": ["T51"],
-      "note": "Phase B. Stand photos API: app_private.spot_photos table, POST/GET /v1/spots/:id/photos (public gallery endpoint returns publicSpotPhotoSchema only, no uploaderId/status/rejectionReason), admin spot-photos queue + approve/reject, account-deletion storage cleanup extended to spot_photos, swaps T39/T38 fixtures. Implemented by the orchestrator in-session (background worker + direct fixes). No live Postgres check (Docker unavailable) - flagged explicitly in PR, future verification needed. CodeRabbit round 1 (head 1f3e0b5) found 4 Minor issues (admin signed-URL failures silently hidden, moderation double-tap race, upload success-guard using stale captured session instead of live ref, migration claim-consistency check accepting both owners set) - all fixed, head 53111e5. Round 2 re-check surfaced 1 new Major: the fix's num_nonnulls=1 check would be violated when account deletion cascades profiles -> spot_photos and media_uploads.claimed_spot_photo_id's ON DELETE SET NULL nulls a still-claimed row - fixed by changing that FK to ON DELETE CASCADE, head 442b656. CodeRabbit round 3 (head 442b656) clean, all prior threads marked addressed. CI green. Noted the identical FK-shape risk pre-exists for app_private.reviews/claimed_review_id (T11) - spawned as a separate follow-up task, out of scope for T37. Review gate satisfied (CodeRabbit reviewed current head, CI green) - merge is the owner's call per CLAUDE.md; the merge command itself was blocked by the harness's auto-mode classifier (merge without human review) and needs the owner to merge.",
+      "note": "Phase B. Stand photos API: app_private.spot_photos table, POST/GET /v1/spots/:id/photos (public gallery endpoint returns publicSpotPhotoSchema only, no uploaderId/status/rejectionReason), admin spot-photos queue + approve/reject, account-deletion storage cleanup extended to spot_photos, swaps T39/T38 fixtures. Implemented by the orchestrator in-session (background worker + direct fixes). No live Postgres check (Docker unavailable) - flagged explicitly in PR, future verification needed. CodeRabbit round 1 (head 1f3e0b5) found 4 Minor issues (admin signed-URL failures silently hidden, moderation double-tap race, upload success-guard using stale captured session instead of live ref, migration claim-consistency check accepting both owners set) - all fixed, head 53111e5. Round 2 re-check surfaced 1 new Major: the fix's num_nonnulls=1 check would be violated when account deletion cascades profiles -> spot_photos and media_uploads.claimed_spot_photo_id's ON DELETE SET NULL nulls a still-claimed row - fixed by changing that FK to ON DELETE CASCADE, head 442b656. CodeRabbit round 3 (head 442b656) clean, all prior threads marked addressed. CI green. Noted the identical FK-shape risk pre-exists for app_private.reviews/claimed_review_id (T11) - spawned as a separate follow-up task, out of scope for T37. Review gate satisfied (CodeRabbit reviewed current head, CI green) - merge is the owner's call per CLAUDE.md; the merge command itself was blocked by the harness's auto-mode classifier (merge without human review) and needs the owner to merge. Merged 2026-10-01T05:50:03Z. Last CodeRabbit review covers an earlier commit, not the merged head.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/52",
-      "headSha": "442b656835d082dbc4ec9c49a18118e2229536a9",
-      "coderabbitReviewedSha": "442b656835d082dbc4ec9c49a18118e2229536a9"
+      "headSha": "2848e34bfc8e6c5bc91c62726bff6d5335ec41c5",
+      "coderabbitReviewedSha": "53111e5729ec610fd1c84f245ae59fe86227451d"
     },
     "T40": {
-      "status": "pr-open",
+      "status": "merged",
       "dependsOn": ["T51"],
-      "note": "Phase B. Profile API: GET/PATCH /v1/me, display name + avatar preset, avatar photo shown immediately (optimistic) with automated review and revert-on-reject + swap T41/T32 fixtures. Implemented by a background worker. CodeRabbit round 1 (head 8cc4ec2) found 4 issues (unique-claim-constraint race on avatar replacement, missing transaction wrap in automated review, Promise.all ordering blocking reviews/favorites on profile-fetch failure, ON DELETE CASCADE for claimed_profile_id) - the claim-race and cascade fixes landed, head c9c538d. A second worker almost duplicated this task entirely (orchestration-state.json was stale showing ready/pr:null) but caught the existing PR #53 before pushing and instead reviewed it: CodeRabbit had auto-marked the post-commit storage-cleanup-gating Major as 'Addressed in commit c9c538d' but the code still had the bug - a displayName-only PATCH (no avatarPhotoUploadId) still deleted the live, still-referenced avatar object, since claimedNewKey stays null on that path. Fixed by gating cleanup on Object.hasOwn(patch,'avatarPhotoUploadId'), same as the existing claim-release guard. Also fixed the one still-open Minor (getProfile failure blocking reviews/favorites/proposals in my-tacos.tsx). Pushed f922403. CodeRabbit round 3 on that head produced no new findings (the 4 prior comments all re-tagged 'Addressed in commit f922403'); manually verified both fixes are actually present in the pushed code rather than trusting the auto-tag (learned not to from round 2). CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md.",
+      "note": "Phase B. Profile API: GET/PATCH /v1/me, display name + avatar preset, avatar photo shown immediately (optimistic) with automated review and revert-on-reject + swap T41/T32 fixtures. Implemented by a background worker. CodeRabbit round 1 (head 8cc4ec2) found 4 issues (unique-claim-constraint race on avatar replacement, missing transaction wrap in automated review, Promise.all ordering blocking reviews/favorites on profile-fetch failure, ON DELETE CASCADE for claimed_profile_id) - the claim-race and cascade fixes landed, head c9c538d. A second worker almost duplicated this task entirely (orchestration-state.json was stale showing ready/pr:null) but caught the existing PR #53 before pushing and instead reviewed it: CodeRabbit had auto-marked the post-commit storage-cleanup-gating Major as 'Addressed in commit c9c538d' but the code still had the bug - a displayName-only PATCH (no avatarPhotoUploadId) still deleted the live, still-referenced avatar object, since claimedNewKey stays null on that path. Fixed by gating cleanup on Object.hasOwn(patch,'avatarPhotoUploadId'), same as the existing claim-release guard. Also fixed the one still-open Minor (getProfile failure blocking reviews/favorites/proposals in my-tacos.tsx). Pushed f922403. CodeRabbit round 3 on that head produced no new findings (the 4 prior comments all re-tagged 'Addressed in commit f922403'); manually verified both fixes are actually present in the pushed code rather than trusting the auto-tag (learned not to from round 2). CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md. Merged 2026-10-01T06:13:25Z. Last CodeRabbit review covers an earlier commit, not the merged head. Two CodeRabbit threads left open (avatar_preset backfill migration; HTTPS-only API URL for the bearer token), plus a Major outside-diff finding: a displayName-only PATCH can delete the avatar.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/53",
-      "headSha": "f922403e154702af799462a5e5d0a8706613a29e",
-      "coderabbitReviewedSha": "f922403e154702af799462a5e5d0a8706613a29e"
+      "headSha": "6957137e4742e669b8b965bbe0bbf49b28fd6e5a",
+      "coderabbitReviewedSha": "36f22a7db705c3eb8696ee73f7f95db4dbad40b2"
     },
     "T49": {
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/49",
@@ -440,12 +441,44 @@
       "note": "Phase B. GET /v1/me/progress: all 6 badges computed from the user's own reviews/proposals/photos only (no other users' counts), nextChallenge from the design's grid order. Implemented by the orchestrator in-session. CodeRabbit reviewed head d669ac0 with no actionable comments. CI green. Merged as 5c6db86."
     },
     "T42": {
-      "status": "pr-open",
+      "status": "merged",
       "dependsOn": ["T51"],
-      "note": "Phase B. Import-candidate approval API + swap T50 fixtures. Implemented by another concurrent process (state was stale showing ready/pr:null - PR already existed when checked). CodeRabbit found 1 Minor (admin.tsx moderation buttons lacked a double-tap guard, same pattern fixed in T37's PR) - fixed and manually verified present in code at head 065feae, not just trusting the auto-tag. The only other finding (add integration tests for the admin import-candidate routes) was declined per CLAUDE.md's no-tests-unless-requested policy, same precedent as T52. CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md.",
+      "note": "Phase B. Import-candidate approval API + swap T50 fixtures. Implemented by another concurrent process (state was stale showing ready/pr:null - PR already existed when checked). CodeRabbit found 1 Minor (admin.tsx moderation buttons lacked a double-tap guard, same pattern fixed in T37's PR) - fixed and manually verified present in code at head 065feae, not just trusting the auto-tag. The only other finding (add integration tests for the admin import-candidate routes) was declined per CLAUDE.md's no-tests-unless-requested policy, same precedent as T52. CI green. Review gate satisfied - merge is the owner's call per CLAUDE.md. Merged 2026-10-01T05:34:21Z. One CodeRabbit thread left open (integration tests, declined per CLAUDE.md), plus a Major outside-diff finding: license_ref is not persisted on approved spots.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/51",
       "headSha": "065feae1fa7fec0f062bec809139902f79b9143d",
       "coderabbitReviewedSha": "065feae1fa7fec0f062bec809139902f79b9143d"
+    },
+    "T61": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "P2.8 Phase A. Google Maps and live discovery UI foundation on a map-discovery fixture adapter. Merged 2026-10-01T18:27:59Z. Its three CodeRabbit threads were fixed by T69 (PR #55) but remain unresolved on GitHub.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/54",
+      "headSha": "f34fab35341a1606396d2c3dcf3678b416c69a9f",
+      "coderabbitReviewedSha": "f34fab35341a1606396d2c3dcf3678b416c69a9f"
+    },
+    "T69": {
+      "status": "merged",
+      "dependsOn": ["T61"],
+      "note": "Resolve T61 CodeRabbit discovery findings. Merged 2026-10-01T19:18:23Z. No CodeRabbit review on record.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/55",
+      "headSha": "3e4ccbf7888d5f96698cb02743b4a532a3f0e266",
+      "coderabbitReviewedSha": null
+    },
+    "T63": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "P2.8 Phase A. Stand details and photos UI on a stand-details fixture adapter. Merged 2026-10-01T19:23:53Z. Last CodeRabbit review covers an earlier commit, not the merged head.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/56",
+      "headSha": "8b383ab91c350b7d6bc0b644b06d073298b43ae4",
+      "coderabbitReviewedSha": "244aa9ea73a86acb70972b9873d897edf99b4d15"
+    },
+    "T62": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "P2.8 Phase A. Proposal UI reset on the proposals fixture adapter. Merged 2026-10-01T19:24:17Z. Last CodeRabbit review covers an earlier commit, not the merged head.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/57",
+      "headSha": "8b15f4043b90f4e91cb217db28927299c3fe1710",
+      "coderabbitReviewedSha": "53bb1a09a79888c171cc1733594453634246c625"
     },
     "T64": {
       "status": "merged",
@@ -464,36 +497,41 @@
       "coderabbitReviewedSha": "9ee942ea48f10c0801c825bfa6f12eaed956af18"
     },
     "T66": {
-      "status": "ready",
+      "status": "merged",
       "dependsOn": ["T64", "T65"],
-      "note": "P2.8 Phase B. Server-side live viewport discovery, on-demand details/photos, attribution-safe responses, budget/kill-switch enforcement, and T61/T63 fixture swaps.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "P2.8 Phase B. Server-side live viewport discovery, on-demand details/photos, attribution-safe responses, budget/kill-switch enforcement, and T61/T63 fixture swaps. Merged 2026-10-02T01:20:19Z. Last CodeRabbit review covers an earlier commit, not the merged head.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/62",
+      "headSha": "a020787b9680568dd18985d8b0b8956a9c588ded",
+      "coderabbitReviewedSha": "c596c32c9f0f64d8480256b38be3ed26fa0c390e"
     },
     "T67": {
-      "status": "ready",
+      "status": "merged",
       "dependsOn": ["T64", "T65"],
-      "note": "P2.8 Phase B. Place-ID duplicate detection and redirect, map-pin-first local proposals, moderation-safe linking, and T62 fixture swap.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "P2.8 Phase B. Place-ID duplicate detection and redirect, map-pin-first local proposals, moderation-safe linking, and T62 fixture swap. Merged 2026-10-01T23:40:59Z. Last CodeRabbit review covers an earlier commit, not the merged head.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/61",
+      "headSha": "96304d4f1d437a9d18796f9cf27c6162bb4b3218",
+      "coderabbitReviewedSha": "280a1930352519ccda36feca6a31be3283a09cec"
     },
     "T68": {
-      "status": "blocked",
+      "status": "merged",
       "dependsOn": ["T66", "T67"],
-      "note": "P2.8 closeout. Retire or explicitly fence normal import_candidates Google payload ingestion and update admin/scripts/docs so no public path copies Google records.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "P2.8 closeout. Retire or explicitly fence normal import_candidates Google payload ingestion and update admin/scripts/docs so no public path copies Google records. Merged 2026-10-02T03:20:15Z. One CodeRabbit thread stayed open: docs/build-spec.md still listed Google use cases that docs/google-places-controls.md had dropped; addressed by the 2026-10-05 documentation refresh.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/63",
+      "headSha": "c6e094a5bbaa693964fec7d86f71d60ffe3ca3c6",
+      "coderabbitReviewedSha": "c6e094a5bbaa693964fec7d86f71d60ffe3ca3c6"
     },
     "T43": {
-      "status": "blocked",
+      "status": "cancelled",
       "dependsOn": ["T42"],
-      "note": "Research ~100 Monterrey taquerías (facts only, source URL provenance), stage via T13 importer, no taco types. After T42.",
+      "note": "Research ~100 Monterrey taquerías (facts only, source URL provenance), stage via T13 importer, no taco types. After T42. Cancelled by the owner on 2026-10-05; not needed.",
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
     }
+  },
+  "lastReconciled": "2026-10-05",
+  "mainHead": {
+    "sha": "7ef3508fd19a5818d0a1905000f8b56d0a5bc018",
+    "note": "Owner direct commit 2026-10-02 \"Consolidate local mobile and Places changes\" (no PR, no CodeRabbit review) on top of PR #63."
   }
 }
