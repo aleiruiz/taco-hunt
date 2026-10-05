@@ -6,6 +6,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "environment": "development",
       "ios": {
         "simulator": true
       },
@@ -13,7 +14,6 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.57:3001/v1",
         "EXPO_PUBLIC_MAPS_PROVIDER": "google"
       }
     }
