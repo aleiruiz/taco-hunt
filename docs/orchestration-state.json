@@ -527,11 +527,75 @@
       "pr": null,
       "headSha": null,
       "coderabbitReviewedSha": null
+    },
+    "T70": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "QA follow-up: favorites, delete review and delete account. CodeRabbit reviewed the pre-merge commit; it declined to re-review the merge-only head. Merged 2026-10-05T21:34:16Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/65",
+      "headSha": "b8d9665ab31ca29da032cd88421cf58784bfb04b",
+      "coderabbitReviewedSha": null
+    },
+    "T71": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "QA follow-up: explicit @Inject for tsx dev mode. CodeRabbit reviewed the pre-merge commit; it declined to re-review the merge-only head. Merged 2026-10-05T21:34:22Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/66",
+      "headSha": "6d76e928cb5b7b8a8176e2b87f3e9ea3543d9ddb",
+      "coderabbitReviewedSha": null
+    },
+    "T72": {
+      "status": "merged",
+      "dependsOn": [],
+      "note": "QA follow-up: app UI fixes. Merged 2026-10-05T21:48:01Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/67",
+      "headSha": "d3dd3cf9e53370cd526755cf0a6ace99ccf53f74",
+      "coderabbitReviewedSha": "d3dd3cf9e53370cd526755cf0a6ace99ccf53f74"
+    },
+    "T73": {
+      "status": "in_progress",
+      "dependsOn": [],
+      "note": "Unique versions for the three colliding migrations.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T74": {
+      "status": "pending",
+      "dependsOn": ["T73"],
+      "note": "Bias address autocomplete to Monterrey.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T75": {
+      "status": "pending",
+      "dependsOn": ["T73"],
+      "note": "Real challenge progress and photo counts.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T76": {
+      "status": "pending",
+      "dependsOn": ["T73"],
+      "note": "Taco-type filter and count for Google pins.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
+    },
+    "T77": {
+      "status": "pending",
+      "dependsOn": ["T73"],
+      "note": "Private S3 storage for user photos.",
+      "pr": null,
+      "headSha": null,
+      "coderabbitReviewedSha": null
     }
   },
   "lastReconciled": "2026-10-05",
   "mainHead": {
-    "sha": "7ef3508fd19a5818d0a1905000f8b56d0a5bc018",
-    "note": "Owner direct commit 2026-10-02 \"Consolidate local mobile and Places changes\" (no PR, no CodeRabbit review) on top of PR #63."
+    "sha": "e032bac3144f31d2e28d7d9832e19b9137bedc76",
+    "note": "Merge of PR #67 (T72)."
   }
 }
