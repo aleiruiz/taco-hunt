@@ -1,30 +1,19 @@
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-  Inject,
-} from "@nestjs/common";
-import { AuthRequiredGuard } from "../auth/auth-required.guard.js";
-import { CurrentProfile } from "../auth/current-profile.decorator.js";
-import type { AuthenticatedProfile } from "../auth/auth.types.js";
+import { BadRequestException, Controller, Get, Inject, Param, Query, Req } from "@nestjs/common";
+import type { ApiRequest } from "../auth/auth.types.js";
 import { PlacesService } from "./places.service.js";
 
 @Controller("/places")
-@UseGuards(AuthRequiredGuard)
 export class PlacesAutocompleteController {
   constructor(@Inject(PlacesService) private readonly places: PlacesService) {}
 
   @Get("/autocomplete")
-  autocomplete(@CurrentProfile() profile: AuthenticatedProfile, @Query("q") q?: string) {
+  autocomplete(@Req() request: ApiRequest, @Query("q") q?: string) {
     if (!q) throw new BadRequestException("q requerido");
-    return this.places.autocomplete(q, profile.id);
+    return this.places.autocomplete(q, request.user?.id, request.ip);
   }
 
   @Get("/:placeId/resolve")
-  resolve(@CurrentProfile() profile: AuthenticatedProfile, @Param("placeId") placeId: string) {
-    return this.places.resolvePlace(placeId, profile.id);
+  resolve(@Req() request: ApiRequest, @Param("placeId") placeId: string) {
+    return this.places.resolvePlace(placeId, request.user?.id, request.ip);
   }
 }

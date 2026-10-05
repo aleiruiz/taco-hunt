@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 /**
  * Spots fixtures: stand list, detail, viewport pins, search suggest
  *
@@ -52,6 +54,23 @@ export interface PuestoSuggestion {
 export interface SearchSuggestResult {
   colonias: ColoniaSuggestion[];
   puestos: PuestoSuggestion[];
+}
+
+const API =
+  process.env.EXPO_PUBLIC_API_URL?.trim() ||
+  (Platform.OS === "android" ? "http://10.0.2.2:3001/v1" : "http://localhost:3001/v1");
+
+export async function fetchSearchSuggest(query: string): Promise<SearchSuggestResult> {
+  const response = await fetch(`${API}/search/suggest?q=${encodeURIComponent(query.trim())}`);
+  if (!response.ok) throw new Error("No pudimos buscar sugerencias.");
+  const result = (await response.json()) as SearchSuggestResult;
+  return {
+    colonias: result.colonias,
+    puestos: result.puestos.map((puesto) => ({
+      ...puesto,
+      bestTaco: puesto.bestTaco ?? undefined,
+    })),
+  };
 }
 
 const FIXTURE_COLONIAS: ColoniaSuggestion[] = [

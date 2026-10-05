@@ -40,9 +40,11 @@ function messageFromResponse(value: unknown) {
   return "No pudimos completar la solicitud.";
 }
 
-async function request<T>(path: string, session: Session): Promise<T> {
+async function request<T>(path: string, session: Session | null): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (session) headers.Authorization = `Bearer ${session.access_token}`;
   const response = await fetch(`${API}${path}`, {
-    headers: { Accept: "application/json", Authorization: `Bearer ${session.access_token}` },
+    headers,
   });
   if (!response.ok) {
     let payload: unknown;
@@ -57,12 +59,15 @@ async function request<T>(path: string, session: Session): Promise<T> {
 }
 
 export async function fetchAutocomplete(
-  session: Session,
+  session: Session | null,
   query: string,
 ): Promise<AutocompleteResult> {
   return request(`/places/autocomplete?q=${encodeURIComponent(query)}`, session);
 }
 
-export async function resolvePlace(session: Session, placeId: string): Promise<ResolvedPlace> {
+export async function resolvePlace(
+  session: Session | null,
+  placeId: string,
+): Promise<ResolvedPlace> {
   return request(`/places/${encodeURIComponent(placeId)}/resolve`, session);
 }

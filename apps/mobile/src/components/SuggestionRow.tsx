@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 export interface SuggestionItem {
   id: string;
-  type: "colonia" | "puesto";
+  type: "direccion" | "colonia" | "puesto";
   name: string;
   subtitle?: string;
   icon?: string;
@@ -29,11 +29,13 @@ type Props =
     };
 
 const iconBg: Record<SuggestionItem["type"], string> = {
+  direccion: colors.greenSoft,
   colonia: colors.greenSoft,
   puesto: colors.tacoTile,
 };
 
 const iconColor: Record<SuggestionItem["type"], string> = {
+  direccion: colors.green,
   colonia: colors.green,
   puesto: colors.ink,
 };
@@ -97,7 +99,7 @@ export function SuggestionRow(props: Props) {
     >
       <View style={[styles.iconCircle, { backgroundColor: iconBg[item.type] }]}>
         <Ionicons
-          name={item.type === "colonia" ? "location" : "fast-food"}
+          name={item.type === "puesto" ? "fast-food" : "location"}
           size={16}
           color={iconColor[item.type]}
         />

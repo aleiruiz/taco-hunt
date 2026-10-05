@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Link, type Href, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, type Href, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import TacoHuntTaco from "@/assets/taco-hunt-taco.svg";
 import { useAuth } from "@/auth/provider";
@@ -383,7 +383,12 @@ export default function ExploreScreen() {
     ? pickPreviewTaco(selectedSpot, items.find((item) => item.id === selectedSpotId)?.bestTaco)
     : undefined;
   const router = useRouter();
-  const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
+  const { clearFilterAt, searchAt, searchLat, searchLon } = useLocalSearchParams<{
+    clearFilterAt?: string;
+    searchAt?: string;
+    searchLat?: string;
+    searchLon?: string;
+  }>();
   const { session, signOut } = useAuth();
   const [headerAvatarPreset, setHeaderAvatarPreset] = useState<AvatarPreset>("pastor");
   const [headerAvatarPhotoUrl, setHeaderAvatarPhotoUrl] = useState<string | null>(null);
@@ -434,6 +439,7 @@ export default function ExploreScreen() {
   const mapProposalCacheRef = useRef<Map<string, TacoHuntProposalPin>>(new Map());
   const mapRef = useRef<MapView>(null);
   const currentRegionRef = useRef<Region | null>(null);
+  const pendingSearchRegionRef = useRef<Region | null>(null);
   const regionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mapFetchSeqRef = useRef(0);
   const mapDiscoveryFetchSeqRef = useRef(0);
@@ -741,6 +747,47 @@ export default function ExploreScreen() {
     // not re-trigger when `area` changes list-mode state while map mode is active.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, activeType, fetchMapDiscovery, fetchMapPins]);
+
+  useEffect(() => {
+    const latitude = Number(searchLat);
+    const longitude = Number(searchLon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+    if (
+      latitude < API_COVERAGE.south ||
+      latitude > API_COVERAGE.north ||
+      longitude < API_COVERAGE.west ||
+      longitude > API_COVERAGE.east
+    ) {
+      setError("Esa dirección queda fuera de la cobertura de Monterrey y su área metropolitana.");
+      return;
+    }
+    setMode("mapa");
+    const nextRegion: Region = {
+      latitude,
+      longitude,
+      latitudeDelta: LOCAL_MAP_DELTA,
+      longitudeDelta: LOCAL_MAP_DELTA,
+    };
+    currentRegionRef.current = nextRegion;
+    // These params arrive while the search screen still covers the map, and Google Maps
+    // ignores camera moves then; the focus effect below applies the move once visible.
+    pendingSearchRegionRef.current = nextRegion;
+    void fetchMapPins(nextRegion);
+    void fetchMapDiscovery(nextRegion);
+  }, [fetchMapDiscovery, fetchMapPins, searchAt, searchLat, searchLon]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const region = pendingSearchRegionRef.current;
+      if (!region) return undefined;
+      // Wait for the back transition to finish before moving the camera.
+      const timer = setTimeout(() => {
+        pendingSearchRegionRef.current = null;
+        mapRef.current?.animateToRegion(region, 400);
+      }, 350);
+      return () => clearTimeout(timer);
+    }, []),
+  );
 
   // Neighborhood/area chips are camera shortcuts only in map mode — they move the
   // camera and let onRegionChangeComplete load pins for the new viewport, they

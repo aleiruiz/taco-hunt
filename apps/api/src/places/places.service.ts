@@ -33,9 +33,12 @@ const PUBLIC_GOOGLE_READ_LIMIT = 30;
 const PUBLIC_GOOGLE_READ_WINDOW_MS = 60_000;
 const VIEWPORT_SEARCH_INSET = 0.15;
 
+/** Monterrey and its metropolitan area: the coverage for contributions and address search. */
+const MONTERREY_AREA = { south: 25.3, north: 26.1, west: -101, east: -99.7 } as const;
+
 const monterreyBounds = z.object({
-  latitude: z.number().min(25.3).max(26.1),
-  longitude: z.number().min(-101).max(-99.7),
+  latitude: z.number().min(MONTERREY_AREA.south).max(MONTERREY_AREA.north),
+  longitude: z.number().min(MONTERREY_AREA.west).max(MONTERREY_AREA.east),
 });
 
 type GooglePlace = {
@@ -534,7 +537,7 @@ export class PlacesService {
    * reviews or photos); coordinates are resolved separately in {@link resolvePlace}, once the
    * user picks a suggestion, to keep Google call volume bounded per keystroke.
    */
-  async autocomplete(rawQuery: string, profileId: string) {
+  async autocomplete(rawQuery: string, profileId: string | undefined, clientIp: string) {
     const parsed = placeAutocompleteQuerySchema.safeParse({ q: rawQuery });
     if (!parsed.success) {
       throw new BadRequestException({
@@ -542,7 +545,7 @@ export class PlacesService {
         details: { issues: parsed.error.issues },
       });
     }
-    this.limits.consume("places-autocomplete-user", profileId, 30, 60_000);
+    this.consumePublicGoogleReadLimit(profileId, clientIp);
 
     const query = parsed.data.q;
     const [localMatches, googleMatches] = await Promise.all([
@@ -564,10 +567,10 @@ export class PlacesService {
   }
 
   /** Resolves a Google place_id into coordinates and a display neighborhood, called once on selection. */
-  async resolvePlace(placeId: string, profileId: string) {
+  async resolvePlace(placeId: string, profileId: string | undefined, clientIp: string) {
     const trimmed = placeId.trim();
     if (!trimmed) throw new BadRequestException("placeId requerido");
-    this.limits.consume("places-resolve-user", profileId, 20, 60_000);
+    this.consumePublicGoogleReadLimit(profileId, clientIp);
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY?.trim();
     if (!apiKey) throw new ServiceUnavailableException("Google Places no está configurado");
@@ -726,10 +729,12 @@ export class PlacesService {
         input: query,
         languageCode: "es",
         includedRegionCodes: ["mx"],
-        locationBias: {
-          circle: {
-            center: { latitude: 25.6866, longitude: -100.3161 },
-            radius: 25_000,
+        // A bias still returns other cities when nothing nearby matches (e.g. Toluca or CDMX
+        // for "Demo 01"); restrict suggestions to the same area resolvePlace accepts.
+        locationRestriction: {
+          rectangle: {
+            low: { latitude: MONTERREY_AREA.south, longitude: MONTERREY_AREA.west },
+            high: { latitude: MONTERREY_AREA.north, longitude: MONTERREY_AREA.east },
           },
         },
       }),

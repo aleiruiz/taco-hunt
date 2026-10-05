@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/auth/provider";
 import { colors, spacing, typography } from "@/theme";
 import { IconButton } from "@/components/IconButton";
 import { SearchBar } from "@/components/SearchBar";
@@ -16,7 +17,12 @@ import { SuggestionRow, type SuggestionItem } from "@/components/SuggestionRow";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
-import { searchSuggestFixture, type ColoniaSuggestion, type PuestoSuggestion } from "@/data/spots";
+import { fetchSearchSuggest, type ColoniaSuggestion, type PuestoSuggestion } from "@/data/spots";
+import {
+  fetchAutocomplete,
+  resolvePlace,
+  type PlaceSuggestion,
+} from "@/features/discovery/autocomplete";
 import { addRecentSearch, getRecentSearches } from "@/features/discovery/recentSearches";
 import { reviewCountLabel } from "@/lib/format";
 
@@ -29,9 +35,13 @@ export default function SearchScreen() {
   const [status, setStatus] = useState<Status>("idle");
   const [colonias, setColonias] = useState<ColoniaSuggestion[]>([]);
   const [puestos, setPuestos] = useState<PuestoSuggestion[]>([]);
+  const [direcciones, setDirecciones] = useState<PlaceSuggestion[]>([]);
+  const [placesAttribution, setPlacesAttribution] = useState<string | null>(null);
   const [recent, setRecent] = useState<string[]>([]);
   const [retryToken, setRetryToken] = useState(0);
+  const [resolveError, setResolveError] = useState(false);
   const requestId = useRef(0);
+  const { session } = useAuth();
 
   useEffect(() => {
     void getRecentSearches().then(setRecent);
@@ -44,29 +54,47 @@ export default function SearchScreen() {
       setStatus("idle");
       setColonias([]);
       setPuestos([]);
+      setDirecciones([]);
+      setPlacesAttribution(null);
       return;
     }
     const currentRequest = ++requestId.current;
     setStatus("loading");
+    setResolveError(false);
     const timer = setTimeout(() => {
-      searchSuggestFixture(trimmed)
-        .then((result) => {
+      // Each source degrades on its own: a Places outage still shows Taco Hunt stands, and
+      // the error state only appears when both sources fail.
+      Promise.allSettled([fetchSearchSuggest(trimmed), fetchAutocomplete(session, trimmed)]).then(
+        ([suggest, places]) => {
           if (requestId.current !== currentRequest) return;
-          setColonias(result.colonias);
-          setPuestos(result.puestos);
-          const hasResults = result.colonias.length > 0 || result.puestos.length > 0;
+          if (suggest.status === "rejected" && places.status === "rejected") {
+            setColonias([]);
+            setPuestos([]);
+            setDirecciones([]);
+            setPlacesAttribution(null);
+            setStatus("error");
+            AccessibilityInfo.announceForAccessibility(
+              "No pudimos buscar. Lo que escribiste sigue aquí.",
+            );
+            return;
+          }
+          const colonias = suggest.status === "fulfilled" ? suggest.value.colonias : [];
+          const puestos = suggest.status === "fulfilled" ? suggest.value.puestos : [];
+          const direcciones =
+            places.status === "fulfilled"
+              ? places.value.items.filter((item) => item.kind === "google")
+              : [];
+          setColonias(colonias);
+          setPuestos(puestos);
+          setDirecciones(direcciones);
+          setPlacesAttribution(places.status === "fulfilled" ? places.value.attribution : null);
+          const hasResults = colonias.length > 0 || puestos.length > 0 || direcciones.length > 0;
           setStatus(hasResults ? "success" : "empty");
-        })
-        .catch(() => {
-          if (requestId.current !== currentRequest) return;
-          setStatus("error");
-          AccessibilityInfo.announceForAccessibility(
-            "No pudimos buscar. Lo que escribiste sigue aquí.",
-          );
-        });
+        },
+      );
     }, 350);
     return () => clearTimeout(timer);
-  }, [query, retryToken]);
+  }, [query, retryToken, session]);
 
   function close() {
     router.back();
@@ -80,6 +108,30 @@ export default function SearchScreen() {
     await addRecentSearch(item.name);
     if (item.type === "puesto") {
       router.push(`/spot/${item.id}`);
+    } else if (item.type === "direccion") {
+      const placeId = item.id.replace(/^google:/, "");
+      setResolveError(false);
+      try {
+        const resolved = await resolvePlace(session, placeId);
+        // navigate (not replace) returns to the existing map screen with new params, so its
+        // mounted map can animate; a fresh screen's map isn't ready to move yet.
+        router.navigate({
+          pathname: "/",
+          params: {
+            searchLat: String(resolved.latitude),
+            searchLon: String(resolved.longitude),
+            searchLabel: resolved.formattedAddress ?? resolved.name,
+            // Unique per selection, so picking the same address again still moves the map.
+            searchAt: String(Date.now()),
+          },
+        });
+      } catch {
+        // Keep the suggestions on screen so the user can pick another one.
+        setResolveError(true);
+        AccessibilityInfo.announceForAccessibility(
+          "No pudimos ubicar esa dirección. Intenta con otra sugerencia.",
+        );
+      }
     } else {
       router.back();
     }
@@ -114,6 +166,14 @@ export default function SearchScreen() {
     name: p.name,
     subtitle: `${p.neighborhood}${p.bestTaco ? ` · ${p.bestTaco}` : ""} · ${reviewCountLabel(p.reviewCount)}`,
   }));
+  const direccionItems: SuggestionItem[] = direcciones
+    .filter((item): item is Extract<PlaceSuggestion, { kind: "google" }> => item.kind === "google")
+    .map((item) => ({
+      id: `google:${item.placeId}`,
+      type: "direccion",
+      name: item.text,
+      subtitle: item.secondaryText ?? "Dirección",
+    }));
 
   return (
     <View style={styles.screen}>
@@ -124,10 +184,10 @@ export default function SearchScreen() {
             value={query}
             onChangeText={runSearch}
             onClear={() => setQuery("")}
-            placeholder="Busca un puesto o colonia"
+            placeholder="Busca una dirección, colonia o puesto"
             autoFocus
             accessibilityRole="combobox"
-            accessibilityLabel="Buscar puesto o colonia"
+            accessibilityLabel="Buscar dirección, colonia o puesto"
             accessibilityState={{ expanded: status === "success" || status === "empty" }}
           />
           {status === "loading" && (
@@ -140,7 +200,7 @@ export default function SearchScreen() {
           )}
         </View>
       </View>
-      <Text style={styles.subline}>Lo más cercano primero · sin límite de zona</Text>
+      <Text style={styles.subline}>Monterrey y su área metropolitana · lo más cercano primero</Text>
 
       <ScrollView
         style={styles.body}
@@ -176,6 +236,27 @@ export default function SearchScreen() {
 
         {status === "success" && (
           <>
+            {resolveError && (
+              <Text style={styles.resolveErrorText} accessibilityRole="alert">
+                No pudimos ubicar esa dirección. Intenta con otra sugerencia.
+              </Text>
+            )}
+            {direccionItems.length > 0 && (
+              <View accessibilityRole="list">
+                <Text style={styles.sectionLabel}>DIRECCIONES Y ZONAS</Text>
+                {direccionItems.map((item) => (
+                  <SuggestionRow
+                    key={item.id}
+                    item={item}
+                    query={query}
+                    onPress={selectSuggestion}
+                  />
+                ))}
+                {placesAttribution ? (
+                  <Text style={styles.attribution}>{placesAttribution}</Text>
+                ) : null}
+              </View>
+            )}
             {coloniaItems.length > 0 && (
               <View accessibilityRole="list">
                 <Text style={styles.sectionLabel}>COLONIAS</Text>
@@ -305,6 +386,13 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
+  attribution: {
+    ...typography.caption,
+    color: colors.muted,
+    textAlign: "right",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   recentSection: { paddingTop: spacing.md },
   recentChips: {
     flexDirection: "row",
@@ -350,4 +438,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   retryButton: { minWidth: 160 },
+  resolveErrorText: {
+    ...typography.body,
+    color: colors.dangerText,
+    marginBottom: spacing.md,
+  },
 });
