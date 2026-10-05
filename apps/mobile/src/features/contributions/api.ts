@@ -113,7 +113,8 @@ async function request<T>(path: string, session: Session, init?: RequestInit): P
     ...init,
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
+      // Fastify rejects a JSON content type with an empty body, so bodyless PUT/DELETE omit it.
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
       Authorization: `Bearer ${session.access_token}`,
       ...init?.headers,
     },
