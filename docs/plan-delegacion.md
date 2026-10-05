@@ -164,6 +164,22 @@ merged: the UI first (T61–T63, plus the T69 review follow-up), then the contra
 | T67 | Proposal/link API: place-ID duplicate detection and redirect, map-pin-first local proposals, moderation-safe linking, and T62 fixture swap.                                                                        | T64, T65   | apps/api/src/proposals/, mobile proposal data              | M    | Merged (PR #61) |
 | T68 | Retire or fence normal `import_candidates` Google payload ingestion and update admin/scripts/docs so no public route copies Google records.                                                                        | T66, T67   | apps/api/src/admin/, supabase/scripts/, mobile admin, docs | M    | Merged (PR #63) |
 
+## P2.9: emulator QA follow-ups (2026-10-05)
+
+The 2026-10-05 Android emulator pass found bugs in the merged app. T70–T72 are
+merged; T73–T77 follow up on what that pass and the owner left open.
+
+| ID  | Task and expected outcome                                                                                           | Blocked by | Main area / hot files                                                  |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| T70 | Favorites, delete review and delete account: send JSON `Content-Type` only with a body; fix the favorites GROUP BY. | —          | apps/mobile/src/features/contributions/api.ts, apps/api/src/favorites/ |
+| T71 | Explicit `@Inject` so `pnpm dev:api` works under tsx.                                                               | —          | apps/api/src/                                                          |
+| T72 | App UI fixes from the QA pass: map card target, proposal status, navigation, keyboard, network errors, copy.        | —          | apps/mobile/app/                                                       |
+| T73 | Give the three colliding migration versions unique versions so `supabase db reset` works on a clean database.       | —          | supabase/migrations/                                                   |
+| T74 | Bias address autocomplete to Monterrey.                                                                             | T73        | apps/api/src/places/                                                   |
+| T75 | Real challenge progress and photo counts instead of fixed sample data.                                              | T73        | apps/api/src/account/, apps/mobile/app/                                |
+| T76 | Apply the taco-type filter and count to Google pins on the map.                                                     | T73        | apps/mobile/app/index.tsx                                              |
+| T77 | Store user-uploaded photos in a private S3 bucket behind the existing storage service.                              | T73        | apps/api/src/media/                                                    |
+
 ## P3: deliberately blocked until the end
 
 | ID  | Task and expected outcome                                                                                                                                                                                        | Blocked by                                                                              | Status          |
