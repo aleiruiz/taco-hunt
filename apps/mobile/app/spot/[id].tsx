@@ -253,6 +253,8 @@ export default function SpotScreen() {
     try {
       await setFavorite(session, id, !favorite);
       setFavoriteState((current) => !current);
+    } catch {
+      Alert.alert("No pudimos actualizar tus favoritos", "Inténtalo de nuevo en un momento.");
     } finally {
       setFavoriteBusy(false);
     }
