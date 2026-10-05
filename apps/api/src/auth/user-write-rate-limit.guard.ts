@@ -4,13 +4,14 @@ import {
   HttpException,
   Injectable,
   UnauthorizedException,
+  Inject,
 } from "@nestjs/common";
 import type { ApiRequest } from "./auth.types.js";
 import { RequestLimitService } from "./request-limit.service.js";
 
 @Injectable()
 export class UserWriteRateLimitGuard implements CanActivate {
-  constructor(private readonly limits: RequestLimitService) {}
+  constructor(@Inject(RequestLimitService) private readonly limits: RequestLimitService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<ApiRequest>();

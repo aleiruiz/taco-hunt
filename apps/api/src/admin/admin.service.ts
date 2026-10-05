@@ -48,7 +48,7 @@ export class AdminService {
 
   constructor(
     @Inject(DATABASE_POOL) private readonly pool: Pool,
-    private readonly media: MediaStorageService,
+    @Inject(MediaStorageService) private readonly media: MediaStorageService,
   ) {}
 
   /** Returns up to 100 moderation items; report items omit the reporter's identity. */
