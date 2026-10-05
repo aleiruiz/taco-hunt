@@ -18,9 +18,9 @@ NestJS on Fastify, Postgres via `pg` (runtime role `taco_hunt_api`), Supabase fo
 
 ## External services
 
-- Google Places goes through `PlacesService`, which enforces the daily call budget and the kill switch (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, `GOOGLE_PLACES_KILL_SWITCH`). Never call Google directly from another module.
+- Google Places goes through `PlacesService`, which enforces the daily call budget and the kill switch (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, `GOOGLE_PLACES_KILL_SWITCH`). Never call Google directly from another module. The one exception is `scripts/refresh-place-candidates.ts`, which calls Place Details itself, honors the kill switch, and is bounded by its own limits (see `docs/google-places-controls.md`).
 - Uploaded images go through the media pipeline (decode, strip EXIF, resize) before storage; reuse it for new photo types (for example, stand and profile photos).
-- Any new external provider (for example, T40's automated image review) needs an orchestrator decision logged before it is added.
+- Any new external provider needs an orchestrator decision logged before it is added. T40's automated avatar review is a local stub (`src/account/avatar-review.service.ts`) with no external provider; replacing it with a real image-moderation service is such a decision.
 
 ## Checks
 

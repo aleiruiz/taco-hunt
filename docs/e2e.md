@@ -4,10 +4,10 @@ This is a manual smoke procedure for the current browse journey. It exercises th
 
 ## Prerequisites
 
-- Node.js 24.19.0 (the supported project range begins at 20.19.4)
+- Node.js 24 (`.nvmrc` pins 24.21.0; CI uses 24.19.0; the API requires 22 or higher)
 - pnpm 11.25.0
 - Docker Desktop running
-- An iOS simulator, Android emulator, or physical phone for the mobile portion
+- An iOS simulator, Android emulator, or physical phone with the Taco Hunt development build installed (`eas build --profile development`, or `npx expo run:android` from `apps/mobile`); Expo Go cannot load the native map configuration
 
 ## Start the local services
 
@@ -51,13 +51,20 @@ Expected: health status `ok`, 10 spots, and 10 active taco types. The fixture na
 
 ## Smoke-test the mobile browse flow
 
-In a third terminal, point Expo at the local API and start the app:
+In a third terminal, point Expo at the local API and start the app. For the iOS simulator:
 
 ```powershell
 $env:EXPO_PUBLIC_API_URL = "http://localhost:3001/v1"
 pnpm dev:mobile
 ```
 
-Open the app in an iOS simulator or the Android emulator. Confirm the Explore screen shows the fictional stands, search returns matching names/neighborhoods, and opening a stand shows its approved taco types. For an Android emulator, use `http://10.0.2.2:3001/v1` instead of `localhost`. For a physical phone, use the computer's LAN address and keep it only in the local `.env`; both devices must be on the same network and the firewall must allow the API port.
+For the Android emulator, use the emulator's address for the host computer instead:
 
-The current manual smoke scope covers public browsing only. Authenticated contributions, moderation, map interactions, and device-specific permissions require their own implementation and acceptance passes; this procedure does not imply those flows are complete. CI runs lint, typecheck, and formatting checks without starting Docker or requiring Supabase credentials.
+```powershell
+$env:EXPO_PUBLIC_API_URL = "http://10.0.2.2:3001/v1"
+pnpm dev:mobile
+```
+
+Open the development build in an iOS simulator or the Android emulator; `pnpm dev:mobile` prints the Metro port it picked. Confirm the Explore screen shows the fictional stands, search returns matching names/neighborhoods, and opening a stand shows its approved taco types. The app also falls back to `10.0.2.2` on Android when `EXPO_PUBLIC_API_URL` is unset. For a physical phone, use the computer's LAN address and keep it only in a local, uncommitted `.env`; both devices must be on the same network and the firewall must allow the API port.
+
+The current manual smoke scope covers public browsing only. Authenticated contributions, moderation, map interactions, and device-specific permissions require their own implementation and acceptance passes; this procedure does not imply those flows are complete. CI runs lint and typecheck (its Prettier step checks only the workflow file) without starting Docker or requiring Supabase credentials.

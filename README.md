@@ -9,11 +9,12 @@ The full functional specification is in [docs/build-spec.md](docs/build-spec.md)
 - **GitHub:** public repository `aleiruiz/taco-hunt`, `main` branch.
 - **Local Supabase:** CLI pinned as a dev dependency, with configuration versioned in `supabase/`. The local database, Auth, and Storage run in Docker.
 - **Remote Supabase and Google Cloud:** not linked yet; they require selecting/creating projects and authenticating the accounts. No cloud infrastructure was created and no billing was activated.
-- **Expo and maps:** will be connected when building `apps/mobile`; Android Maps requires a restricted key. The app will not use Places or geocoding/routing APIs.
+- **Expo and maps:** `apps/mobile` runs as an Expo development build (EAS profile `development` in `apps/mobile/eas.json`). The map uses `react-native-maps`; Android needs a restricted Maps SDK key at build time.
+- **Google Places:** the mobile app never calls Google directly. The API calls Google Places (New) server-side with `GOOGLE_PLACES_API_KEY` for live viewport discovery, autocomplete, on-demand details and photos, and review-target creation. Google display data is never stored; see [docs/google-places-controls.md](docs/google-places-controls.md).
 
 ## Local requirements
 
-- Node.js 20.19.4 or higher (Expo SDK 57 requirement)
+- Node.js 24 (`.nvmrc` pins 24.21.0; the API requires 22 or higher and Expo SDK 57 requires 20.19.4 or higher)
 - pnpm (version pinned in `package.json`)
 - Docker Desktop running
 
@@ -24,9 +25,15 @@ pnpm install
 Copy-Item .env.example .env
 pnpm db:start
 pnpm db:status
+pnpm db:reset
+.\supabase\dev-role.ps1 provision
 ```
 
-`db:status` shows the local Auth URL and the keys for development. Copy only the publishable key into the `SUPABASE_PUBLISHABLE_KEY` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` variables in `.env`. Privileged keys/passwords are server-only and must never be prefixed with `EXPO_PUBLIC_` or published.
+`db:status` shows the local Auth URL and the keys for development. Copy only the publishable key into `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. `dev-role.ps1 provision` creates the least-privileged `taco_hunt_api` database role and writes its `DATABASE_URL` to `.env`; the API must never connect as the `postgres` owner. Privileged keys/passwords are server-only and must never be prefixed with `EXPO_PUBLIC_` or published.
+
+Neither app reads the root `.env` on its own. The API takes its settings from the process environment (see [docs/e2e.md](docs/e2e.md) for loading `DATABASE_URL` without printing it). Expo loads `.env` from `apps/mobile/`, so put the `EXPO_PUBLIC_*` values and the native maps keys there or export them in the shell.
+
+The pnpm workspace applies the patches in `patches/` (React Native Screens, Worklets, Reanimated, Expo Modules Core, and Gesture Handler) through `patchedDependencies` in `pnpm-workspace.yaml`. Keep a patch's version in step with the dependency it patches.
 
 `pnpm db:reset` applies migrations from scratch and loads fictional development stands. To stop local services use `pnpm db:stop`.
 
@@ -40,8 +47,6 @@ Public responses never include a direct Storage URL. To display an image, reques
 
 To review and clean up old pending uploads or orphaned objects, run `pnpm --filter @taco-hunt/api media:cleanup` in preview mode. To delete the listed objects, add `-- --delete`. The default threshold is 24 hours; it can be changed with `MEDIA_ORPHAN_AGE_HOURS` (1–8760). The command needs `DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` on the server side.
 
-## Run the demo
-
 ## Quality and formatting
 
 Run these commands from the repository root before sharing changes:
@@ -52,14 +57,15 @@ pnpm typecheck
 pnpm format:check
 ```
 
-`pnpm lint` applies ESLint to the Expo app, the API, and the landing page. `pnpm typecheck` checks types for the API and the mobile app. To format compatible files use `pnpm format`; `pnpm format:check` only reports whether there are differences. The shared configuration lives in `eslint.config.js` and `.prettierrc.json`.
+`pnpm lint` runs ESLint on the API, the contracts package, and the landing page; the mobile app is excluded from ESLint and checked by `pnpm typecheck`, which covers the API and the mobile app. To format compatible files use `pnpm format`; `pnpm format:check` only reports whether there are differences. The shared configuration lives in `eslint.config.mjs` and `.prettierrc.json`.
 
-The manual end-to-end procedure for starting Supabase, checking the API, and opening mobile discovery is in [docs/e2e.md](docs/e2e.md). GitHub Actions runs the quality commands without starting Docker or requiring Supabase credentials.
+The manual end-to-end procedure for starting Supabase, checking the API, and opening mobile discovery is in [docs/e2e.md](docs/e2e.md). GitHub Actions runs `pnpm lint` and `pnpm typecheck` without starting Docker or requiring Supabase credentials; its Prettier step checks only the workflow file, not the whole repository.
 
-In three terminals from the root:
+## Run the demo
+
+In three terminals from the root. Load `DATABASE_URL` from `.env` as shown in [docs/e2e.md](docs/e2e.md), then:
 
 ```powershell
-$env:DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:55422/postgres"
 pnpm dev:api
 ```
 
@@ -68,11 +74,12 @@ pnpm dev:landing
 ```
 
 ```powershell
-$env:EXPO_PUBLIC_API_URL = "http://localhost:3001/v1"
 pnpm dev:mobile
 ```
 
-The local landing page runs at `http://localhost:4173`; the API at `http://localhost:3001/healthz`. For the Android emulator use `http://10.0.2.2:3001/v1` as `EXPO_PUBLIC_API_URL`; on a physical phone, use this computer's LAN IP. In Expo Go, press `w` to preview in the browser.
+The local landing page runs at `http://localhost:4173`; the API at `http://localhost:3001/healthz`. `pnpm dev:mobile` starts Metro on a free port and prints it. Open the app in a development build, not Expo Go: native map keys, the `withAndroidCxxShared` config plugin, and the patched native dependencies all need one. Build it with `eas build --profile development` (see `apps/mobile/eas.json`) or locally with `npx expo run:android` from `apps/mobile`.
+
+If `EXPO_PUBLIC_API_URL` is not set, the app uses `http://10.0.2.2:3001/v1` on Android (the emulator's host) and `http://localhost:3001/v1` elsewhere.
 
 ## API from mobile
 
@@ -86,10 +93,21 @@ The IP depends on each network. The API must listen on `0.0.0.0`; the local fire
 
 - If `pnpm db:start` fails to connect, start Docker Desktop and confirm the engine is ready.
 - The configuration uses ports 55420–55429 to avoid ranges reserved by Windows; if you change one, adjust the local `.env` URLs.
-- For Android without a map, set `EXPO_PUBLIC_ANDROID_MAPS_API_KEY` to a Google Maps SDK for Android key restricted by package name and signing certificate. Maps may require Google Cloud billing; do not enable Places.
+- For Android without a map, set `ANDROID_MAPS_API_KEY` (and `IOS_MAPS_API_KEY` for Google Maps on iOS) before building the development build, and `EXPO_PUBLIC_MAPS_PROVIDER=google` to use the Google provider. Restrict the key to the Maps SDK, the package `com.aleiruiz.tacohunt`, and its signing certificate. Maps may require Google Cloud billing. Never enable Places on this key; Places uses the separate server-only `GOOGLE_PLACES_API_KEY`.
 - If the phone can't reach the API, check that the API listens on `0.0.0.0`, the LAN URL in `.env`, the Wi-Fi network, and the firewall rules.
 - Auth messages from the local stack are captured by the test mail server; they are not sent to real addresses.
 
+## Admin and maintenance scripts
+
+From the root, with the server-only variables each script needs in the environment:
+
+- `pnpm --filter @taco-hunt/api admin:bootstrap` grants the first admin role (see [docs/authentication.md](docs/authentication.md)).
+- `pnpm --filter @taco-hunt/api media:cleanup` previews old pending uploads and orphaned photo objects (described above).
+- `pnpm --filter @taco-hunt/api places:refresh` re-checks approved stands linked to a Google place (see [docs/data-provenance.md](docs/data-provenance.md)).
+
 ## More information
 
-See `docs/build-spec.md` for architecture, data model, API, security, provenance-based import, and the deployment recipe.
+- [docs/build-spec.md](docs/build-spec.md): architecture, data model, API, and security.
+- [docs/google-places-controls.md](docs/google-places-controls.md): Google Places usage, budgets, and kill switch.
+- [docs/data-provenance.md](docs/data-provenance.md), [docs/moderation.md](docs/moderation.md), [docs/privacy.md](docs/privacy.md), [docs/authentication.md](docs/authentication.md), [docs/share.md](docs/share.md).
+- [docs/plan-delegacion.md](docs/plan-delegacion.md): task board and current status.
