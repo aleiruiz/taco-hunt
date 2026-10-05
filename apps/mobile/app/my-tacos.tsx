@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Link, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/auth/provider";
 import {
@@ -74,9 +74,25 @@ export default function MyTacosScreen() {
     }
   }, [requestedTab]);
 
+  const hasLoaded = useRef(false);
+  // Only the latest load may commit state, so a slow request from a previous account
+  // or an older refresh can't overwrite newer data.
+  const loadSequence = useRef(0);
+  useEffect(() => {
+    loadSequence.current += 1;
+    // A different account must never see the previous account's lists while reloading.
+    hasLoaded.current = false;
+    setReviews([]);
+    setFavorites([]);
+    setProposals([]);
+    setProfile(null);
+  }, [session?.user.id]);
   const load = useCallback(async () => {
     if (!session) return;
-    setLoading(true);
+    const requestId = ++loadSequence.current;
+    const isCurrent = () => requestId === loadSequence.current;
+    // Refreshes on focus (e.g. back from editing a review) keep the current lists visible.
+    if (!hasLoaded.current) setLoading(true);
     setError(null);
     try {
       const [reviewPage, favoritePage, proposalsResponse, ownProfile] = await Promise.all([
@@ -90,6 +106,7 @@ export default function MyTacosScreen() {
         // sign-up metadata when profile is null (see below).
         getProfile(session).catch(() => null),
       ]);
+      if (!isCurrent()) return;
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);
       setProfile(ownProfile);
@@ -98,17 +115,22 @@ export default function MyTacosScreen() {
           spotProposals: Proposal[];
           tacoProposals: Proposal[];
         };
+        if (!isCurrent()) return;
         setProposals([...data.spotProposals, ...data.tacoProposals]);
       }
+      hasLoaded.current = true;
     } catch (cause) {
+      if (!isCurrent()) return;
       setError(cause instanceof Error ? cause.message : "No pudimos cargar tu perfil.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [session]);
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
   async function remove(review: OwnReview) {
     Alert.alert("Eliminar reseña", "Esta acción no se puede deshacer.", [
       { text: "Cancelar", style: "cancel" },
@@ -177,16 +199,8 @@ export default function MyTacosScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: "Mi perfil", headerShown: true }} />
+      {/* The native "Mi perfil" header already provides the back action. */}
       <View style={styles.topRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Volver"
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="chevron-back" size={16} color={colors.green} />
-          <Text style={styles.backText}>Volver</Text>
-        </Pressable>
         <IconButton
           icon="settings-outline"
           label="Ajustes"
@@ -414,9 +428,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.cream },
   content: { padding: 22, paddingTop: 58, paddingBottom: 46 },
   center: { flex: 1, backgroundColor: colors.cream, padding: 28, justifyContent: "center" },
-  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  backButton: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44 },
-  backText: { color: colors.green, fontWeight: "800", fontSize: 15 },
+  topRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end" },
   title: { color: colors.ink, fontSize: 32, fontWeight: "900", marginTop: 10 },
   body: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 6 },
   profileHeader: {

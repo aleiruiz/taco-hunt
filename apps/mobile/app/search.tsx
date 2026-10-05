@@ -18,6 +18,7 @@ import { Button } from "@/components/Button";
 import { Chip } from "@/components/Chip";
 import { searchSuggestFixture, type ColoniaSuggestion, type PuestoSuggestion } from "@/data/spots";
 import { addRecentSearch, getRecentSearches } from "@/features/discovery/recentSearches";
+import { reviewCountLabel } from "@/lib/format";
 
 type Status = "idle" | "loading" | "success" | "empty" | "error";
 
@@ -111,7 +112,7 @@ export default function SearchScreen() {
     id: p.id,
     type: "puesto",
     name: p.name,
-    subtitle: `${p.neighborhood}${p.bestTaco ? ` · ${p.bestTaco}` : ""} · ${p.reviewCount} reseñas`,
+    subtitle: `${p.neighborhood}${p.bestTaco ? ` · ${p.bestTaco}` : ""} · ${reviewCountLabel(p.reviewCount)}`,
   }));
 
   return (

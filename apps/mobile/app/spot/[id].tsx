@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
   Pressable,
@@ -28,6 +29,7 @@ import {
   type TacoType,
 } from "@/features/proposals/api";
 import { openDirections as openMapDirections } from "@/lib/directions";
+import { reviewCountLabel } from "@/lib/format";
 import {
   createFixtureTacoHuntPhoto,
   getFixtureGooglePlaceDetails,
@@ -449,11 +451,10 @@ export default function SpotScreen() {
     (photo) => photo.spotId === spot?.id && photo.uploaderId === session?.user.id,
   );
   const heroUrl = approvedPhotos[0]?.url;
-  const totalScored = spot?.tacos.filter((taco) => taco.score !== null) ?? [];
-  const ratingSummary =
-    totalScored.length > 0
-      ? `${(totalScored.reduce((total, taco) => total + (taco.score ?? 0), 0) / totalScored.length).toFixed(1)} ★ · ${spot?.tacos.reduce((total, taco) => total + taco.reviewCount, 0)} reseñas`
-      : null;
+  // Ratings belong to each taco, so the header only counts reviews; it never averages
+  // taco scores into a stand-wide rating.
+  const totalReviews = spot?.tacos.reduce((total, taco) => total + taco.reviewCount, 0) ?? 0;
+  const ratingSummary = totalReviews > 0 ? reviewCountLabel(totalReviews) : null;
 
   return (
     <View style={{ flex: 1 }}>
@@ -612,12 +613,15 @@ export default function SpotScreen() {
                       {googleDetailsMessage ||
                         "Los datos de Google no están disponibles por ahora."}
                     </Text>
-                    <Button
-                      label="Reintentar"
-                      variant="secondary"
-                      onPress={() => void loadGoogleDetails()}
-                      style={styles.googleRetry}
-                    />
+                    {/* "unavailable" (e.g. no linked Google place) won't change on retry. */}
+                    {googleDetailsState === "error" ? (
+                      <Button
+                        label="Reintentar"
+                        variant="secondary"
+                        onPress={() => void loadGoogleDetails()}
+                        style={styles.googleRetry}
+                      />
+                    ) : null}
                   </View>
                 )}
                 {googleDetailsState === "ready" && googleDetails && (
@@ -745,7 +749,7 @@ export default function SpotScreen() {
                     <Text style={styles.tacoName}>{taco.name}</Text>
                     <Text style={styles.body}>
                       {taco.reviewCount
-                        ? `${taco.reviewCount} reseñas`
+                        ? reviewCountLabel(taco.reviewCount)
                         : "Sin calificaciones todavía"}
                     </Text>
                   </View>
@@ -801,7 +805,8 @@ export default function SpotScreen() {
           )
         )}
         <Modal visible={reportOpen} animationType="slide" transparent onRequestClose={closeReport}>
-          <View style={styles.modalBackdrop}>
+          {/* Android 15 draws edge-to-edge, so the window no longer resizes for the keyboard. */}
+          <KeyboardAvoidingView behavior="padding" style={styles.modalBackdrop}>
             <View style={styles.modalSheet}>
               <Text style={styles.modalTitle}>Reportar este puesto</Text>
               <Text style={styles.body}>
@@ -846,7 +851,7 @@ export default function SpotScreen() {
                 />
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
         <Modal
           visible={tacoModalOpen}

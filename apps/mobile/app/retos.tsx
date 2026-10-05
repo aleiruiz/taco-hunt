@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -8,20 +8,21 @@ import { BadgeMedal } from "@/components/BadgeMedal";
 import { getFixtureProgress } from "@/data/progress";
 
 export default function RetosScreen() {
+  const router = useRouter();
   const progress = getFixtureProgress();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Link href="/settings" asChild>
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel="Volver a ajustes"
-          style={styles.back}
-        >
-          <Ionicons name="chevron-back" size={16} color={colors.green} />
-          <Text style={styles.backText}>Volver</Text>
-        </Pressable>
-      </Link>
+      {/* Retos opens from the profile, the sidebar and settings, so go back to wherever it came from. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Volver"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+        style={styles.back}
+      >
+        <Ionicons name="chevron-back" size={16} color={colors.green} />
+        <Text style={styles.backText}>Volver</Text>
+      </Pressable>
       <Text style={styles.kicker}>TU PROGRESO</Text>
       <Text style={styles.title}>Retos e insignias</Text>
 

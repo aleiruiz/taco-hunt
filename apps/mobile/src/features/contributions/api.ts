@@ -2,6 +2,18 @@ import type { Session } from "@supabase/supabase-js";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
+const NETWORK_ERROR_MESSAGE =
+  "No pudimos conectar con Taco Hunt. Revisa tu conexión e inténtalo de nuevo.";
+
+/** fetch that reports a connection failure in Spanish instead of the platform's raw error. */
+async function fetchOrNetworkError(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new Error(NETWORK_ERROR_MESSAGE);
+  }
+}
+
 export type OwnReview = {
   id: string;
   spotTacoId: string;
@@ -76,7 +88,7 @@ export async function uploadReviewPhoto(
     name: asset.fileName ?? "review-photo.jpg",
     type: asset.mimeType ?? "image/jpeg",
   } as unknown as Blob);
-  const response = await fetch(`${API}/review-photos`, {
+  const response = await fetchOrNetworkError(`${API}/review-photos`, {
     method: "POST",
     headers: { Authorization: `Bearer ${session.access_token}` },
     body: form,
@@ -109,7 +121,7 @@ function messageFromResponse(value: unknown) {
 }
 
 async function request<T>(path: string, session: Session, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API}${path}`, {
+  const response = await fetchOrNetworkError(`${API}${path}`, {
     ...init,
     headers: {
       Accept: "application/json",
