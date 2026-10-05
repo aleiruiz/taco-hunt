@@ -43,7 +43,7 @@ One bucket per environment, e.g. `taco-hunt-media-dev` and later `taco-hunt-medi
 
 ## IAM identity for the API
 
-Create a dedicated IAM user (or, when deployed on AWS, a role) per environment, e.g. `taco-hunt-api-media-dev`, with only this inline policy:
+Create a dedicated IAM user per environment, e.g. `taco-hunt-api-media-dev`, with only this inline policy. The driver requires static access keys and does not support instance or task roles:
 
 ```json
 {
