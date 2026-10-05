@@ -3,14 +3,13 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Button, Card } from "@/components";
@@ -18,7 +17,7 @@ import { colors, radii, sizes, spacing, typography } from "@/theme";
 import { getOnboardingProfile, type OnboardingProfile } from "@/data/auth-onboarding";
 import { authConfigured, passwordResetRedirectUrl, supabase } from "./client";
 import { useAuth } from "./provider";
-import { authDestination } from "./navigation";
+import { authDestination, stackRoutePath } from "./navigation";
 import { SignUpSuccess } from "./SignUpSuccess";
 import { EmailConfirmation } from "./EmailConfirmation";
 
@@ -66,8 +65,24 @@ function authFailure(cause: unknown): FormError {
 
 export function AuthScreen({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ returnTo?: string; email?: string }>();
   const destination = authDestination(params.returnTo);
+
+  /**
+   * Returns to the screen that opened this one when it is the destination (it re-renders
+   * signed in), instead of stacking a second copy of it that "atrás" would reveal later.
+   */
+  function goToDestination() {
+    const state = navigation.getState();
+    const previous = state && state.index > 0 ? state.routes[state.index - 1] : undefined;
+    const target = typeof destination === "string" ? destination.split("?")[0] : undefined;
+    if (previous && target && stackRoutePath(previous.name, previous.params) === target) {
+      router.back();
+    } else {
+      router.replace(destination);
+    }
+  }
   const { session, loading } = useAuth();
   const [email, setEmail] = useState(typeof params.email === "string" ? params.email : "");
   const [password, setPassword] = useState("");
@@ -108,7 +123,9 @@ export function AuthScreen({ mode }: { mode: Mode }) {
       return;
     }
     navigated.current = true;
-    router.replace(destination);
+    goToDestination();
+    // goToDestination only reads navigation state and router, both stable across renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, loading, newProfile, confirmationEmail, displayName, mode, destination, router]);
 
   function reportError(next: FormError) {
@@ -160,7 +177,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
           `Sesión iniciada. ¡Bienvenido, ${profile.displayName}!`,
         );
         navigated.current = true;
-        router.replace(destination);
+        goToDestination();
       } else if (mode === "sign-up") {
         const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
@@ -197,7 +214,8 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   function finishSignUp(personalize: boolean) {
     if (!newProfile || navigated.current) return;
     navigated.current = true;
-    router.replace(personalize ? "/my-tacos" : destination);
+    if (personalize) router.replace("/my-tacos");
+    else goToDestination();
   }
 
   const title =
@@ -216,7 +234,8 @@ export function AuthScreen({ mode }: { mode: Mode }) {
   return (
     <SafeAreaView style={styles.screen}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // Android 15 draws edge-to-edge, so the window no longer resizes for the keyboard.
+        behavior="padding"
         style={styles.screen}
       >
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>

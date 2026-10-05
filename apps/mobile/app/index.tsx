@@ -277,6 +277,20 @@ const ProposalMapMarker = memo(function ProposalMapMarker({
   );
 });
 
+/**
+ * Picks the taco a map preview highlights and rates: the list's best taco when the
+ * detail still has it, otherwise the best-scored approved taco in the detail.
+ */
+function pickPreviewTaco(spot: SpotDetail, listBest: Taco | null | undefined): Taco | undefined {
+  const tacos = spot.tacos ?? [];
+  const listMatch = listBest ? tacos.find((taco) => taco.id === listBest.id) : undefined;
+  if (listMatch) return listMatch;
+  return tacos.reduce<Taco | undefined>((best, current) => {
+    if (!best) return current;
+    return (current.score ?? -Infinity) > (best.score ?? -Infinity) ? current : best;
+  }, undefined);
+}
+
 const MapPreviewCard = ({
   title,
   neighborhood,
@@ -286,6 +300,7 @@ const MapPreviewCard = ({
   primaryLabel,
   primaryIcon,
   onPrimary,
+  onOpen,
   onClose,
   children,
 }: {
@@ -297,6 +312,8 @@ const MapPreviewCard = ({
   primaryLabel?: string;
   primaryIcon?: keyof typeof Ionicons.glyphMap;
   onPrimary?: () => void;
+  /** When set, the secondary action opens the full stand page instead of closing the card. */
+  onOpen?: () => void;
   onClose: () => void;
   children?: ReactNode;
 }) => (
@@ -335,9 +352,9 @@ const MapPreviewCard = ({
           />
         ) : null}
         <Button
-          label="Cerrar"
+          label={onOpen ? "Ver puesto" : "Cerrar"}
           variant="secondary"
-          onPress={onClose}
+          onPress={onOpen ?? onClose}
           style={styles.mapPreviewAction}
         />
       </View>
@@ -362,6 +379,9 @@ export default function ExploreScreen() {
   const [selectedSpot, setSelectedSpot] = useState<SpotDetail | null>(null);
   const [spotLoading, setSpotLoading] = useState(false);
   const [spotError, setSpotError] = useState("");
+  const previewTaco = selectedSpot
+    ? pickPreviewTaco(selectedSpot, items.find((item) => item.id === selectedSpotId)?.bestTaco)
+    : undefined;
   const router = useRouter();
   const { clearFilterAt } = useLocalSearchParams<{ clearFilterAt?: string }>();
   const { session, signOut } = useAuth();
@@ -1229,22 +1249,29 @@ export default function ExploreScreen() {
               neighborhood={selectedSpot?.neighborhood ?? ""}
               kicker="Puesto en Taco Hunt"
               photoUrl={selectedSpot?.photoUrl}
-              primaryLabel={selectedSpot?.tacos?.length ? "Calificar tacos" : undefined}
+              primaryLabel={previewTaco ? `Calificar ${previewTaco.name}` : undefined}
               primaryIcon="star-outline"
               onPrimary={() => {
-                const taco = selectedSpot?.tacos?.[0];
-                if (!taco || !selectedSpot || !selectedSpotId) return;
+                if (!previewTaco || !selectedSpot || !selectedSpotId) return;
                 if (closeSheet()) {
                   router.push({
                     pathname: "/review/new",
                     params: {
-                      spotTacoId: taco.id,
+                      spotTacoId: previewTaco.id,
                       spotName: selectedSpot.name,
-                      tacoName: taco.name,
+                      tacoName: previewTaco.name,
                     },
                   } as Href);
                 }
               }}
+              onOpen={
+                selectedSpotId
+                  ? () => {
+                      const spotId = selectedSpotId;
+                      if (closeSheet()) router.push(`/spot/${spotId}` as Href);
+                    }
+                  : undefined
+              }
               onClose={() => closeSheet()}
             >
               {spotLoading ? (
@@ -1255,30 +1282,17 @@ export default function ExploreScreen() {
                 <Text style={[styles.previewError, { marginTop: spacing.md }]}>{spotError}</Text>
               ) : selectedSpot ? (
                 <>
-                  {(() => {
-                    const spotFromList = items.find((i) => i.id === selectedSpotId);
-                    // Fallback: if spot is not in current items list, derive best taco from selectedSpot.tacos
-                    const bestTaco =
-                      spotFromList?.bestTaco ||
-                      selectedSpot.tacos?.reduce((best, current) => {
-                        if (!best) return current;
-                        const bestScore = best.score ?? -Infinity;
-                        const currentScore = current.score ?? -Infinity;
-                        return currentScore > bestScore ? current : best;
-                      });
-
-                    return bestTaco ? (
-                      <View style={{ marginTop: spacing.md }}>
-                        <Text style={styles.previewLabel}>Mejor taco</Text>
-                        <Text style={styles.previewTaco}>
-                          {bestTaco.name} ·{" "}
-                          {bestTaco.score === null
-                            ? "Sin reseñas"
-                            : `${bestTaco.score.toFixed(1)} ★`}
-                        </Text>
-                      </View>
-                    ) : null;
-                  })()}
+                  {previewTaco ? (
+                    <View style={{ marginTop: spacing.md }}>
+                      <Text style={styles.previewLabel}>Mejor taco</Text>
+                      <Text style={styles.previewTaco}>
+                        {previewTaco.name} ·{" "}
+                        {previewTaco.score === null
+                          ? "Sin reseñas"
+                          : `${previewTaco.score.toFixed(1)} ★`}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {selectedSpot.reviews && selectedSpot.reviews.length > 0 && (
                     <View style={{ marginTop: spacing.md }}>

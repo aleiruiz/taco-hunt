@@ -41,7 +41,16 @@ export default function EditReviewScreen() {
       <Stack.Screen
         options={{ title: "Editar reseña", headerShown: true, headerBackTitle: "Volver" }}
       />
-      <ReviewForm session={session} existing={review} onSaved={() => router.replace("/my-tacos")} />
+      <ReviewForm
+        session={session}
+        existing={review}
+        onSaved={() => {
+          // Go back to the profile that opened the editor (it refreshes on focus)
+          // instead of stacking a second, stale copy of it.
+          if (router.canGoBack()) router.back();
+          else router.replace({ pathname: "/my-tacos", params: { tab: "resenas" } });
+        }}
+      />
     </>
   );
 }

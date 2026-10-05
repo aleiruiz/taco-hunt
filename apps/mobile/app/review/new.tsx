@@ -126,7 +126,7 @@ export default function NewReviewScreen() {
           spotTacoId={params.spotTacoId ?? target?.spotTacoId}
           spotName={params.spotName ?? target?.spotName}
           tacoName={params.tacoName ?? target?.tacoName}
-          onSaved={() => router.replace("/my-tacos")}
+          onSaved={() => router.replace({ pathname: "/my-tacos", params: { tab: "resenas" } })}
         />
       )}
     </>

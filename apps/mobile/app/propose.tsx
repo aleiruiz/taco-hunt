@@ -16,6 +16,7 @@ import MapView, { type Region } from "react-native-maps";
 import { useAuth } from "@/auth/provider";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { StatusBadge } from "@/components/StatusBadge";
 import { Stepper } from "@/components/Stepper";
 import {
   listMySpotProposals,
@@ -620,6 +621,14 @@ function TimelineRow({
   );
 }
 
+function proposalSubtitle(proposal: SpotProposal): string {
+  if (proposal.status === "approved") return "Ya aparece en Taco Hunt";
+  if (proposal.status === "rejected") return "El equipo no la aprobó";
+  return proposal.source === "google"
+    ? "Vínculo pendiente de moderación"
+    : "Pin local · solo tú la ves por ahora";
+}
+
 function MyProposals({ proposals }: { proposals: SpotProposal[] }) {
   return (
     <Card style={styles.proposalsCard}>
@@ -633,13 +642,9 @@ function MyProposals({ proposals }: { proposals: SpotProposal[] }) {
             <Text style={styles.suggestionTitle}>
               {proposal.source === "google" ? "Lugar de Google" : proposal.name || "Pin sin nombre"}
             </Text>
-            <Text style={styles.muted}>
-              {proposal.source === "google"
-                ? "Vínculo pendiente de moderación"
-                : "Pin local · solo tú la ves por ahora"}
-            </Text>
+            <Text style={styles.muted}>{proposalSubtitle(proposal)}</Text>
           </View>
-          <Text style={styles.pendingStatus}>Pendiente</Text>
+          <StatusBadge status={proposal.status} />
         </View>
       ))}
     </Card>
@@ -846,5 +851,4 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginTop: spacing.md,
   },
-  pendingStatus: { color: colors.pendingText, ...typography.caption },
 });
