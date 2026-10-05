@@ -2,18 +2,14 @@
 
 ## Current integration snapshot
 
-As of 2026-10-01, T34 (PR #50), T37 (PR #52), T40 (PR #53), T42 (PR #51), T61 (PR #54), T69 (PR #55), T63 (PR #56), T62 (PR #57), T64 (PR #58), and T65 (PR #59) are merged into `main`. T34 and T42 are historical/superseded by the Google Places architecture reset. T66 and T67 are ready in parallel; T68 remains gated until both merge. Keep `docs/orchestration-state.json` aligned with this snapshot during every coordination pass.
+As of 2026-10-05, every task from T00 to T69 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05. P2.8 (T61–T69) closed with T68 (PR #63) on 2026-10-01, and the owner then committed `7ef3508` ("Consolidate local mobile and Places changes") directly on 2026-10-02. There are no open PRs. T15 waits only on E01/E02; T16 waits on T15 and E03/E04. Keep `docs/orchestration-state.json` aligned with this snapshot during every coordination pass.
 
-The orchestrator operates in the main Codex task. Every worker must be a separate, user-visible Codex task/session with its own history and worktree in the repository. Do not use subagents within the orchestrator task as implementation workers. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. The limit is **three active worker tasks**; coordination in the main task does not use one of those slots.
-
-## Current integration snapshot
-
-As of 2026-10-01, the owner has merged T40 (PR #53, Profile API and avatars). T40 is no longer an open worker or merge blocker; its profile, avatar, account-deletion, and mobile fixture-swap changes are integrated into `main`. Keep `docs/orchestration-state.json` aligned with this snapshot when the next coordination pass reconciles GitHub state.
+The orchestrator session may implement tasks itself, sequentially, one task in progress at a time, each in its own git worktree/branch (see `CLAUDE.md`). A separate worker session is still fine when the owner explicitly starts one; do not use subagents inside the orchestrator session as implementation workers. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. The limit is **three active worker sessions**; coordination in the orchestrator session does not use one of those slots.
 
 ## Worker cycle
 
 1. Select the highest-priority available task whose dependencies are integrated into `main`. Prefer tasks with separate areas and stable contracts.
-2. Create an independent Codex task/session in its own worktree based on the latest `main`, with its ID, scope, owned files, acceptance criteria, and check-in format. Record its `threadId`, worktree, and branch. Do not spawn a subagent in the orchestrator session for this work.
+2. Implement the task in the orchestrator session, or hand it to a separate worker session if the owner started one, in its own worktree based on the latest `main`, with its ID, scope, owned files, acceptance criteria, and check-in format. Record the worktree and branch (and the worker session, if any). Do not spawn a subagent in the orchestrator session for this work.
 3. Check progress at least every 30 minutes while a task is active. If there is a prolonged silence, ask for an update once and record a blocker if it persists; do not create a second task for the same ID.
 4. When the author opens a PR, confirm that CodeRabbit completed a review of the exact current PR head commit. A review completed before the latest push does not count. If the app is not installed or has not reviewed the current head, resolve that integration or report the blocker to the user.
 5. The orchestrator evaluates CodeRabbit findings against the specification, contracts, security, migrations, and compatibility with other branches. The author fixes important findings or documents why they do not apply. The orchestrator also checks CI and confirms that important findings are resolved.
@@ -23,7 +19,7 @@ CodeRabbit is the independent code reviewer for every PR. Do not assign peer rev
 
 ## Statuses and check-ins
 
-Task statuses are `blocked`, `ready`, `active`, `review`, `changes_requested`, `merged`, and `external_blocked`. Only `merged` unblocks dependent tasks. An agent reports: `ID · status · concrete progress · next step · blocker/decision · PR (if any)`. The orchestrator verifies the report against Git, the PR, and CI; a check-in does not close a task.
+Task statuses are `blocked`, `ready`, `active`, `review`, `changes_requested`, `merged`, `external_blocked`, and `cancelled` (dropped by the owner; never started again without a new decision). Only `merged` unblocks dependent tasks. An agent reports: `ID · status · concrete progress · next step · blocker/decision · PR (if any)`. The orchestrator verifies the report against Git, the PR, and CI; a check-in does not close a task.
 
 Scheduled coordination checks messages and PRs every 30 minutes. If nothing has changed and no action is available, remain silent. Notify the user when a decision is needed, an external blocker arises, a significant set of changes is integrated, or a phase is complete.
 

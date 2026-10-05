@@ -23,7 +23,8 @@ In the Google Cloud Console, on the Places key:
   IP(s) if available, otherwise leave unrestricted at the application level but rely on
   the API restriction and the controls below.
 - **API restriction:** limit to `Places API (New)` only (the endpoints this codebase
-  uses: `places:searchText`, `places:autocomplete`, `places/{placeId}`). Do not enable
+  uses: `places:searchText`, `places:autocomplete`, `places/{placeId}`, and
+  `places/{placeId}/photos/{photoId}/media` for the photo proxy). Do not enable
   any other Google Maps Platform API on this key.
 - Store the key as `GOOGLE_PLACES_API_KEY` in the deployment's secret manager, never in
   the repository or logs.
@@ -41,14 +42,17 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
 
 - **Per-user, per-minute** (`RequestLimitService`, already in place for T21):
   30 autocomplete requests and 20 resolve requests per user per minute
-  (`apps/api/src/places/places.service.ts`). This stops a single client from hammering
-  the endpoint; it does not bound total daily spend.
+  (`apps/api/src/places/places.service.ts`). Viewport discovery, place details, photo
+  proxying, and review-target creation share a separate limit of 30 requests per minute
+  per signed-in user, or per client IP when signed out. These stop a single client from
+  hammering the endpoints; they do not bound total daily spend.
 - **Global daily call budget** (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, added by this task):
   every outbound Google Places request from `PlacesService` — viewport discovery,
   autocomplete, place-details resolution, review-target creation, and photo proxying — consumes one unit of a single shared
   24-hour counter via
   `RequestLimitService`. Once the limit is reached, further calls fail closed
-  (autocomplete degrades to local-only results; discovery and resolve return `503`)
+  (autocomplete degrades to local-only results; viewport discovery, details, photo,
+  review-target, and resolve return `503`)
   until the window resets. Default is 2,000 calls/day if the env var is unset or
   invalid; set it below whatever the Cloud Console quota allows, so the application
   degrades gracefully before Google starts rejecting requests outright.
@@ -103,7 +107,8 @@ the process if your platform doesn't hot-reload env vars) to immediately stop ev
 outbound Google Places call:
 
 - `PlacesService.assertGoogleCallAllowed()` throws before any `fetch` to Google —
-  viewport discovery and resolve return `503`, autocomplete silently degrades to local-only
+  viewport discovery, details, photo, review-target, and resolve return `503`, autocomplete
+  silently degrades to local-only
   results (same behavior as when `GOOGLE_PLACES_API_KEY` is unset).
 - `apps/api/scripts/refresh-place-candidates.ts` refuses to run at all when the switch
   is set.
@@ -114,7 +119,7 @@ the call sites above. Unset the variable (or remove it) to resume normal operati
 
 ## Environment variables added by this task
 
-| Variable                         | Default | Effect                                                                          |
-| -------------------------------- | ------- | ------------------------------------------------------------------------------- |
-| `GOOGLE_PLACES_KILL_SWITCH`      | unset   | `"true"` disables all outbound Google Places calls immediately.                 |
-| `GOOGLE_PLACES_DAILY_CALL_LIMIT` | `2000`  | Shared 24h budget across discovery, autocomplete and resolve, per API instance. |
+| Variable                         | Default | Effect                                                                           |
+| -------------------------------- | ------- | -------------------------------------------------------------------------------- |
+| `GOOGLE_PLACES_KILL_SWITCH`      | unset   | `"true"` disables all outbound Google Places calls immediately.                  |
+| `GOOGLE_PLACES_DAILY_CALL_LIMIT` | `2000`  | Shared 24h budget across every `PlacesService` call to Google, per API instance. |
