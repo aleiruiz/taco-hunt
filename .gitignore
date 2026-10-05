@@ -29,3 +29,8 @@ apps/mobile/android-build.log
 
 # Local orchestrator check-in log (keep on disk; do not commit)
 docs/orchestration-log.md
+
+# Local mobile debugging output
+apps/mobile/config-output.json
+apps/mobile/netsim.ini
+apps/mobile/*-screen.png

@@ -34,7 +34,7 @@ Do not replace the API with direct Supabase table access or Edge Functions. Keep
 
 ### 3.1 Browse without an account
 
-Launch into a list of approved stands in Monterrey. The app initially uses a preset city center; show a clear **Use my location** action. When permission is denied, list/map/search continue to work with manual area selection. Users can search by name and neighborhood, filter by taco type, toggle map/list, open a stand detail, save a favorite only after sign-in, and open directions in an installed map application.
+Launch into a map of approved stands in Monterrey, with a toggle to a list. The app initially uses a preset city center; show a clear **Use my location** action. When permission is denied, list/map/search continue to work with manual area selection. Users can search by name and neighborhood, filter by taco type, toggle map/list, open a stand detail, save a favorite only after sign-in, and open directions in an installed map application.
 
 Each stand detail displays its name, neighborhood, map pin, optional photo, last verified date, taco types known to be sold, rating count, and taco-specific rating summaries. For the map card, use the first approved Taco Hunt photo; if none exists and the stand has a linked Google place, use the first Google Places photo transiently; otherwise use the Taco Hunt fallback artwork. Unknown hours say **Horario no confirmado**; unknown prices say **Precio no confirmado**. Do not invent opening status, menu, or photos.
 
@@ -48,7 +48,7 @@ Favorite a stand from list or detail. Show saved stands and a **Mis tacos** list
 
 ### 3.4 Propose a stand and report content
 
-Authenticated users can submit a name, neighborhood, manually selected pin, and optional note. Pending stands are private to the submitter and moderators. Show likely duplicates within 100 meters and ask the user to select an existing stand if appropriate. Users can report a stand or review for a bounded set of reasons. Reports enter a private queue; one report does not automatically hide content. An administrator can approve/reject proposals and hide/unhide reviews.
+Authenticated users propose a stand pin-first: either pick a Google place (sent as its place ID) or drop a pin on the map with an optional name and note. Pending stands are private to the submitter and moderators. If the chosen Google place is already linked to a Taco Hunt stand, the API returns a conflict with a redirect, and the app sends the user to the existing stand instead of creating a duplicate. Users can report a stand or review for a bounded set of reasons. Reports enter a private queue; one report does not automatically hide content. An administrator can approve/reject proposals and hide/unhide reviews.
 
 ### 3.5 Share
 
@@ -56,7 +56,7 @@ Share a normal HTTPS URL for a stand. The API serves a small HTML preview with t
 
 ## 4. Scope boundaries
 
-Version 1 includes browsing, list/map, name and neighborhood search, taco-specific ratings, favorites, personal history, one review photo, user proposals, admin review, reporting, sharing, and basic privacy-safe telemetry. It excludes ads, payment, messaging, automatic venue ingestion, GPS check-in verification, gamified leaderboards, AI-generated content, continuous tracking, push notifications, vendor accounts, and multi-city rollout.
+Version 1 includes browsing, list/map, name and neighborhood search, taco-specific ratings, favorites, personal history, one review photo, user proposals, admin review, reporting, sharing, and basic privacy-safe telemetry. It excludes ads, payment, messaging, bulk or automatic venue import (a user's rating action may register a single Google-linked stand, see §3.2), GPS check-in verification, gamified leaderboards, AI-generated content, continuous tracking, push notifications, vendor accounts, and multi-city rollout.
 
 Use a cohesive visual system with typography, colors, spacing, empty states, loading states, permission states and a few tasteful taco-specific details. Avoid a generic CRUD appearance, but do not let animations delay the core flow. Design for small phones, dynamic text size, screen readers, and Spanish labels.
 
@@ -67,61 +67,72 @@ apps/
   api/
     src/
       auth/             # JWT verification and role guard
-      spots/            # public queries, proposals, moderation
+      account/          # profile, avatars, progress, account deletion
+      admin/            # moderation queues and actions
+      spots/            # public queries, map pins, search suggestions
+      places/           # server-side Google Places: viewport, details, photo, autocomplete, review target
+      proposals/        # place, spot and taco proposals
       reviews/          # ratings, aggregates, edit/delete
       favorites/
       reports/
-      media/            # file validation and storage adapter
+      media/            # review photos, stand photos, signed media URLs
+      share/            # /s/:id HTML preview
       health/
+      database/
       common/           # errors, logging, validation, pagination
-    test/               # HTTP integration tests
+    scripts/            # admin bootstrap, media cleanup, Places refresh
     Dockerfile
   mobile/
     app/                # Expo Router screens
-    src/components/
+    src/components/     # shared UI components
+    src/data/           # API data adapters
     src/features/
-    src/lib/            # API client, auth, query cache
+    src/auth/
+    src/lib/
+    src/theme.ts        # design tokens
+    plugins/            # Expo config plugins
+    eas.json            # EAS build profiles
   landing/              # static promotional page, no runtime backend
     index.html
     taco-hunt-logo.svg
 packages/
-  contracts/            # shared Zod schemas, DTOs, typed API errors
-db/
+  contracts/            # shared Zod schemas, DTOs, typed API errors, openapi.yaml
+supabase/
+  config.toml           # local Auth/DB/Storage configuration
   migrations/
-  seeds/development/    # clearly fictional test data only
-  scripts/              # staging import and duplicate review tools
+  seed.sql              # clearly fictional development data only
+  scripts/              # staging import tool (import-candidates.mjs)
+patches/                # pnpm patches for native dependencies
 docs/
-  architecture.md
-  brand.md
-  deployment.md
   data-provenance.md
+  google-places-controls.md
   moderation.md
   privacy.md
-supabase/config.toml       # local Auth/DB/Storage configuration
 .env.example
 README.md
 ```
 
 Use a single package manager and lockfile across the workspace. Pin compatible versions when scaffolding. Run the local Supabase CLI stack so `auth.users`, Postgres, Auth and Storage behave together; do not start a second unrelated Postgres container. Mock external Google services, not the core local data flow. The API should start with `PORT` from the environment, bind to `0.0.0.0`, expose `/healthz`, and shut down gracefully. No undocumented manual database edits should be required.
 
-The README must give runnable commands (adjust exact script names to the scaffold): `supabase start`, `supabase db reset`, `pnpm install`, `pnpm dev:api`, `pnpm dev:mobile`, `pnpm test`, `pnpm typecheck`, and `pnpm lint`. Document how a simulator and a physical phone reach the local API (localhost is different on each), and how to obtain the local Auth URL and publishable key from `supabase status`. Use environment-specific config instead of hard-coded LAN addresses. Include a first-run troubleshooting section for Docker, Android map keys and an unavailable local API.
+The README must give runnable commands (adjust exact script names to the scaffold): `supabase start`, `supabase db reset`, `pnpm install`, `pnpm dev:api`, `pnpm dev:mobile`, `pnpm typecheck`, and `pnpm lint` (there is no `pnpm test` script yet; tests are added only when the owner asks). Document how a simulator and a physical phone reach the local API (localhost is different on each), and how to obtain the local Auth URL and publishable key from `supabase status`. Use environment-specific config instead of hard-coded LAN addresses. Include a first-run troubleshooting section for Docker, Android map keys and an unavailable local API.
 
 ## 6. Database schema
 
 Use UUID primary keys, `timestamptz` in UTC, foreign keys, check constraints, and indexed query paths. Name columns consistently in snake case. A migration must create the following logical entities; the agent can adjust minor SQL syntax, but not their invariants.
 
-| Table               | Essential columns and constraints                                                                                                                                                                                                                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `profiles`          | `id uuid` referencing Supabase Auth user; `display_name text null`; `role text` restricted to `user` or `admin`, default `user`; `status text` restricted to `active` or `blocked`; timestamps. API cannot accept role/status changes from a normal user.                                                            |
-| `spots`             | `id uuid`; `name`; `normalized_name`; `neighborhood`; `latitude numeric`; `longitude numeric`; optional `hours_json`; `status` pending/approved/rejected; `created_by uuid null`; `source_type`; `source_ref null`; `last_verified_at null`; timestamps. Approved rows require non-empty name and valid coordinates. |
-| `taco_types`        | `id uuid`; unique `slug`; `name_es`; `active boolean`. Seed common types while preserving regional distinctions, e.g. pastor and trompo as separate labels.                                                                                                                                                          |
-| `spot_tacos`        | `id uuid`; `spot_id`; `taco_type_id`; `display_name null`; `price_hint_mxn null`; `status` pending/approved/rejected; unique `(spot_id,taco_type_id)` in v1. Only approved rows are public.                                                                                                                          |
-| `reviews`           | `id uuid`; `user_id`; `spot_taco_id`; integer `tortilla`, `filling`, `salsa`, `value` each 1–5; `price_paid_mxn null`; `body varchar(500) null`; `photo_key null`; `status` visible/hidden; timestamps; unique `(user_id,spot_taco_id)`.                                                                             |
-| `favorites`         | `(user_id,spot_id)` primary key; `created_at`.                                                                                                                                                                                                                                                                       |
-| `reports`           | `id uuid`; `reporter_id`; `target_type` spot/review; `target_id`; `reason` inaccurate/abusive/spam/closed/other; optional bounded note; status open/closed; timestamps. Resolve target existence in application code.                                                                                                |
-| `media_uploads`     | `id uuid`; `owner_id`; `object_key`; `state` pending/claimed/deleted; `created_at`; `claimed_review_id null`. One-use binding between processed uploads and a later review.                                                                                                                                          |
-| `moderation_audit`  | `id uuid`; `moderator_id`; `target_type`; `target_id`; `action`; `created_at`; optional internal reason. Only admin can read.                                                                                                                                                                                        |
-| `import_candidates` | `id uuid`; original row payload; normalized name; pin; source and license reference; matched spot IDs; state pending/approved/rejected; review notes; import batch ID. Never exposed as a public endpoint.                                                                                                           |
+| Table               | Essential columns and constraints                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`          | `id uuid` referencing Supabase Auth user; `display_name text null`; `role text` restricted to `user` or `admin`, default `user`; `status text` restricted to `active` or `blocked`; `avatar_preset` (one of the app's preset avatars); optional `avatar_photo_key` and `avatar_photo_status` pending/approved/rejected; timestamps. API cannot accept role/status changes from a normal user.                                                                       |
+| `spots`             | `id uuid`; `name`; `normalized_name`; `neighborhood`; `latitude numeric`; `longitude numeric`; optional `hours_json`; `status` pending/changes_requested/approved/rejected; `created_by uuid null`; `source_type`; `source_ref null`; `google_place_id null`, unique when present (a Taco Hunt-owned link to a Google place; no Google display fields are copied); `last_verified_at null`; timestamps. Approved rows require non-empty name and valid coordinates. |
+| `taco_types`        | `id uuid`; unique `slug`; `name_es`; `active boolean`. Seed common types while preserving regional distinctions, e.g. pastor and trompo as separate labels.                                                                                                                                                                                                                                                                                                         |
+| `spot_tacos`        | `id uuid`; `spot_id`; `taco_type_id`; `display_name null`; `price_hint_mxn null`; `status` pending/approved/rejected; unique `(spot_id,taco_type_id)` in v1. Only approved rows are public.                                                                                                                                                                                                                                                                         |
+| `reviews`           | `id uuid`; `user_id`; `spot_taco_id`; integer `tortilla`, `filling`, `salsa`, `value` each 1–5; `price_paid_mxn null`; `body varchar(500) null`; `photo_key null`; `status` visible/hidden; timestamps; unique `(user_id,spot_taco_id)`.                                                                                                                                                                                                                            |
+| `spot_photos`       | `id uuid`; `spot_id`; `uploader_id`; `object_key`; `kind` tacos/puesto/menu; `status` pending/approved/rejected, pre-moderated; optional `rejection_reason`; `created_at`. Only approved photos are public.                                                                                                                                                                                                                                                         |
+| `favorites`         | `(user_id,spot_id)` primary key; `created_at`.                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `reports`           | `id uuid`; `reporter_id`; `target_type` spot/review; `target_id`; `reason` inaccurate/abusive/spam/closed/other; optional bounded note; status open/closed; timestamps. Resolve target existence in application code.                                                                                                                                                                                                                                               |
+| `media_uploads`     | `id uuid`; `owner_id`; `object_key`; `state` pending/claimed/deleted; `created_at`; `claimed_review_id null`. One-use binding between processed uploads and a later review.                                                                                                                                                                                                                                                                                         |
+| `moderation_audit`  | `id uuid`; `moderator_id`; `target_type`; `target_id`; `action`; `created_at`; optional internal reason. Only admin can read.                                                                                                                                                                                                                                                                                                                                       |
+| `import_candidates` | `id uuid`; original row payload; normalized name; pin; source and license reference; matched spot IDs; state pending/approved/rejected; review notes; import batch ID. Never exposed as a public endpoint.                                                                                                                                                                                                                                                          |
 
 Indexes: `spots(status, normalized_name)`, `spots(status, neighborhood)`, `spot_tacos(spot_id,status)`, `reviews(spot_taco_id,status,created_at DESC)`, `reviews(user_id)`, `reports(status,created_at)`. For a few hundred spots, bounding-box filtering using indexed coordinates and a Haversine calculation is acceptable. If PostGIS is available, use `geography(Point,4326)` and a GIST index; choose one implementation during phase 1 and document it. Validate latitude/longitude within Mexico, with a tighter Monterrey-area contribution boundary; store no user's GPS position.
 
@@ -148,11 +159,14 @@ Base URL `/v1`. JSON uses camelCase at the API boundary; storage uses snake_case
 | `GET /v1/spots`                   | Query `north,south,east,west` optionally, `q`, `tacoType`, `cursor`, `limit` default 20 max 50. Return approved spots only. Limit bounding-box area to avoid full-table scraping; default Monterrey area. Return `{items:[SpotSummary],nextCursor:string                       | null}`. |
 | `GET /v1/spots/map`               | Return compact approved pins and server-side clusters for the requested viewport. The mobile map merges results by stable ID as the camera moves; it does not unload pins already seen.                                                                                        |
 | `GET /v1/spots/:id`               | Return approved stand, approved taco types, aggregate counts, limited visible reviews, source verification date. 404 for pending/rejected.                                                                                                                                     |
+| `GET /v1/spots/:id/photos`        | Approved stand photos for the gallery, without uploader or moderation fields.                                                                                                                                                                                                  |
+| `GET /v1/search/suggest`          | Suggest stands and neighborhoods already in Taco Hunt; no Google calls.                                                                                                                                                                                                        |
 | `GET /v1/spots/:id/reviews`       | `tacoType`, `cursor`, `limit` max 30; return visible reviews only.                                                                                                                                                                                                             |
 | `GET /v1/taco-types`              | Return active types and localized display names.                                                                                                                                                                                                                               |
 | `GET /v1/places/viewport`         | Explicitly search the visible map rectangle for `tacos`. Return transient Google place IDs, names, coordinates, attribution, and the first photo resource name when available, plus Taco Hunt local records. The mobile app does not call this route on every camera movement. |
 | `GET /v1/places/:placeId/details` | On-demand transient details for a Google place, including its first photo resource name when available. No Google display payload is persisted.                                                                                                                                |
 | `GET /v1/places/photo?name=...`   | Proxy a validated Google photo resource with the API key kept server-side. The image is transient and must not be stored in Taco Hunt.                                                                                                                                         |
+| `GET /v1/media/:reviewId`         | Short-lived signed URL for a visible review photo; 404 otherwise.                                                                                                                                                                                                              |
 | `GET /s/:spotId`                  | Safe HTML preview for an approved stand; 404 otherwise. This path is outside `/v1`.                                                                                                                                                                                            |
 | `GET /healthz`                    | 200 when the process can serve requests; do not expose secrets or user information.                                                                                                                                                                                            |
 
@@ -160,21 +174,27 @@ Base URL `/v1`. JSON uses camelCase at the API boundary; storage uses snake_case
 
 ### 8.2 Authenticated routes
 
-| Route                           | Request and behavior                                                                                                                                                                                                                                                                                  |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /v1/spot-proposals`       | `{name,neighborhood,latitude,longitude,note?}`. Check duplicates within 100 m, return 409 with candidate IDs when strong match; otherwise return 201 with pending ID.                                                                                                                                 |
-| `POST /v1/places/review-target` | Authenticated `{placeId,tacoTypeId}`. Create or recover an approved Taco Hunt spot linked by `google_place_id` and its approved taco target, then return IDs for the normal Taco Hunt review form. This operation is idempotent and is used only when a user starts rating a Google-discovered place. |
-| `POST /v1/taco-proposals`       | `{spotId,tacoTypeId,displayName?}`; return pending record for moderator.                                                                                                                                                                                                                              |
-| `POST /v1/reviews`              | `{spotTacoId,tortilla,filling,salsa,value,pricePaidMxn?,body?,photoUploadId?}`. Return 201 on create or 409 with existing review ID; never silently replace an earlier review. Unique DB constraint handles races.                                                                                    |
-| `PATCH /v1/reviews/:id`         | Partial edits to author-owned scores/body/price/photo only. Reject `userId`, `status`, `role` and foreign identifiers.                                                                                                                                                                                |
-| `DELETE /v1/reviews/:id`        | Author deletes; return 204. Deleting twice returns 204 without leaking previous content.                                                                                                                                                                                                              |
-| `POST /v1/review-photos`        | Multipart image max 2 MB input; API decodes, strips EXIF, resizes to <=1200 px and targets <=300 KB, stores temporary private object; returns a one-use upload ID bound to current user. Clean unclaimed uploads.                                                                                     |
-| `GET /v1/me/favorites`          | Paginated favorites. `PUT /v1/me/favorites/:spotId` is idempotent and returns 204; `DELETE` returns 204.                                                                                                                                                                                              |
-| `GET /v1/me/reviews`            | Current user's review history, including own hidden reviews with status clearly marked.                                                                                                                                                                                                               |
-| `POST /v1/reports`              | `{targetType,targetId,reason,note?}`. One open report per user/target; return 201 or 409.                                                                                                                                                                                                             |
-| `DELETE /v1/me`                 | Delete user's reviews, favorites, profile, and owned photos; anonymize retained moderation audit/report references; delete Auth account through a privileged server action. Return 204 when complete. Make retries safe after partial failure.                                                        |
+| Route                                                            | Request and behavior                                                                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /v1/place-proposals`                                       | Pin-first proposal used by the app: `{source:"google",placeId}` or `{source:"local",latitude,longitude,name?,note?}`. A Google place already linked to a stand returns 409 `already_registered` with a redirect to `/spot/:id`; otherwise 201 with a pending ID.                                      |
+| `POST /v1/spot-proposals`                                        | Earlier API-only form `{name,neighborhood,latitude,longitude,note?}`. Check duplicates within 100 m, return 409 with candidate IDs when strong match; otherwise return 201 with pending ID.                                                                                                           |
+| `POST /v1/places/review-target`                                  | Authenticated `{placeId,tacoTypeId}`. Create or recover an approved Taco Hunt spot linked by `google_place_id` and its approved taco target, then return IDs for the normal Taco Hunt review form. This operation is idempotent and is used only when a user starts rating a Google-discovered place. |
+| `GET /v1/places/autocomplete`, `GET /v1/places/:placeId/resolve` | Server-side Google autocomplete and place resolution for the proposal flow; rate-limited per user.                                                                                                                                                                                                    |
+| `POST /v1/taco-proposals`                                        | `{spotId,tacoTypeId,displayName?}`; return pending record for moderator.                                                                                                                                                                                                                              |
+| `POST /v1/reviews`                                               | `{spotTacoId,tortilla,filling,salsa,value,pricePaidMxn?,body?,photoUploadId?}`. Return 201 on create or 409 with existing review ID; never silently replace an earlier review. Unique DB constraint handles races.                                                                                    |
+| `PATCH /v1/reviews/:id`                                          | Partial edits to author-owned scores/body/price/photo only. Reject `userId`, `status`, `role` and foreign identifiers.                                                                                                                                                                                |
+| `DELETE /v1/reviews/:id`                                         | Author deletes; return 204. Deleting twice returns 204 without leaking previous content.                                                                                                                                                                                                              |
+| `POST /v1/review-photos`                                         | Multipart image max 2 MB input; API decodes, strips EXIF, resizes to <=1200 px and targets <=300 KB, stores temporary private object; returns a one-use upload ID bound to current user. Clean unclaimed uploads.                                                                                     |
+| `GET /v1/me/favorites`                                           | Paginated favorites. `PUT /v1/me/favorites/:spotId` is idempotent and returns 204; `DELETE` returns 204.                                                                                                                                                                                              |
+| `GET /v1/me/reviews`                                             | Current user's review history, including own hidden reviews with status clearly marked.                                                                                                                                                                                                               |
+| `GET /v1/me`, `PATCH /v1/me`                                     | Read and edit the caller's profile: display name, avatar preset, optional avatar photo (shown at once, then automatically reviewed).                                                                                                                                                                  |
+| `GET /v1/me/progress`                                            | The caller's progress and badges for the Retos screen.                                                                                                                                                                                                                                                |
+| `GET /v1/me/proposals`                                           | The caller's own proposals and their status.                                                                                                                                                                                                                                                          |
+| `POST /v1/spots/:id/photos`                                      | Upload a stand photo; pending until a moderator approves it.                                                                                                                                                                                                                                          |
+| `POST /v1/reports`                                               | `{targetType,targetId,reason,note?}`. One open report per user/target; return 201 or 409.                                                                                                                                                                                                             |
+| `DELETE /v1/me`                                                  | Delete user's reviews, favorites, profile, and owned photos; anonymize retained moderation audit/report references; delete Auth account through a privileged server action. Return 204 when complete. Make retries safe after partial failure.                                                        |
 
-Moderation routes under `/v1/admin`: `GET /queue?kind=spots|tacos|reports`, `POST /spot-proposals/:id/approve`, `POST /spot-proposals/:id/reject`, `POST /taco-proposals/:id/approve`, `POST /reviews/:id/hide`, `POST /reviews/:id/unhide`, `POST /reports/:id/close`. All require server-verified admin role; record moderator ID and action timestamp in an audit table. A pending stand becomes a public spot on approval without losing its stable ID. Rejections preserve an internal reason.
+Moderation routes under `/v1/admin`: `GET /queue?kind=spots|tacos|reports|photos|duplicates|spot-photos`, `GET /audit`, `GET /duplicate-candidates`, `GET /import-candidates`, `POST /import-candidates/:id/approve|reject|merge`, `POST /spot-proposals/:id/approve|reject|request-changes`, `POST /duplicates/:id/merge`, `POST /taco-proposals/:id/approve|reject`, `POST /reviews/:id/hide|unhide|hide-photo`, `POST /spot-photos/:id/approve|reject`, `POST /reports/:id/close`. All require server-verified admin role; record moderator ID and action timestamp in an audit table. A pending stand becomes a public spot on approval without losing its stable ID. Rejections preserve an internal reason.
 
 Errors use `{error:{code:string,message:string,requestId:string,details?:object}}`. Define stable codes `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE`. Return 400/401/403/404/409/429/503 accordingly. Do not return stack traces. Retry transient reads from mobile with backoff; do not automatically repeat writes except idempotent `PUT`/`DELETE`.
 
@@ -192,14 +212,15 @@ Include 10 explicitly fictional development fixtures (names such as `Tacos Demo 
 
 ## 11. Mobile screen inventory
 
-1. **Explore:** nearby list with search and chips, location action, map/list toggle, loading/empty/error states, visible review counts.
+1. **Explore:** map-first home (see `docs/design-map-first.md`) with a list mode, minimized search header with suggestions, filter chips, location action, map/list toggle, loading/empty/error states, visible review counts.
 2. **Map:** clustered pins or bounded pin count; selected-pin bottom sheet; manual-area fallback; do not fetch on every camera animation frame.
 3. **Stand detail:** header, information reliability labels, taco types, score counts, reviews, directions, favorite, share, report.
 4. **Taco detail and rating:** score breakdown, review list, structured form, input validation, optional photo, edit state.
 5. **My tacos:** review history and favorites; sign-in prompt if needed.
-6. **Propose:** name, neighborhood and movable pin; duplicate suggestion; pending confirmation.
+6. **Propose:** pick a Google place or drop a pin; redirect to an existing linked stand; pending confirmation.
 7. **Sign-in and settings:** Supabase Auth flow, privacy links, account deletion, app version and attribution.
-8. **Admin:** a simple protected API-backed web or mobile screen for the owner, or documented API/OpenAPI tooling for the initial pilot; the moderation operations must exist and be exercised.
+8. **Retos and profile:** progress and badges, display name, preset avatars and optional avatar photo.
+9. **Admin:** a simple protected API-backed web or mobile screen for the owner, or documented API/OpenAPI tooling for the initial pilot; the moderation operations must exist and be exercised.
 
 Each screen must have clear text at large font sizes, accessible control labels, tap targets of at least 44 points, and skeleton or progress states. Cache last successful public results for temporary offline viewing. Disable mutations offline and preserve unsent review form data locally until the user explicitly discards it. Deep links must handle unknown, pending or deleted IDs gracefully.
 
@@ -209,7 +230,7 @@ Cloud Run: request-based billing, `min-instances=0`, initial `max-instances=1`, 
 
 Supabase Free currently lists 500 MB database, 1 GB object storage and 50,000 monthly active users. A free project may pause after low activity; this is acceptable for internal testing but may be unacceptable after a public launch. Export schema and content regularly; write down the restore procedure. Start image compression before upload. Set an internal review trigger at 350 MB DB, 700 MB storage, recurring project pauses, or more than two hours weekly moderation.
 
-Android Google Maps SDK needs a Cloud billing account and a key restricted to the app package/signing certificate and the Maps SDK. Do not enable Places. Publishing costs are outside recurring infrastructure: Google Play currently has a US$25 one-time registration fee and a new personal account may require a closed test with 12 opted-in testers for 14 days; Apple Developer Program is US$99 yearly. Do not buy accounts or deploy services as part of code implementation without owner authorization.
+Android Google Maps SDK needs a Cloud billing account and a key restricted to the app package/signing certificate and the Maps SDK. Do not enable Places on that key; Places uses a separate server-only key held by the API (see `docs/google-places-controls.md`). Publishing costs are outside recurring infrastructure: Google Play currently has a US$25 one-time registration fee and a new personal account may require a closed test with 12 opted-in testers for 14 days; Apple Developer Program is US$99 yearly. Do not buy accounts or deploy services as part of code implementation without owner authorization.
 
 ## 13. Testing and quality gates
 
