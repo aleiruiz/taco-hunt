@@ -1,93 +1,70 @@
-import { Inject, Injectable, ServiceUnavailableException } from "@nestjs/common";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import type { MediaStorageDriver } from "./storage-drivers.js";
 
-export const REVIEW_PHOTO_BUCKET = "REVIEW_PHOTO_BUCKET";
+export const MEDIA_STORAGE_DRIVER = "MEDIA_STORAGE_DRIVER";
 export const REVIEW_PHOTO_TTL_SECONDS = 300;
 
+/**
+ * Private storage for user-uploaded photos. The backing store (S3 or Supabase
+ * Storage) is chosen by MEDIA_STORAGE_DRIVER; see createMediaStorageDriver.
+ */
 @Injectable()
 export class MediaStorageService {
-  private readonly client: SupabaseClient;
-  private readonly bucket: string;
+  private readonly logger = new Logger(MediaStorageService.name);
 
-  constructor(
-    @Inject(REVIEW_PHOTO_BUCKET)
-    config: { url: string; key: string; bucket: string } | null,
-  ) {
-    if (!config) {
-      this.client = null as unknown as SupabaseClient;
-      this.bucket = "review-photos";
-      return;
-    }
-    this.client = createClient(config.url, config.key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-    this.bucket = config.bucket;
-  }
+  constructor(@Inject(MEDIA_STORAGE_DRIVER) private readonly driver: MediaStorageDriver | null) {}
 
   newObjectKey(ownerId: string): string {
     return `${ownerId}/${randomUUID()}.webp`;
   }
 
   get enabled(): boolean {
-    return this.client !== (null as unknown as SupabaseClient);
+    return this.driver !== null;
   }
 
-  private ensureEnabled(): SupabaseClient {
-    if (!this.enabled)
+  private ensureEnabled(): MediaStorageDriver {
+    if (!this.driver)
       throw new ServiceUnavailableException("El almacenamiento de fotos no está configurado");
-    return this.client;
+    return this.driver;
   }
 
   async upload(objectKey: string, bytes: Buffer): Promise<void> {
-    const { error } = await this.ensureEnabled()
-      .storage.from(this.bucket)
-      .upload(objectKey, bytes, {
-        contentType: "image/webp",
-        cacheControl: "300",
-        upsert: false,
-      });
-    if (error) throw new ServiceUnavailableException("No se pudo guardar la foto");
+    const driver = this.ensureEnabled();
+    try {
+      await driver.upload(objectKey, bytes, "image/webp");
+    } catch (error) {
+      this.logger.error(`Photo upload failed: ${errorMessage(error)}`);
+      throw new ServiceUnavailableException("No se pudo guardar la foto");
+    }
   }
 
   async download(objectKey: string): Promise<Buffer> {
-    const { data, error } = await this.ensureEnabled()
-      .storage.from(this.bucket)
-      .download(objectKey);
-    if (error || !data) throw new ServiceUnavailableException("No se pudo leer la foto");
-    return Buffer.from(await data.arrayBuffer());
+    const driver = this.ensureEnabled();
+    try {
+      return await driver.download(objectKey);
+    } catch (error) {
+      this.logger.error(`Photo download failed: ${errorMessage(error)}`);
+      throw new ServiceUnavailableException("No se pudo leer la foto");
+    }
   }
 
   async remove(objectKeys: string[]): Promise<void> {
     if (objectKeys.length === 0) return;
-    const { error } = await this.ensureEnabled().storage.from(this.bucket).remove(objectKeys);
-    if (error) throw new Error(`Storage object cleanup failed: ${error.message}`);
+    await this.ensureEnabled().remove(objectKeys);
   }
 
   async createSignedUrl(objectKey: string): Promise<string | null> {
-    const { data, error } = await this.ensureEnabled()
-      .storage.from(this.bucket)
-      .createSignedUrl(objectKey, REVIEW_PHOTO_TTL_SECONDS);
-    if (error || !data?.signedUrl) return null;
-    return data.signedUrl;
+    const driver = this.ensureEnabled();
+    try {
+      return await driver.createSignedUrl(objectKey, REVIEW_PHOTO_TTL_SECONDS);
+    } catch (error) {
+      this.logger.warn(`Signed URL creation failed: ${errorMessage(error)}`);
+      return null;
+    }
   }
+}
 
-  async list(
-    prefix?: string,
-    offset = 0,
-  ): Promise<Array<{ name: string; id: string | null; created_at: string | null }>> {
-    const { data, error } = await this.ensureEnabled()
-      .storage.from(this.bucket)
-      .list(prefix, {
-        limit: 100,
-        offset,
-        sortBy: { column: "created_at", order: "asc" },
-      });
-    if (error) throw new Error(`Storage object listing failed: ${error.message}`);
-    return (data ?? []).map((item) => ({
-      name: item.name,
-      id: item.id ?? null,
-      created_at: item.created_at ?? null,
-    }));
-  }
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
