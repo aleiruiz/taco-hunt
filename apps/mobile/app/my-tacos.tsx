@@ -25,7 +25,7 @@ import {
   type AvatarPreset,
   type Profile,
 } from "@/data/profile-api";
-import { getFixtureProgress } from "@/data/progress";
+import { useProgress } from "@/features/progress/useProgress";
 import { AvatarSheet } from "@/features/profile/AvatarSheet";
 import { colors, radii, spacing, typography } from "@/theme";
 import { Avatar } from "@/components/Avatar";
@@ -64,9 +64,10 @@ export default function MyTacosScreen() {
   const [tab, setTab] = useState<Tab>("favoritos");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const progress = getFixtureProgress();
+  const { progress } = useProgress();
   const earnedBadges = progress.badges.filter((badge) => badge.earned);
   const nextBadge = progress.badges.find((badge) => !badge.earned);
+  const badgeCountLabel = `${earnedBadges.length} ${earnedBadges.length === 1 ? "insignia" : "insignias"}`;
 
   useEffect(() => {
     if (requestedTab === "favoritos" || requestedTab === "resenas" || requestedTab === "fotos") {
@@ -272,15 +273,14 @@ export default function MyTacosScreen() {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${earnedBadges.length} insignias, vista previa. Siguiente: ${nextBadge?.label ?? "todas ganadas"}`}
+        accessibilityLabel={`${badgeCountLabel}. Siguiente: ${nextBadge?.label ?? "todas ganadas"}`}
         onPress={() => router.push("/retos")}
         style={styles.badgeRow}
       >
         <Ionicons name="ribbon" size={18} color={colors.gold} />
         <Text style={styles.badgeRowText}>
-          {earnedBadges.length} insignias
+          {badgeCountLabel}
           {nextBadge ? ` · siguiente: ${nextBadge.label}` : ""}
-          <Text style={styles.badgeRowPreview}> · vista previa</Text>
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.paper} />
       </Pressable>
@@ -490,7 +490,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   badgeRowText: { flex: 1, color: colors.paper, fontWeight: "800", fontSize: 13 },
-  badgeRowPreview: { color: colors.gold, fontWeight: "700" },
   proposalsRow: {
     flexDirection: "row",
     alignItems: "center",

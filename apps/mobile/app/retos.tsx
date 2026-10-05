@@ -5,11 +5,11 @@ import { colors, radii, spacing, typography } from "@/theme";
 import { Card } from "@/components/Card";
 import { ProgressBar } from "@/components/ProgressBar";
 import { BadgeMedal } from "@/components/BadgeMedal";
-import { getFixtureProgress } from "@/data/progress";
+import { useProgress } from "@/features/progress/useProgress";
 
 export default function RetosScreen() {
   const router = useRouter();
-  const progress = getFixtureProgress();
+  const { progress, error } = useProgress();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -25,6 +25,7 @@ export default function RetosScreen() {
       </Pressable>
       <Text style={styles.kicker}>TU PROGRESO</Text>
       <Text style={styles.title}>Retos e insignias</Text>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {progress.nextChallenge && (
         <View style={styles.nextChallengeCard}>
@@ -57,6 +58,7 @@ const styles = StyleSheet.create({
   backText: { color: colors.green, fontSize: 15, fontWeight: "800" },
   kicker: { ...typography.kicker, color: colors.green },
   title: { color: colors.ink, fontSize: 32, fontWeight: "900", marginTop: 10 },
+  error: { ...typography.caption, color: colors.dangerText, marginTop: spacing.sm },
   nextChallengeCard: {
     marginTop: spacing.xl,
     padding: spacing.lg,
