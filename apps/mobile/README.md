@@ -29,7 +29,7 @@ Supabase values above, set:
   phone use the computer's LAN address, only in an uncommitted local `.env`. For an EAS
   development build, store it as an EAS environment variable instead of in `eas.json` (the
   `development` profile reads the `development` environment), for example
-  `eas env:create --environment development --name EXPO_PUBLIC_API_URL --visibility plaintext`.
+  `eas env:set --environment development --name EXPO_PUBLIC_API_URL --visibility plaintext`.
 - `EXPO_PUBLIC_MAPS_PROVIDER=google` to use the Google map provider.
 - `ANDROID_MAPS_API_KEY` and, optionally, `IOS_MAPS_API_KEY` at build time: Maps SDK keys
   restricted to the package `com.aleiruiz.tacohunt` and its signing certificate. Never enable

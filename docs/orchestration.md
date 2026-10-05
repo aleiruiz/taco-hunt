@@ -2,7 +2,7 @@
 
 ## Current integration snapshot
 
-As of 2026-10-05, every task from T00 to T69 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05. P2.8 (T61–T69) closed with T68 (PR #63) on 2026-10-01, and the owner then committed `7ef3508` ("Consolidate local mobile and Places changes") directly on 2026-10-02. There are no open PRs. T15 waits only on E01/E02; T16 waits on T15 and E03/E04. Keep `docs/orchestration-state.json` aligned with this snapshot during every coordination pass.
+As of 2026-10-05, every task from T00 to T69 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05. P2.8 (T61–T69) closed with T68 (PR #63) on 2026-10-02 (UTC), and the owner then committed `7ef3508` ("Consolidate local mobile and Places changes") directly on 2026-10-02. There are no open PRs. T15 waits only on E01/E02; T16 waits on T15 and E03/E04. Keep `docs/orchestration-state.json` aligned with this snapshot during every coordination pass.
 
 The orchestrator session may implement tasks itself, sequentially, one task in progress at a time, each in its own git worktree/branch (see `CLAUDE.md`). A separate worker session is still fine when the owner explicitly starts one; do not use subagents inside the orchestrator session as implementation workers. `docs/plan-delegacion.md` defines priorities and dependencies; `docs/orchestration-state.json` tracks assignments and integration status. The limit is **three active worker sessions**; coordination in the orchestrator session does not use one of those slots.
 

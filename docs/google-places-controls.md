@@ -43,17 +43,18 @@ Two layers enforce quotas in code, independent of the Cloud Console setting:
 - **Per-user, per-minute** (`RequestLimitService`, already in place for T21):
   30 autocomplete requests and 20 resolve requests per user per minute
   (`apps/api/src/places/places.service.ts`). Viewport discovery, place details, photo
-  proxying, and review-target creation share a separate limit of 30 requests per minute
+  proxying, and review-target creation (when it needs a Google lookup) share a separate limit of 30 requests per minute
   per signed-in user, or per client IP when signed out. These stop a single client from
   hammering the endpoints; they do not bound total daily spend.
 - **Global daily call budget** (`GOOGLE_PLACES_DAILY_CALL_LIMIT`, added by this task):
   every outbound Google Places request from `PlacesService` — viewport discovery,
   autocomplete, place-details resolution, review-target creation, and photo proxying — consumes one unit of a single shared
   24-hour counter via
-  `RequestLimitService`. Once the limit is reached, further calls fail closed
-  (autocomplete degrades to local-only results; viewport discovery, details, photo,
-  review-target, and resolve return `503`)
-  until the window resets. Default is 2,000 calls/day if the env var is unset or
+  `RequestLimitService`. Once the limit is reached, further calls fail closed until the
+  window resets: autocomplete degrades to local-only results, viewport discovery returns
+  an `unavailable` result, and details, photo, and resolve return `503`. Review-target
+  creation returns `503` only when it needs a Google lookup; for a place already linked
+  to a stand it does not call Google. Default is 2,000 calls/day if the env var is unset or
   invalid; set it below whatever the Cloud Console quota allows, so the application
   degrades gracefully before Google starts rejecting requests outright.
   This counter is in-process and per-instance — with `max-instances` above 1 the
@@ -106,10 +107,11 @@ Set `GOOGLE_PLACES_KILL_SWITCH=true` in the API's environment (and redeploy, or 
 the process if your platform doesn't hot-reload env vars) to immediately stop every
 outbound Google Places call:
 
-- `PlacesService.assertGoogleCallAllowed()` throws before any `fetch` to Google —
-  viewport discovery, details, photo, review-target, and resolve return `503`, autocomplete
-  silently degrades to local-only
-  results (same behavior as when `GOOGLE_PLACES_API_KEY` is unset).
+- `PlacesService` blocks every request to Google. Viewport discovery and place details
+  return an `unavailable` result; photo and resolve return `503`; review-target creation
+  returns `503` only when it needs a Google lookup (a place already linked to a stand
+  still works); autocomplete silently degrades to local-only results (same behavior as
+  when `GOOGLE_PLACES_API_KEY` is unset).
 - `apps/api/scripts/refresh-place-candidates.ts` refuses to run at all when the switch
   is set.
 
