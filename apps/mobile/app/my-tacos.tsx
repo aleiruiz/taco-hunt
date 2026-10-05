@@ -75,7 +75,11 @@ export default function MyTacosScreen() {
   }, [requestedTab]);
 
   const hasLoaded = useRef(false);
+  // Only the latest load may commit state, so a slow request from a previous account
+  // or an older refresh can't overwrite newer data.
+  const loadSequence = useRef(0);
   useEffect(() => {
+    loadSequence.current += 1;
     // A different account must never see the previous account's lists while reloading.
     hasLoaded.current = false;
     setReviews([]);
@@ -85,6 +89,8 @@ export default function MyTacosScreen() {
   }, [session?.user.id]);
   const load = useCallback(async () => {
     if (!session) return;
+    const requestId = ++loadSequence.current;
+    const isCurrent = () => requestId === loadSequence.current;
     // Refreshes on focus (e.g. back from editing a review) keep the current lists visible.
     if (!hasLoaded.current) setLoading(true);
     setError(null);
@@ -100,6 +106,7 @@ export default function MyTacosScreen() {
         // sign-up metadata when profile is null (see below).
         getProfile(session).catch(() => null),
       ]);
+      if (!isCurrent()) return;
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);
       setProfile(ownProfile);
@@ -108,13 +115,15 @@ export default function MyTacosScreen() {
           spotProposals: Proposal[];
           tacoProposals: Proposal[];
         };
+        if (!isCurrent()) return;
         setProposals([...data.spotProposals, ...data.tacoProposals]);
       }
       hasLoaded.current = true;
     } catch (cause) {
+      if (!isCurrent()) return;
       setError(cause instanceof Error ? cause.message : "No pudimos cargar tu perfil.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [session]);
   useFocusEffect(
