@@ -1,9 +1,10 @@
 -- T40 (20260930000101_t40_profile_avatars.sql) replaced
 -- media_uploads_claim_consistency_check to add claimed_profile_id but dropped
 -- T37's claimed_spot_photo_id, so claiming an upload for a stand photo
--- (POST /v1/spots/:id/photos) violates the check. Restore it: a claimed upload
--- has exactly one owner among the three claim columns; a pending or deleted
--- upload has none.
+-- (POST /v1/spots/:id/photos) violates the check. T40 now carries the corrected
+-- check for fresh databases; this migration repairs databases that already
+-- applied the old T40. A claimed upload has exactly one owner among the three
+-- claim columns; a pending or deleted upload has none.
 alter table app_private.media_uploads
   drop constraint media_uploads_claim_consistency_check;
 

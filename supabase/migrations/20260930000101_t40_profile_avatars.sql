@@ -59,8 +59,12 @@ alter table app_private.media_uploads
 alter table app_private.media_uploads
   add constraint media_uploads_claim_consistency_check
   check (
-    (state = 'claimed' and (claimed_review_id is not null or claimed_profile_id is not null))
-    or (state in ('pending','deleted') and claimed_review_id is null and claimed_profile_id is null)
+    (state = 'claimed'
+      and num_nonnulls(claimed_review_id, claimed_spot_photo_id, claimed_profile_id) = 1)
+    or (state in ('pending','deleted')
+      and claimed_review_id is null
+      and claimed_spot_photo_id is null
+      and claimed_profile_id is null)
   );
 
 -- T06 narrowed profiles to column-level grants only; extend that narrow surface
