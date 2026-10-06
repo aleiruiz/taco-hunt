@@ -61,19 +61,29 @@ try {
   }
 
   $key = aws iam create-access-key --user-name $User | ConvertFrom-Json
+  # Secrets whose new version was published, with the file holding the previous value (or $null).
+  $published = [System.Collections.Generic.List[object]]::new()
   try {
     if ($Environment -eq 'prod') {
       foreach ($pair in @(@('s3-media-access-key-id', $key.AccessKey.AccessKeyId), @('s3-media-secret-access-key', $key.AccessKey.SecretAccessKey))) {
         $name = $pair[0]
         $secretExists = $true
         try { gcloud secrets describe $name --project $GcpProject 2>$null | Out-Null } catch { $secretExists = $false }
-        if (-not $secretExists) {
+        $previousFile = $null
+        if ($secretExists) {
+          # Keep the current value so a half-finished rotation can be rolled back.
+          $previousFile = Join-Path $Tmp "$name.previous"
+          try {
+            gcloud secrets versions access latest --secret $name --project $GcpProject "--out-file=$previousFile" 2>$null | Out-Null
+          } catch { $previousFile = $null }
+        } else {
           gcloud secrets create $name --project $GcpProject --replication-policy automatic | Out-Null
         }
         # The value goes through a temp file (no trailing newline), never a process argument.
         $valueFile = Join-Path $Tmp $name
         Set-Content -Encoding ascii -NoNewline -LiteralPath $valueFile -Value $pair[1]
         gcloud secrets versions add $name --project $GcpProject "--data-file=$valueFile" | Out-Null
+        $published.Add(@($name, $previousFile))
       }
       Write-Host "Done: bucket $Bucket and user $User; access key stored in Secret Manager ($GcpProject)."
     } else {
@@ -82,6 +92,16 @@ try {
       Write-Host "Done: bucket $Bucket and user $User; credentials appended to apps/api/.env."
     }
   } catch {
+    # Never leave a half-published pair: put back the previous value of any secret already written.
+    foreach ($entry in $published) {
+      if ($entry[1]) {
+        try {
+          gcloud secrets versions add $entry[0] --project $GcpProject "--data-file=$($entry[1])" | Out-Null
+        } catch { Write-Warning "Could not restore $($entry[0]); restore its previous version by hand." }
+      } else {
+        Write-Warning "Secret $($entry[0]) had no previous value; its latest version now belongs to a deleted key."
+      }
+    }
     # Never leave an active key that was not stored completely.
     aws iam delete-access-key --user-name $User --access-key-id $key.AccessKey.AccessKeyId
     throw
