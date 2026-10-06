@@ -553,43 +553,51 @@
       "coderabbitReviewedSha": "d3dd3cf9e53370cd526755cf0a6ace99ccf53f74"
     },
     "T73": {
-      "status": "in_progress",
+      "status": "merged",
       "dependsOn": [],
-      "note": "Unique versions for the three colliding migrations.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Unique versions for the three colliding migrations plus the T40 stand-photo claim check repair (20261005000100). Duplicate PR #69 was closed in favor of #68. Merged 2026-10-05T23:19:08Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/68",
+      "headSha": "6c14e864862fe1c46b7d6a8ed95c396063c9f1c7",
+      "coderabbitReviewedSha": "6c14e864862fe1c46b7d6a8ed95c396063c9f1c7"
     },
     "T74": {
-      "status": "pending",
+      "status": "merged",
       "dependsOn": ["T73"],
-      "note": "Bias address autocomplete to Monterrey.",
-      "pr": null,
-      "headSha": null,
+      "note": "Owner's address-first live search, Google autocomplete restricted to Monterrey, maxParamLength 512 for long place IDs, map recenter on focus. CodeRabbit's findings were all fixed in the merged head and confirmed resolved in-thread; its status check still read 'Review in progress' at merge time. Merged 2026-10-05T23:26:22Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/70",
+      "headSha": "315a68d6ffb76edaaeadf533c4e207e36abadcb2",
       "coderabbitReviewedSha": null
     },
     "T75": {
-      "status": "pending",
+      "status": "merged",
       "dependsOn": ["T73"],
-      "note": "Real challenge progress and photo counts.",
-      "pr": null,
-      "headSha": null,
-      "coderabbitReviewedSha": null
+      "note": "Retos and profile badges use GET /v1/me/progress. Merged 2026-10-05T23:23:00Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/71",
+      "headSha": "a52363c9a452963bccaf1312e284bdaf71350e99",
+      "coderabbitReviewedSha": "a52363c9a452963bccaf1312e284bdaf71350e99"
     },
     "T76": {
-      "status": "pending",
+      "status": "merged",
       "dependsOn": ["T73"],
-      "note": "Taco-type filter and count for Google pins.",
-      "pr": null,
-      "headSha": null,
+      "note": "Taco filter hides Google and proposal pins with a note; count chip and panel agree. CodeRabbit's findings were all fixed in the merged head and confirmed resolved in-thread; its status check still read 'Review in progress' at merge time. Merged 2026-10-05T23:26:25Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/72",
+      "headSha": "8a747a9e8e55567e6170d85e5c28cd16e95327f8",
       "coderabbitReviewedSha": null
     },
     "T77": {
-      "status": "pending",
+      "status": "merged",
       "dependsOn": ["T73"],
-      "note": "Private S3 storage for user photos.",
-      "pr": null,
-      "headSha": null,
+      "note": "Pluggable MediaStorageService driver (supabase | s3) with dedicated S3_MEDIA_* credentials; docs/media-storage.md. CodeRabbit reviewed ecc40e5 (one Minor docs finding, fixed in acb26a7 and resolved); it skipped the docs-only head. Dev AWS bucket taco-hunt-media-dev and IAM user taco-hunt-api-media-dev (us-east-1) created with owner OK; production bucket belongs with T16. Merged 2026-10-05T23:46:42Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/73",
+      "headSha": "acb26a745c5da8e810f759bf7fc80207b9a2ec14",
+      "coderabbitReviewedSha": null
+    },
+    "T78": {
+      "status": "pr-open",
+      "dependsOn": ["T77"],
+      "note": "Profile Fotos stat/tab: GET /v1/me/spot-photos (OwnSpotPhotoPage) and mobile list with StatusBadge per design §6.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/74",
+      "headSha": "5a9330e8a0765831cd8a9fc2bbe0b4c8151c5eac",
       "coderabbitReviewedSha": null
     }
   },

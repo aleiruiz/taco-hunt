@@ -4,9 +4,9 @@ This board follows the specification in docs/build-spec.md and the repository's 
 
 ## Current status (2026-10-05)
 
-- Every task from T00 to T69 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05.
-- There are no open PRs. The last integrated PR is #63 (T68), followed by the owner's direct commit `7ef3508` ("Consolidate local mobile and Places changes", 2026-10-02).
-- Remaining work: **T15** (full integration and acceptance), waiting only on the external inputs E01/E02, then **T16** (real deployment), waiting on T15 and E03/E04.
+- Every task from T00 to T77 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05.
+- P2.9 (emulator QA follow-ups, T70–T78): T70–T77 merged on 2026-10-05 (PRs #65–#68, #70–#73). T78 is open as PR #74.
+- Remaining work: **T78**, then **T15** (full integration and acceptance), waiting only on the external inputs E01/E02, then **T16** (real deployment), waiting on T15 and E03/E04. T16 also creates the production media bucket and IAM user (see `docs/media-storage.md`).
 
 ## Blocking rule
 
@@ -166,8 +166,8 @@ merged: the UI first (T61–T63, plus the T69 review follow-up), then the contra
 
 ## P2.9: emulator QA follow-ups (2026-10-05)
 
-The 2026-10-05 Android emulator pass found bugs in the merged app. T70–T72 are
-merged; T73–T77 follow up on what that pass and the owner left open.
+The 2026-10-05 Android emulator pass found bugs in the merged app. T70–T77 are
+merged (T73 as PR #68, T74–T77 as PRs #70–#73); T78 is open as PR #74.
 
 | ID  | Task and expected outcome                                                                                                                                                                                                                                                                          | Blocked by | Main area / hot files                                                  |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------- |
@@ -179,6 +179,7 @@ merged; T73–T77 follow up on what that pass and the owner left open.
 | T75 | Real challenge progress and photo counts instead of fixed sample data.                                                                                                                                                                                                                             | T73        | apps/api/src/account/, apps/mobile/app/                                |
 | T76 | Apply the taco-type filter and count to Google pins on the map.                                                                                                                                                                                                                                    | T73        | apps/mobile/app/index.tsx                                              |
 | T77 | Store user-uploaded photos in a private S3 bucket behind the existing storage service (owner decision, 2026-10-05). Update the build-spec media-storage decision, define how existing Supabase objects move, and keep signed URLs for visible photos, account deletion and orphan cleanup working. | T73        | apps/api/src/media/, docs/build-spec.md                                |
+| T78 | Profile "Fotos" stat and tab: `GET /v1/me/spot-photos` lists the user's own stand photos in every moderation state, and the tab shows them with status badges (design §6).                                                                                                                         | T77        | packages/contracts/, apps/api/src/media/, apps/mobile/app/my-tacos.tsx |
 
 ## P3: deliberately blocked until the end
 
