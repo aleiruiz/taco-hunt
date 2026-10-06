@@ -131,7 +131,9 @@ export async function searchProposalPlaces(
     headers: authHeaders(session),
   });
   const payload = (await response.json().catch(() => undefined)) as
-    ApiAutocompleteResponse | { error?: unknown } | undefined;
+    | ApiAutocompleteResponse
+    | { error?: unknown }
+    | undefined;
   if (!response.ok) {
     throw new Error(
       messageFromResponse(
@@ -141,12 +143,11 @@ export async function searchProposalPlaces(
     );
   }
 
-  const items =
-    payload && Array.isArray((payload as ApiAutocompleteResponse).items)
-      ? (payload as ApiAutocompleteResponse).items
-      : [];
-  const localMatch = items.find(
-    (item): item is Extract<ApiPlaceSuggestion, { kind: "spot" }> => item.kind === "spot",
+  const items = payload && Array.isArray((payload as ApiAutocompleteResponse).items)
+    ? (payload as ApiAutocompleteResponse).items
+    : [];
+  const localMatch = items.find((item): item is Extract<ApiPlaceSuggestion, { kind: "spot" }> =>
+    item.kind === "spot",
   );
   const registeredMatch =
     (payload as ApiAutocompleteResponse).registeredMatch ??
@@ -158,9 +159,7 @@ export async function searchProposalPlaces(
         }
       : undefined);
   const suggestions = items
-    .filter(
-      (item): item is Extract<ApiPlaceSuggestion, { kind: "google" }> => item.kind === "google",
-    )
+    .filter((item): item is Extract<ApiPlaceSuggestion, { kind: "google" }> => item.kind === "google")
     .map((item) => ({
       placeId: item.placeId,
       displayName: item.text,
@@ -170,7 +169,7 @@ export async function searchProposalPlaces(
   return {
     suggestions,
     registeredMatch,
-    attribution: payload ? ((payload as ApiAutocompleteResponse).attribution ?? null) : null,
+    attribution: payload ? (payload as ApiAutocompleteResponse).attribution ?? null : null,
   };
 }
 
@@ -221,9 +220,10 @@ export async function submitProposal(
 export async function listMySpotProposals(session: Session): Promise<SpotProposal[]> {
   const response = await fetch(`${API}/me/proposals`, { headers: authHeaders(session) });
   const payload = (await response.json().catch(() => undefined)) as
-    { spotProposals?: SpotProposal[] } | { error?: unknown } | undefined;
-  if (!response.ok)
-    throw new Error(messageFromResponse(payload, "No pudimos cargar tus propuestas."));
+    | { spotProposals?: SpotProposal[] }
+    | { error?: unknown }
+    | undefined;
+  if (!response.ok) throw new Error(messageFromResponse(payload, "No pudimos cargar tus propuestas."));
   return payload && Array.isArray((payload as { spotProposals?: SpotProposal[] }).spotProposals)
     ? (payload as { spotProposals: SpotProposal[] }).spotProposals
     : [];
