@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import TacoHuntTaco from "@/assets/taco-hunt-taco.svg";
 import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
+import Svg, { Path } from "react-native-svg";
 import * as Location from "expo-location";
 import { colors, spacing, radii, sizes, elevation, typography } from "@/theme";
 import { placeCountLabel } from "@/lib/format";
@@ -83,6 +84,7 @@ type MapPin = {
   latitude: number;
   longitude: number;
   bestTaco: string | null;
+  reviewCount: number;
 };
 type MapCluster = {
   count: number;
@@ -168,12 +170,24 @@ function regionToViewportBounds(region: Region, marginFactor = 0.25): Area | nul
 
 type MarkerPressHandler = (id: string) => void | Promise<void>;
 
-const CustomMarkerContent = memo(function CustomMarkerContent() {
+const CustomMarkerContent = memo(function CustomMarkerContent({
+  firstToReview,
+}: {
+  /** No visible reviews yet: shows the gold "sé el primero" sparkle (design §2). */
+  firstToReview: boolean;
+}) {
   return (
     <View collapsable={false} style={styles.markerWrap}>
       <View style={styles.marker}>
         <TacoHuntTaco width={22} height={22} />
       </View>
+      {firstToReview ? (
+        <View style={styles.markerSparkle}>
+          <Svg width={11} height={11} viewBox="0 0 24 24">
+            <Path d="M12 2l2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6z" fill={colors.ink} />
+          </Svg>
+        </View>
+      ) : null}
     </View>
   );
 });
@@ -188,11 +202,11 @@ const TacoMapMarker = memo(function TacoMapMarker({
   return (
     <Marker
       coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-      accessibilityLabel={`${pin.name}, ${pin.neighborhood}`}
+      accessibilityLabel={`${pin.name}, ${pin.neighborhood}${pin.reviewCount === 0 ? ", sin reseñas" : ""}`}
       onPress={() => void onPress(pin.id)}
       tracksViewChanges={false}
     >
-      <CustomMarkerContent />
+      <CustomMarkerContent firstToReview={pin.reviewCount === 0} />
     </Marker>
   );
 });
@@ -1715,8 +1729,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...elevation.float,
   },
-  markerWrap: { width: 44, height: 44 },
+  // Room above and to the right of the pin for the sparkle badge, which native map
+  // markers would otherwise clip.
+  markerWrap: { width: 51, height: 51 },
   marker: {
+    position: "absolute",
+    left: 0,
+    bottom: 0,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -1750,8 +1769,8 @@ const styles = StyleSheet.create({
   clusterBubbleText: { color: colors.white, fontWeight: "800", fontSize: 14 },
   markerSparkle: {
     position: "absolute",
-    top: -2,
-    right: -2,
+    top: 0,
+    right: 0,
     width: 20,
     height: 20,
     borderRadius: 10,
