@@ -11,7 +11,8 @@ COPY apps/api/tsconfig.json apps/api/tsconfig.json
 COPY packages/contracts/src packages/contracts/src
 COPY packages/contracts/tsconfig.json packages/contracts/tsconfig.json
 RUN pnpm --filter @taco-hunt/api build
-RUN pnpm --filter @taco-hunt/api --prod deploy --legacy /app/deploy
+# The workspace patches only apply to mobile packages, which the API bundle never installs.
+RUN pnpm --filter @taco-hunt/api --prod deploy --legacy --config.allow-unused-patches=true /app/deploy
 
 FROM node:24-alpine
 WORKDIR /app
