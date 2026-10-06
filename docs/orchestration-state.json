@@ -600,13 +600,29 @@
       "headSha": "31814f0b1a0235fdcbce07cc6b7d30a1789a3537",
       "coderabbitReviewedSha": "31814f0b1a0235fdcbce07cc6b7d30a1789a3537"
     },
+    "T79": {
+      "status": "merged",
+      "dependsOn": ["T77"],
+      "note": "Docs-only: records T73-T77 as merged, adds T78, and says deployed environments must set MEDIA_STORAGE_DRIVER=s3. The reviewed SHA was not recorded for this docs-only head. Merged 2026-10-06T00:35:15Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/75",
+      "headSha": "05829d5203069dd1266f6af7ab573ad01cd8b0ba",
+      "coderabbitReviewedSha": null
+    },
+    "T80": {
+      "status": "merged",
+      "dependsOn": ["T78"],
+      "note": "Docs-only: records T78 as merged. CodeRabbit reviewed the merged head with no findings. Merged 2026-10-06T00:47:30Z.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/76",
+      "headSha": "e95a7795d5ce34dc2a884785245b4f52fb65eac1",
+      "coderabbitReviewedSha": "e95a7795d5ce34dc2a884785245b4f52fb65eac1"
+    },
     "T81": {
       "status": "merged",
       "dependsOn": ["T78"],
       "note": "Avatars and map taco replaced verbatim from the design canvas. Merged 2026-10-06.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/77",
       "headSha": "100e28b13852003fa94ac7f8289ff55a46c868b2",
-      "coderabbitReviewedSha": null
+      "coderabbitReviewedSha": "100e28b13852003fa94ac7f8289ff55a46c868b2"
     },
     "T82": {
       "status": "merged",
