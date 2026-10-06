@@ -13,7 +13,7 @@ export function BadgeMedal({ icon, label, earned = false, progress }: Props) {
   return (
     <View style={[styles.container, !earned && styles.locked]}>
       <Icon
-        name={icon as any}
+        name={icon}
         size={40}
         color={earned ? colors.gold : colors.muted}
         style={!earned && styles.lockedIcon}

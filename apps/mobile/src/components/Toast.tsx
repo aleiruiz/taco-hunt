@@ -5,10 +5,10 @@ import { useEffect, useRef } from "react";
 
 type Variant = "success" | "error" | "info";
 
-const variantConfig: Record<Variant, { icon: string; bgColor: string; textColor: string }> = {
+const variantConfig: Record<Variant, { icon: IconName; bgColor: string; textColor: string }> = {
   success: { icon: "checkmark-circle", bgColor: colors.greenSoft, textColor: colors.green },
   error: { icon: "alert-circle", bgColor: colors.dangerBg, textColor: colors.dangerText },
-  info: { icon: "information-circle", bgColor: colors.cream, textColor: colors.ink },
+  info: { icon: "information-circle-outline", bgColor: colors.cream, textColor: colors.ink },
 };
 
 type Props = {
@@ -32,7 +32,7 @@ export function Toast({ message, variant = "info", duration = 3000, onDismiss }:
 
   return (
     <Animated.View style={[styles.toast, { backgroundColor: config.bgColor, opacity: fadeAnim }]}>
-      <Icon name={config.icon as any} size={20} color={config.textColor} style={styles.icon} />
+      <Icon name={config.icon} size={20} color={config.textColor} style={styles.icon} />
       <Text style={[styles.text, { color: config.textColor }]}>{message}</Text>
     </Animated.View>
   );

@@ -40,7 +40,7 @@ export default function RetosScreen() {
         {progress.badges.map((badge) => (
           <BadgeMedal
             key={badge.id}
-            icon={badge.icon as never}
+            icon={badge.icon}
             label={badge.label}
             earned={badge.earned}
             progress={badge.progress}

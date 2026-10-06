@@ -6,7 +6,7 @@ type Status = "pending" | "approved" | "rejected";
 
 const statusConfig: Record<
   Status,
-  { icon: string; label: string; color: string; bgColor: string; textColor: string }
+  { icon: IconName; label: string; color: string; bgColor: string; textColor: string }
 > = {
   pending: {
     icon: "time",
@@ -41,7 +41,7 @@ export function StatusBadge({ status, reason }: Props) {
 
   return (
     <View style={[styles.badge, { backgroundColor: config.bgColor }]}>
-      <Icon name={config.icon as any} size={14} color={config.color} style={{ marginRight: 4 }} />
+      <Icon name={config.icon} size={14} color={config.color} style={{ marginRight: 4 }} />
       <Text style={[styles.text, { color: config.textColor }]}>{config.label}</Text>
       {reason && <Text style={[styles.reason, { color: config.textColor }]}> · {reason}</Text>}
     </View>

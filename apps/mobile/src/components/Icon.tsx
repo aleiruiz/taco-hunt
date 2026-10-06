@@ -31,6 +31,12 @@ const stroke = {
       <Circle cx="12" cy="10" r="2.2" />
     </>
   ),
+  compass: (
+    <>
+      <Circle cx="12" cy="12" r="9" />
+      <Path d="M15.5 8.5l-2 5-5 2 2-5z" />
+    </>
+  ),
   navigate: <Path d="M20 4L3.5 11l7 2.5 2.5 7z" />,
   "ellipse-outline": <Circle cx="12" cy="12" r="8" />,
   add: <Path d="M12 5v14M5 12h14" />,
@@ -157,6 +163,7 @@ const aliases = {
   "heart-outline": "heart",
   "camera-outline": "camera",
   "star-outline": "star",
+  "add-circle": "add-circle-outline",
   "ellipsis-horizontal": "ellipsis",
   "fast-food": "taco",
   "flag-outline": "flag",
