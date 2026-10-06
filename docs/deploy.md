@@ -15,7 +15,7 @@ Recheck every price and free-tier limit below on the provider's pricing page bef
 | User media           | S3 bucket `taco-hunt-media-prod`, `us-east-1`            | Private, encrypted, accessed only by IAM user `taco-hunt-api-media-prod`. See `docs/media-storage.md`.      |
 | Places (server side) | Google Cloud API key restricted to Places API (New)      | Separate from the Android Maps key. Daily call limit and kill switch from `docs/google-places-controls.md`. |
 | Android app          | EAS `production` profile (AAB) to Google Play            | `preview` profile (APK) for testing a release build against production before store upload.                 |
-| Landing page         | Free static host                                         | Also hosts the privacy policy URL that Google Play requires.                                                |
+| Landing page         | GitHub Pages, `https://aleiruiz.github.io/taco-hunt/`    | Also hosts the privacy policy and account-deletion URLs that Google Play requires.                          |
 
 ## One-time setup
 
@@ -165,6 +165,15 @@ Five secrets with one active version each stay within Secret Manager's free allo
 
 - **Maps SDK for Android:** a separate key restricted to _Maps SDK for Android_, package `com.aleiruiz.tacohunt`, and the SHA-1 fingerprints of both the EAS upload certificate and the Google Play app signing certificate (Play Console → App integrity). Never enable Places on this key.
 
+### 8. Landing page (owner, once)
+
+In the repository, Settings → Pages → Build and deployment → Source: **GitHub Actions**. The **Deploy landing** workflow then publishes `apps/landing` (HTML and SVG only, not the local preview server) on every push to `main` that touches it, or on a manual run. Use these URLs in the Play Console:
+
+- Privacy policy: `https://aleiruiz.github.io/taco-hunt/privacidad.html`
+- Account deletion (Data safety → Data deletion): `https://aleiruiz.github.io/taco-hunt/eliminar-cuenta.html`
+
+Keep both pages accurate whenever data handling changes (new providers, telemetry, retention), and update their effective date.
+
 ## Deploying the API
 
 Run the **Deploy API** workflow from the Actions tab (manual trigger, `main` only). It:
@@ -240,7 +249,7 @@ pnpm supabase db dump --linked -f backup-schema.sql
 pnpm supabase db dump --linked --data-only -f backup-data.sql
 ```
 
-Keep dumps outside the repository; they contain personal data. To restore into a fresh project: create it, apply `backup-schema.sql`, then `backup-data.sql`, re-provision the runtime role password, and update the `database-url` secret. S3 objects are not touched by a database restore.
+Keep dumps outside the repository; they contain personal data. Delete dumps older than 90 days: the public privacy policy and account-deletion pages (`apps/landing/privacidad.html`, `apps/landing/eliminar-cuenta.html`) promise that backups are kept at most 90 days. To restore into a fresh project: create it, apply `backup-schema.sql`, then `backup-data.sql`, re-provision the runtime role password, and update the `database-url` secret. S3 objects are not touched by a database restore.
 
 ## Cost watch
 

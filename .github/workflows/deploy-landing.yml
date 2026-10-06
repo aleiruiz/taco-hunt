@@ -1,0 +1,48 @@
+name: Deploy landing
+
+# Publishes the static landing page, privacy policy, and account-deletion page to GitHub Pages.
+# One-time setup: Settings → Pages → Source: GitHub Actions. See docs/deploy.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/landing/**
+      - .github/workflows/deploy-landing.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-landing
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish to GitHub Pages
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      # Only the public static files; server.mjs is a local preview server and is not published.
+      - name: Collect site files
+        run: |
+          mkdir _site
+          cp apps/landing/*.html apps/landing/*.svg _site/
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
