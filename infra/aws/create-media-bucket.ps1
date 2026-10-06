@@ -1,5 +1,7 @@
+#Requires -Version 7.4
 # Creates the private user-media bucket and its least-privilege IAM user for one environment.
-# See docs/media-storage.md and docs/deploy.md. Run from the repository root in PowerShell 7.
+# See docs/media-storage.md and docs/deploy.md. Run from the repository root in PowerShell 7.4+
+# (older versions don't stop on failed aws/gcloud calls).
 # Requires the AWS CLI with an administrator profile. For prod, also requires gcloud signed in to
 # the Google Cloud project: the access key goes straight into Secret Manager and is never printed.
 # Idempotent except for creating the access key; re-running creates a second key.
@@ -8,6 +10,9 @@ param(
   [ValidateSet('dev', 'prod')]
   [string] $Environment,
   [string] $Region = 'us-east-1',
+  # S3 bucket names are global; pass another name if this one is taken. The deploy must use the same
+  # name (repository variable API_S3_MEDIA_BUCKET, see docs/deploy.md).
+  [string] $Bucket = "taco-hunt-media-$Environment",
   # Google Cloud project that receives the prod key in Secret Manager.
   [string] $GcpProject
 )
@@ -18,10 +23,14 @@ if ($Environment -eq 'prod' -and -not $GcpProject) {
   throw 'Prod needs -GcpProject so the access key goes to Secret Manager.'
 }
 
-$Bucket = "taco-hunt-media-$Environment"
 $User = "taco-hunt-api-media-$Environment"
 $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Force $Tmp | Out-Null
+# Credential files are written here: owner-only from creation on Unix; %TEMP% is already per-user on Windows.
+if ($IsWindows) {
+  New-Item -ItemType Directory $Tmp | Out-Null
+} else {
+  [System.IO.Directory]::CreateDirectory($Tmp, [System.IO.UnixFileMode]'UserRead, UserWrite, UserExecute') | Out-Null
+}
 
 try {
   $bucketExists = $true

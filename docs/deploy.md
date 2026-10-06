@@ -85,6 +85,7 @@ Then add these **repository variables** (Settings → Secrets and variables → 
 | `GCP_DEPLOY_SA`       | `taco-hunt-deployer@taco-hunt-prod.iam.gserviceaccount.com`                                                           |
 | `API_SUPABASE_URL`    | `https://<project-ref>.supabase.co`                                                                                   |
 | `API_PUBLIC_BASE_URL` | The public HTTPS origin used in share links, e.g. `https://api.<domain>` (or the `run.app` URL until a domain exists) |
+| `API_S3_MEDIA_BUCKET` | The media bucket name from step 5 (`taco-hunt-media-prod` unless that name was taken)                                 |
 
 ### 4. Supabase production project (owner creates, Claude scripts the rest)
 
@@ -106,6 +107,8 @@ Then add these **repository variables** (Settings → Secrets and variables → 
 ```powershell
 .\infra\aws\create-media-bucket.ps1 -Environment prod -GcpProject taco-hunt-prod
 ```
+
+S3 bucket names are global. If `taco-hunt-media-prod` is taken, add `-Bucket <another-name>` and use that name for `API_S3_MEDIA_BUCKET`. The script needs PowerShell 7.4 or newer.
 
 The script creates the private bucket and its least-privilege IAM user, then writes the new access key straight into Secret Manager (`s3-media-access-key-id`, `s3-media-secret-access-key`) without printing it. It needs the AWS CLI with an administrator profile and `gcloud` signed in to the project.
 
