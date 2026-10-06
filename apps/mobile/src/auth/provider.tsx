@@ -8,7 +8,7 @@ import {
   type PropsWithChildren,
 } from "react";
 import { Linking } from "react-native";
-import type { Session } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError, type Session } from "@supabase/supabase-js";
 import { supabase } from "./client";
 
 type AuthContextValue = {
@@ -70,7 +70,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
         if (cancelled || response.status !== 401) return;
         const { error: refreshError } = await supabase.auth.refreshSession();
-        if (!cancelled && refreshError) await supabase.auth.signOut({ scope: "local" });
+        // A transport failure says nothing about the account; only a real rejection ends the session.
+        if (!cancelled && refreshError && !isAuthRetryableFetchError(refreshError)) {
+          await supabase.auth.signOut({ scope: "local" });
+        }
       } catch {
         // Offline or API unavailable: keep the session; this check runs again next launch.
       }
