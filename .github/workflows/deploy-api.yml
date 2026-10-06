@@ -24,6 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
+    # Repository variables reach run scripts only as quoted shell variables, never as inline expressions.
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      API_SUPABASE_URL: ${{ vars.API_SUPABASE_URL }}
+      API_S3_MEDIA_BUCKET: ${{ vars.API_S3_MEDIA_BUCKET }}
+      API_PUBLIC_BASE_URL: ${{ vars.API_PUBLIC_BASE_URL }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -61,17 +68,17 @@ jobs:
 
       - name: Build and push the image
         run: |
-          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
           docker build -f apps/api/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "$SERVICE" \
-            --project "${{ vars.GCP_PROJECT_ID }}" \
-            --region "${{ vars.GCP_REGION }}" \
+            --project "$GCP_PROJECT_ID" \
+            --region "$GCP_REGION" \
             --image "$IMAGE" \
-            --service-account "taco-hunt-api@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --service-account "taco-hunt-api@$GCP_PROJECT_ID.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --min-instances 0 \
             --max-instances 1 \
@@ -79,10 +86,10 @@ jobs:
             --memory 512Mi \
             --concurrency 40 \
             --timeout 60s \
-            --set-env-vars "TRUST_PROXY_HOPS=1,SUPABASE_URL=${{ vars.API_SUPABASE_URL }},MEDIA_STORAGE_DRIVER=s3,S3_MEDIA_BUCKET=${{ vars.API_S3_MEDIA_BUCKET }},S3_MEDIA_REGION=us-east-1,PUBLIC_BASE_URL=${{ vars.API_PUBLIC_BASE_URL }}" \
+            --set-env-vars "TRUST_PROXY_HOPS=1,SUPABASE_URL=$API_SUPABASE_URL,MEDIA_STORAGE_DRIVER=s3,S3_MEDIA_BUCKET=$API_S3_MEDIA_BUCKET,S3_MEDIA_REGION=us-east-1,PUBLIC_BASE_URL=$API_PUBLIC_BASE_URL" \
             --set-secrets "DATABASE_URL=database-url:latest,SUPABASE_SECRET_KEY=supabase-secret-key:latest,S3_MEDIA_ACCESS_KEY_ID=s3-media-access-key-id:latest,S3_MEDIA_SECRET_ACCESS_KEY=s3-media-secret-access-key:latest,GOOGLE_PLACES_API_KEY=google-places-api-key:latest"
 
       - name: Check health
         run: |
-          url=$(gcloud run services describe "$SERVICE" --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION }}" --format 'value(status.url)')
+          url=$(gcloud run services describe "$SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --format 'value(status.url)')
           curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors "$url/healthz"
