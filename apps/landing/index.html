@@ -563,6 +563,14 @@
       .foot img {
         width: 126px;
       }
+      .foot-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 18px;
+      }
+      .foot-links a {
+        font-weight: 750;
+      }
       @media (max-width: 880px) {
         .hero-grid,
         .split {
@@ -814,6 +822,11 @@
         <img src="taco-hunt-logo.svg" alt="Taco Hunt" /><span
           >Hecho con hambre en Monterrey · Vista conceptual del producto</span
         >
+        <nav class="foot-links" aria-label="Información legal">
+          <a href="privacidad.html">Aviso de privacidad</a
+          ><a href="eliminar-cuenta.html">Eliminar tu cuenta</a
+          ><a href="mailto:contact@northsoft.com">Contacto</a>
+        </nav>
       </div>
     </footer>
   </body>
