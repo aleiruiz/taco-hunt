@@ -1,8 +1,1 @@
-<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="40" cy="40" r="36" fill="#DCEBE2" stroke="#302723" stroke-width="2"/>
-  <ellipse cx="40" cy="40" rx="14" ry="18" fill="#1F4A35" stroke="#302723" stroke-width="1.5"/>
-  <ellipse cx="40" cy="40" rx="8" ry="10" fill="#6B8F78" stroke="#302723" stroke-width="1"/>
-  <circle cx="34" cy="34" r="3" fill="#302723"/>
-  <circle cx="46" cy="34" r="3" fill="#302723"/>
-  <path d="M 34 50 Q 40 56 46 50" stroke="#302723" stroke-width="2" fill="none" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#FCEBC8"></circle><path d="M32 10 C43 10 49 25 49 38 C49 49 41 55 32 55 C23 55 15 49 15 38 C15 25 21 10 32 10 Z" fill="#276C4F" stroke="#302723" stroke-width="2.2"></path><path d="M32 16 C40 16 44 28 44 38 C44 46 39 50 32 50 C25 50 20 46 20 38 C20 28 24 16 32 16 Z" fill="#F9DEAE"></path><circle cx="32" cy="42" r="5.5" fill="#6C5D53"></circle><circle cx="28" cy="29" r="2" fill="#302723"></circle><circle cx="36" cy="29" r="2" fill="#302723"></circle><path d="M29 33.5 Q32 36 35 33.5" stroke="#302723" stroke-width="2" fill="none" stroke-linecap="round"></path></svg>

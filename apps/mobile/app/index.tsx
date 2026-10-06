@@ -172,7 +172,7 @@ const CustomMarkerContent = memo(function CustomMarkerContent() {
   return (
     <View collapsable={false} style={styles.markerWrap}>
       <View style={styles.marker}>
-        <TacoHuntTaco width={24} height={18} />
+        <TacoHuntTaco width={22} height={22} />
       </View>
     </View>
   );
@@ -248,7 +248,7 @@ const GoogleMapMarker = memo(function GoogleMapMarker({
         style={styles.googleMarker}
         accessibilityLabel={`${result.attributionLabel}: ${result.name}`}
       >
-        <TacoHuntTaco width={24} height={18} />
+        <TacoHuntTaco width={22} height={22} />
       </View>
     </Marker>
   );
@@ -272,7 +272,7 @@ const ProposalMapMarker = memo(function ProposalMapMarker({
         style={styles.proposalMarker}
         accessibilityLabel={`${proposal.ownershipLabel}: ${proposal.name}`}
       >
-        <TacoHuntTaco width={24} height={18} />
+        <TacoHuntTaco width={22} height={22} />
       </View>
     </Marker>
   );
@@ -328,7 +328,7 @@ const MapPreviewCard = ({
       />
     ) : (
       <View style={styles.mapPreviewImageFallback} accessibilityLabel="Foto no disponible">
-        <TacoHuntTaco width={48} height={36} />
+        <TacoHuntTaco width={44} height={44} />
       </View>
     )}
     <View style={styles.mapPreviewBody}>
@@ -1466,7 +1466,7 @@ export default function ExploreScreen() {
           >
             <Pressable accessibilityRole="link" style={styles.card}>
               <View style={styles.taco}>
-                <TacoHuntTaco width={24} height={18} />
+                <TacoHuntTaco width={22} height={22} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{item.name}</Text>

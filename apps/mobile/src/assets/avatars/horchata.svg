@@ -1,9 +1,1 @@
-<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="40" cy="40" r="36" fill="#E8D9C8" stroke="#302723" stroke-width="2"/>
-  <path d="M 30 30 L 50 30 L 48 54 Q 40 58 32 54 Z" fill="#D4B9A1" stroke="#302723" stroke-width="1.5"/>
-  <line x1="35" y1="32" x2="35" y2="48" stroke="#302723" stroke-width="1"/>
-  <line x1="45" y1="32" x2="45" y2="48" stroke="#302723" stroke-width="1"/>
-  <circle cx="34" cy="42" r="3" fill="#302723"/>
-  <circle cx="46" cy="42" r="3" fill="#302723"/>
-  <path d="M 34 54 Q 40 60 46 54" stroke="#302723" stroke-width="2" fill="none" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><circle cx="32" cy="32" r="32" fill="#DCEBE2"></circle><path d="M36 20 L43 7" stroke="#E95032" stroke-width="3.2" stroke-linecap="round"></path><path d="M21 18 H43 L39.5 53 H24.5 Z" fill="#FFFAF1" stroke="#302723" stroke-width="2.2" stroke-linejoin="round"></path><path d="M22.2 26 H41.8 L39.5 53 H24.5 Z" fill="#FBF3E6"></path><circle cx="27" cy="29" r="1" fill="#6C5D53"></circle><circle cx="37" cy="28" r="1" fill="#6C5D53"></circle><circle cx="28" cy="36" r="2.1" fill="#302723"></circle><circle cx="36" cy="36" r="2.1" fill="#302723"></circle><path d="M28.5 41 Q32 44 35.5 41" stroke="#302723" stroke-width="2" fill="none" stroke-linecap="round"></path></svg>

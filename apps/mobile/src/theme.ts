@@ -31,8 +31,8 @@ export const colors = {
     tortilla: "#F9DEAE",
     salsa: "#FBE2DC",
     comal: "#EFE4D5",
-    aguacate: "#DCEBC7",
-    horchata: "#F3E9D6",
+    aguacate: "#FCEBC8",
+    horchata: "#DCEBE2",
   },
 } as const;
 
