@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { Button, Card } from "@/components";
 import { colors, radii, sizes, spacing, typography } from "@/theme";
 import { getOnboardingProfile, type OnboardingProfile } from "@/data/auth-onboarding";
@@ -418,7 +418,7 @@ function Field({
       />
       {error && (
         <View style={styles.fieldError}>
-          <Ionicons name="alert-circle" size={20} color={colors.dangerText} />
+          <Icon name="alert-circle" size={20} color={colors.dangerText} />
           <Text accessibilityRole="alert" style={styles.fieldErrorText}>
             {error}
           </Text>

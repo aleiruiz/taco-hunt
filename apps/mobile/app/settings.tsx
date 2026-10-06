@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { authConfigured } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
 import { deleteAccount } from "@/features/contributions/api";
@@ -85,7 +85,7 @@ export default function SettingsScreen() {
           accessibilityLabel="Volver a explorar"
           style={styles.back}
         >
-          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Icon name="chevron-back" size={16} color={colors.green} />
           <Text style={styles.backText}>Volver a explorar</Text>
         </Pressable>
       </Link>

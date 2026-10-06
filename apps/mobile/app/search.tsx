@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { useAuth } from "@/auth/provider";
 import { colors, spacing, typography } from "@/theme";
 import { IconButton } from "@/components/IconButton";
@@ -316,7 +316,7 @@ export default function SearchScreen() {
         {status === "error" && (
           <View style={styles.centeredSection}>
             <View style={styles.errorIconWrap}>
-              <Ionicons name="cloud-offline-outline" size={28} color={colors.dangerText} />
+              <Icon name="cloud-offline-outline" size={28} color={colors.dangerText} />
             </View>
             <Text
               style={styles.errorText}

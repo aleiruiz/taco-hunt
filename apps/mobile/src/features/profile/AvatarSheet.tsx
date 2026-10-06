@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AccessibilityInfo, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { colors, spacing, typography } from "@/theme";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
@@ -133,7 +133,7 @@ export function AvatarSheet({ visible, onClose, preset, photoUrl, onSave }: Prop
                 <Avatar size={40} preset={option.preset} />
                 {selected && (
                   <View style={styles.checkBadge}>
-                    <Ionicons name="checkmark" size={12} color={colors.paper} />
+                    <Icon name="checkmark" size={12} color={colors.paper} />
                   </View>
                 )}
               </View>

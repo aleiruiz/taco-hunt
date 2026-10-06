@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { AccessibilityInfo, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { Avatar, Button, Card, ProgressBar } from "@/components";
 import { avatarNames, type OnboardingProfile } from "@/data/auth-onboarding";
 import { colors, spacing, typography } from "@/theme";
@@ -29,7 +29,7 @@ export function SignUpSuccess({
         <View style={styles.avatarScale}>
           <Avatar size={72} preset={profile.avatarPreset} />
         </View>
-        <Ionicons name="sparkles" size={24} color={colors.redStrong} style={styles.sparkles} />
+        <Icon name="sparkles" size={24} color={colors.redStrong} style={styles.sparkles} />
       </View>
       <Text style={styles.kicker}>CUENTA CREADA</Text>
       <Text accessibilityRole="header" style={styles.title}>
@@ -61,7 +61,7 @@ export function SignUpSuccess({
           { icon: "add-circle-outline" as const, label: "Propón una taquería" },
         ].map((step) => (
           <View key={step.label} style={styles.step}>
-            <Ionicons name={step.icon} size={22} color={colors.green} />
+            <Icon name={step.icon} size={22} color={colors.green} />
             <Text style={styles.stepText}>{step.label}</Text>
           </View>
         ))}

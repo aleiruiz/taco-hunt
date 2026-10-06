@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet } from "react-native";
 import { colors, spacing, typography } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 import { Button } from "./Button";
 
 type Props = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   title: string;
   subtitle?: string;
   actionLabel: string;
@@ -14,7 +14,7 @@ type Props = {
 export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Props) {
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={56} color={colors.muted} style={styles.icon} />
+      <Icon name={icon} size={56} color={colors.muted} style={styles.icon} />
       <Text style={styles.title}>{title}</Text>
       {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       <Button label={actionLabel} variant="primary" onPress={onAction} style={styles.button} />

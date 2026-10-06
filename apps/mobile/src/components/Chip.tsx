@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 type Props = {
   label: string;
   selected?: boolean;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: IconName;
   dashed?: boolean;
   onPress: () => void;
 };
@@ -21,7 +21,7 @@ export function Chip({ label, selected = false, icon, dashed = false, onPress }:
     >
       <View style={styles.content}>
         {icon && (
-          <Ionicons
+          <Icon
             name={icon}
             size={14}
             color={selected ? colors.paper : colors.ink}
@@ -30,7 +30,7 @@ export function Chip({ label, selected = false, icon, dashed = false, onPress }:
         )}
         <Text style={[styles.text, selected && styles.selectedText]}>{label}</Text>
         {selected && (
-          <Ionicons name="checkmark" size={14} color={colors.paper} style={{ marginLeft: 6 }} />
+          <Icon name="checkmark" size={14} color={colors.paper} style={{ marginLeft: 6 }} />
         )}
       </View>
     </Pressable>
