@@ -15,7 +15,7 @@ The orphan-photo cleanup job (`pnpm --filter @taco-hunt/api media:cleanup`) uses
 
 ## AWS bucket requirements
 
-One bucket per environment, e.g. `taco-hunt-media-dev` and later `taco-hunt-media-prod`:
+One bucket per environment, e.g. `taco-hunt-media-dev` and later `taco-hunt-media-prod`: `infra/aws/create-media-bucket.ps1 -Environment dev|prod` creates either one with the settings below (see `docs/deploy.md` for prod).
 
 - **Block Public Access:** all four settings enabled.
 - **Object Ownership:** `BucketOwnerEnforced` (ACLs disabled).

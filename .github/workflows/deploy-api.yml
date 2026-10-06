@@ -1,0 +1,86 @@
+name: Deploy API
+
+# Manual production deploy to Cloud Run. See docs/deploy.md for the one-time setup
+# (Workload Identity Federation, secrets, and the repository variables used below).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+env:
+  SERVICE: taco-hunt-api
+  IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/taco-hunt/api:${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Check, build, and deploy
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Lint and typecheck the API
+        run: |
+          pnpm exec eslint apps/api packages
+          pnpm --filter @taco-hunt/api typecheck
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push the image
+        run: |
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          docker build -f apps/api/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --image "$IMAGE" \
+            --service-account "taco-hunt-api@${{ vars.GCP_PROJECT_ID }}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --min-instances 0 \
+            --max-instances 1 \
+            --cpu 1 \
+            --memory 512Mi \
+            --concurrency 40 \
+            --timeout 60s \
+            --set-env-vars "TRUST_PROXY_HOPS=1,SUPABASE_URL=${{ vars.API_SUPABASE_URL }},MEDIA_STORAGE_DRIVER=s3,S3_MEDIA_BUCKET=taco-hunt-media-prod,S3_MEDIA_REGION=us-east-1,PUBLIC_BASE_URL=${{ vars.API_PUBLIC_BASE_URL }}" \
+            --set-secrets "DATABASE_URL=database-url:latest,SUPABASE_SECRET_KEY=supabase-secret-key:latest,S3_MEDIA_ACCESS_KEY_ID=s3-media-access-key-id:latest,S3_MEDIA_SECRET_ACCESS_KEY=s3-media-secret-access-key:latest,GOOGLE_PLACES_API_KEY=google-places-api-key:latest"
+
+      - name: Check health
+        run: |
+          url=$(gcloud run services describe "$SERVICE" --project "${{ vars.GCP_PROJECT_ID }}" --region "${{ vars.GCP_REGION }}" --format 'value(status.url)')
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors "$url/healthz"
