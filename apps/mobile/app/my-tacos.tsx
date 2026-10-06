@@ -26,12 +26,14 @@ import {
   type Profile,
 } from "@/data/profile-api";
 import { useProgress } from "@/features/progress/useProgress";
+import { listOwnSpotPhotos, type OwnSpotPhoto } from "@/features/spotPhotos/api";
 import { AvatarSheet } from "@/features/profile/AvatarSheet";
 import { colors, radii, spacing, typography } from "@/theme";
 import { Avatar } from "@/components/Avatar";
 import { IconButton } from "@/components/IconButton";
 import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PhotoTile } from "@/components/PhotoTile";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 type Tab = "favoritos" | "resenas" | "fotos";
@@ -59,6 +61,8 @@ export default function MyTacosScreen() {
   const [reviews, setReviews] = useState<OwnReview[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [photos, setPhotos] = useState<OwnSpotPhoto[]>([]);
+  const [photosError, setPhotosError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("favoritos");
@@ -86,6 +90,8 @@ export default function MyTacosScreen() {
     setReviews([]);
     setFavorites([]);
     setProposals([]);
+    setPhotos([]);
+    setPhotosError(false);
     setProfile(null);
   }, [session?.user.id]);
   const load = useCallback(async () => {
@@ -96,21 +102,26 @@ export default function MyTacosScreen() {
     if (!hasLoaded.current) setLoading(true);
     setError(null);
     try {
-      const [reviewPage, favoritePage, proposalsResponse, ownProfile] = await Promise.all([
-        listOwnReviews(session),
-        listFavorites(session),
-        fetch(`${API}/me/proposals`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }).catch(() => null),
-        // Kept out of the failure path below: a profile fetch failure shouldn't block
-        // reviews/favorites/proposals from loading. displayName already falls back to
-        // sign-up metadata when profile is null (see below).
-        getProfile(session).catch(() => null),
-      ]);
+      const [reviewPage, favoritePage, proposalsResponse, ownProfile, ownPhotos] =
+        await Promise.all([
+          listOwnReviews(session),
+          listFavorites(session),
+          fetch(`${API}/me/proposals`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }).catch(() => null),
+          // Kept out of the failure path below: a profile fetch failure shouldn't block
+          // reviews/favorites/proposals from loading. displayName already falls back to
+          // sign-up metadata when profile is null (see below).
+          getProfile(session).catch(() => null),
+          // Same here: the photos tab keeps its last list if this request fails.
+          listOwnSpotPhotos(session).catch(() => null),
+        ]);
       if (!isCurrent()) return;
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);
       setProfile(ownProfile);
+      setPhotosError(!ownPhotos);
+      if (ownPhotos) setPhotos(ownPhotos);
       if (proposalsResponse?.ok) {
         const data = (await proposalsResponse.json()) as {
           spotProposals: Proposal[];
@@ -162,7 +173,8 @@ export default function MyTacosScreen() {
       </View>
     );
 
-  const isNewProfile = reviews.length === 0 && favorites.length === 0 && proposals.length === 0;
+  const isNewProfile =
+    reviews.length === 0 && favorites.length === 0 && proposals.length === 0 && photos.length === 0;
   const memberSince = session.user.created_at ? new Date(session.user.created_at) : null;
   const memberSinceLabel = memberSince
     ? `Cazando tacos desde ${MONTHS_ES[memberSince.getMonth()]} ${memberSince.getFullYear()}`
@@ -265,7 +277,7 @@ export default function MyTacosScreen() {
             <Text style={styles.statLabel}>Favoritos</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>0</Text>
+            <Text style={styles.statValue}>{photos.length}</Text>
             <Text style={styles.statLabel}>Fotos</Text>
           </View>
         </View>
@@ -404,13 +416,53 @@ export default function MyTacosScreen() {
       ) : null}
 
       {!loading && tab === "fotos" ? (
-        <EmptyState
-          icon="camera-outline"
-          title="Aún no subes fotos"
-          subtitle="Sube una foto desde la página de un puesto."
-          actionLabel="Explorar el mapa"
-          onAction={() => router.push("/")}
-        />
+        photos.length === 0 && photosError ? (
+          <View style={styles.notice}>
+            <Text style={styles.body}>No pudimos cargar tus fotos.</Text>
+            <Pressable hitSlop={14} onPress={() => void load()}>
+              <Text style={styles.link}>Reintentar</Text>
+            </Pressable>
+          </View>
+        ) : photos.length === 0 ? (
+          <EmptyState
+            icon="camera-outline"
+            title="Aún no subes fotos"
+            subtitle="Sube una foto desde la página de un puesto."
+            actionLabel="Explorar el mapa"
+            onAction={() => router.push("/")}
+          />
+        ) : (
+          photos.map((photo) => (
+            <Pressable
+              key={photo.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Foto en ${photo.spotName}`}
+              onPress={() => router.push({ pathname: "/spot/[id]", params: { id: photo.spotId } })}
+              style={styles.card}
+            >
+              <PhotoTile photoUrl={photo.url} size={64} />
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {photo.spotName}
+                </Text>
+                <View style={styles.photoStatusRow}>
+                  <StatusBadge status={photo.status} />
+                </View>
+                {photo.status === "pending" ? (
+                  <Text style={styles.photoNote}>Solo tú la ves por ahora</Text>
+                ) : null}
+                {photo.status === "rejected" ? (
+                  <>
+                    {photo.rejectionReason ? (
+                      <Text style={styles.photoNote}>{photo.rejectionReason}</Text>
+                    ) : null}
+                    <Text style={styles.link}>Subir otra</Text>
+                  </>
+                ) : null}
+              </View>
+            </Pressable>
+          ))
+        )
       ) : null}
 
       <AvatarSheet
@@ -525,6 +577,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   cardTitle: { color: colors.ink, fontSize: 16, fontWeight: "900" },
+  photoStatusRow: { flexDirection: "row" },
+  photoNote: { ...typography.caption, color: colors.muted },
   comment: { color: colors.ink, marginTop: 7, lineHeight: 20 },
   notice: { padding: 14, backgroundColor: colors.tacoTile, borderRadius: 14, marginTop: 18 },
   link: { color: colors.green, fontWeight: "900", marginTop: 8 },

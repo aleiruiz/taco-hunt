@@ -52,6 +52,26 @@ export async function listSpotPhotos(spotId: string): Promise<PublicSpotPhoto[]>
   return data.items;
 }
 
+// The uploader's own photos across stands (GET /v1/me/spot-photos, T78).
+export type OwnSpotPhoto = SpotPhoto & { spotId: string; spotName: string };
+
+/** Every page of the signed-in user's own stand photos, newest first. */
+export async function listOwnSpotPhotos(session: Session): Promise<OwnSpotPhoto[]> {
+  const items: OwnSpotPhoto[] = [];
+  let cursor: string | null = null;
+  do {
+    const response = await fetch(
+      `${API}/me/spot-photos?limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      { headers: { Accept: "application/json", Authorization: `Bearer ${session.access_token}` } },
+    );
+    if (!response.ok) throw new Error("No pudimos cargar tus fotos.");
+    const page = (await response.json()) as { items: OwnSpotPhoto[]; nextCursor: string | null };
+    items.push(...page.items);
+    cursor = page.nextCursor;
+  } while (cursor);
+  return items;
+}
+
 /**
  * Uploads the picked asset via the shared review-photo pipeline, then claims
  * it for this spot as a pending photo. Two network calls because the upload
