@@ -193,7 +193,7 @@ Run the **Deploy API** workflow from the Actions tab (manual trigger, `main` onl
 
 The service allows unauthenticated invocations (set once when the owner creates it in step 3): the API is public and enforces its own auth. The deployer can't change who may invoke the service.
 
-After a deploy, check `GET <service-url>/healthz` returns `{"status":"ok"}` and that the app can browse stands.
+After a deploy, check `GET <service-url>/health` returns `{"status":"ok"}` (Cloud Run reserves `/healthz`, so it answers 404 there) and that the app can browse stands.
 
 ### Rollback
 

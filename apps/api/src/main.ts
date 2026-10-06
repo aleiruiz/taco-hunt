@@ -39,7 +39,7 @@ async function bootstrap(): Promise<void> {
 
   app.enableCors({ origin: true });
   app.setGlobalPrefix("v1", {
-    exclude: ["healthz", { path: "s/:id", method: RequestMethod.GET }],
+    exclude: ["healthz", "health", { path: "s/:id", method: RequestMethod.GET }],
   });
   app.enableShutdownHooks();
   await app.listen(port, "0.0.0.0");

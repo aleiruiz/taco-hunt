@@ -6,7 +6,8 @@ import { DATABASE_POOL } from "../database/database.module.js";
 export class HealthController {
   constructor(@Inject(DATABASE_POOL) private readonly pool: Pool) {}
 
-  @Get("/healthz")
+  // Cloud Run's front end reserves `/healthz`, so production probes use `/health`.
+  @Get(["/healthz", "/health"])
   async health() {
     try {
       await this.pool.query("select 1");
