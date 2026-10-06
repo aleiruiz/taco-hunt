@@ -599,11 +599,43 @@
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/74",
       "headSha": "31814f0b1a0235fdcbce07cc6b7d30a1789a3537",
       "coderabbitReviewedSha": "31814f0b1a0235fdcbce07cc6b7d30a1789a3537"
+    },
+    "T81": {
+      "status": "merged",
+      "dependsOn": ["T78"],
+      "note": "Avatars and map taco replaced verbatim from the design canvas. Merged 2026-10-06.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/77",
+      "headSha": "100e28b13852003fa94ac7f8289ff55a46c868b2",
+      "coderabbitReviewedSha": null
+    },
+    "T82": {
+      "status": "merged",
+      "dependsOn": ["T81"],
+      "note": "Gold sparkle on pins without reviews (additive reviewCount in mapPinSchema, openapi and GET /v1/spots/map) plus the launcher and adaptive app icon; a new native build is needed to see the icon. CodeRabbit's centering finding was fixed in 758f86e and its review of that head had no findings. Merged 2026-10-06.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/79",
+      "headSha": "758f86eacda8c39d9d4a845412dc5b5d0fda7aae",
+      "coderabbitReviewedSha": "758f86eacda8c39d9d4a845412dc5b5d0fda7aae"
+    },
+    "T83": {
+      "status": "merged",
+      "dependsOn": ["T81"],
+      "note": "Every Ionicons usage replaced by a shared Icon component that draws the canvas's stroke icons (apps/mobile only). CodeRabbit's findings (info toast without icon, untyped icon names) were fixed in 17d1e83 and confirmed resolved. Merged 2026-10-06.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/78",
+      "headSha": "17d1e838a75b887cf810a5ecb288c6e490e34eb9",
+      "coderabbitReviewedSha": "17d1e838a75b887cf810a5ecb288c6e490e34eb9"
+    },
+    "T84": {
+      "status": "merged",
+      "dependsOn": ["T78"],
+      "note": "A rejected token (deleted account, expired or invalid) is treated as a guest on public routes while protected routes keep the original 401; the app signs out locally when /me returns 401 and the refresh fails for a non-transient reason. CodeRabbit's finding (keep the session on retryable refresh errors) was fixed in 87d4bf0 and confirmed resolved. Merged 2026-10-06.",
+      "pr": "https://github.com/aleiruiz/taco-hunt/pull/80",
+      "headSha": "87d4bf05b17225543b54a493cc7cb151a529bf1e",
+      "coderabbitReviewedSha": "87d4bf05b17225543b54a493cc7cb151a529bf1e"
     }
   },
   "lastReconciled": "2026-10-06",
   "mainHead": {
-    "sha": "df859120d2ace729f52475b31ef8a0c79445b6c4",
-    "note": "Merge of PR #74 (T78)."
+    "sha": "b52237f87d96ed6a3720ad350ec0355485d4e7ce",
+    "note": "Merge of PR #80 (T84)."
   }
 }
