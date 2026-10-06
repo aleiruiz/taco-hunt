@@ -245,11 +245,12 @@ Remove-Item Env:ADMIN_DATABASE_URL
 Supabase Free has no point-in-time recovery. Export the schema and data regularly (at least before each migration):
 
 ```bash
-pnpm supabase db dump --linked -f backup-schema.sql
-pnpm supabase db dump --linked --data-only -f backup-data.sql
+backup_date=$(date +%F)
+pnpm supabase db dump --linked -f "backup-schema-${backup_date}.sql"
+pnpm supabase db dump --linked --data-only -f "backup-data-${backup_date}.sql"
 ```
 
-Keep dumps outside the repository; they contain personal data. The public privacy policy and account-deletion pages (`apps/landing/privacidad.html`, `apps/landing/eliminar-cuenta.html`) promise that backups are kept at most 90 days, so name each dump with its date (for example `backup-data-2026-10-06.sql`) and, every time you take a new dump and at least once a month, delete every dump older than 90 days, including copies in other storage. To restore into a fresh project: create it, apply `backup-schema.sql`, then `backup-data.sql`, re-provision the runtime role password, and update the `database-url` secret. S3 objects are not touched by a database restore.
+Keep dumps outside the repository; they contain personal data. The public privacy policy and account-deletion pages (`apps/landing/privacidad.html`, `apps/landing/eliminar-cuenta.html`) promise that backups are kept at most 90 days. The commands above add the dump date to each filename. Every time you take a new dump, and at least once a month, delete every dump older than 90 days, including copies in other storage. To restore into a fresh project: create it, apply the matching `backup-schema-YYYY-MM-DD.sql`, then `backup-data-YYYY-MM-DD.sql`, re-provision the runtime role password, and update the `database-url` secret. S3 objects are not touched by a database restore.
 
 ## Cost watch
 
