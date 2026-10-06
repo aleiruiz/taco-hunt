@@ -4,8 +4,8 @@ This board follows the specification in docs/build-spec.md and the repository's 
 
 ## Current status (2026-10-06)
 
-- Every task from T00 to T78 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05.
-- P2.9 (emulator QA follow-ups, T70–T78): T70–T77 merged on 2026-10-05 (PRs #65–#68, #70–#73) and T78 on 2026-10-06 (PR #74).
+- Every task from T00 to T84 is merged into `main`, except T15 and T16, and T43, which the owner cancelled on 2026-10-05.
+- P2.9 (emulator QA follow-ups, T70–T84): T70–T77 merged on 2026-10-05 (PRs #65–#68, #70–#73) and T78–T84 on 2026-10-06 (PRs #74–#80).
 - Remaining work: **T15** (full integration and acceptance), waiting only on the external inputs E01/E02, then **T16** (real deployment), waiting on T15 and E03/E04. T16 also creates the production media bucket and IAM user (see `docs/media-storage.md`).
 
 ## Blocking rule
