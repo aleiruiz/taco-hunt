@@ -108,6 +108,7 @@ From the root, with the server-only variables each script needs in the environme
 ## More information
 
 - [docs/build-spec.md](docs/build-spec.md): architecture, data model, API, and security.
+- [docs/deploy.md](docs/deploy.md): production deployment (Cloud Run, Supabase, S3, Android release builds) and rollback.
 - [docs/google-places-controls.md](docs/google-places-controls.md): Google Places usage, budgets, and kill switch.
 - [docs/data-provenance.md](docs/data-provenance.md), [docs/moderation.md](docs/moderation.md), [docs/privacy.md](docs/privacy.md), [docs/authentication.md](docs/authentication.md), [docs/share.md](docs/share.md).
 - [docs/plan-delegacion.md](docs/plan-delegacion.md): task board and current status.
