@@ -81,6 +81,11 @@ function decodeCursor<T>(value: string | undefined, schema: z.ZodType<T>): T | u
   }
 }
 
+// Visible reviews across the stand's approved tacos, so the map can flag pins with none yet
+// (the "sé el primero" sparkle).
+const MAP_PIN_REVIEW_COUNT_EXPR =
+  "(select count(*)::int from app_private.reviews r join app_private.spot_tacos st on st.id=r.spot_taco_id where st.spot_id=s.id and st.status='approved' and r.status='visible')";
+
 @Controller()
 export class SpotsController {
   private readonly logger = new Logger(SpotsController.name);
@@ -301,7 +306,7 @@ export class SpotsController {
       const bestTacoExpr =
         "(select coalesce(st.display_name,tt.name_es) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r.id) desc,avg((r.tortilla+r.filling+r.salsa+r.value)/4.0) desc nulls last limit 1)";
       const probe = await this.pool.query(
-        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,${bestTacoExpr} as "bestTaco" from app_private.spots s where ${whereClause} order by s.id limit ${MAP_PIN_LIMIT + 1}`,
+        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,${bestTacoExpr} as "bestTaco",${MAP_PIN_REVIEW_COUNT_EXPR} as "reviewCount" from app_private.spots s where ${whereClause} order by s.id limit ${MAP_PIN_LIMIT + 1}`,
         values,
       );
 
@@ -382,7 +387,7 @@ export class SpotsController {
       const bestTacoExpr =
         "(select coalesce(st.display_name,tt.name_es) from app_private.spot_tacos st join app_private.taco_types tt on tt.id=st.taco_type_id and tt.active left join app_private.reviews r on r.spot_taco_id=st.id and r.status='visible' where st.spot_id=s.id and st.status='approved' group by st.id,tt.id order by count(r.id) desc,avg((r.tortilla+r.filling+r.salsa+r.value)/4.0) desc nulls last limit 1)";
       const pinRows = await this.pool.query<MapPin>(
-        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,${bestTacoExpr} as "bestTaco" from app_private.spots s where s.id = any($1::uuid[])`,
+        `select s.id,s.name,s.neighborhood,s.latitude::float8 as latitude,s.longitude::float8 as longitude,${bestTacoExpr} as "bestTaco",${MAP_PIN_REVIEW_COUNT_EXPR} as "reviewCount" from app_private.spots s where s.id = any($1::uuid[])`,
         [singletonIds],
       );
       pins = pinRows.rows;

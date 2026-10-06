@@ -304,6 +304,8 @@ export const mapPinSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
   bestTaco: z.string().nullable(),
+  // Visible reviews across the stand's approved tacos; 0 shows the "sé el primero" sparkle.
+  reviewCount: z.number().int().nonnegative(),
 });
 export type MapPin = z.infer<typeof mapPinSchema>;
 

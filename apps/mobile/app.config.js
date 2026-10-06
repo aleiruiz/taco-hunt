@@ -4,6 +4,11 @@ module.exports = () => ({
   ...appJson.expo,
   android: {
     package: "com.aleiruiz.tacohunt",
+    // Brand marker on the theme's cream (colors.cream); sources in assets/*.svg.
+    adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#FBF3E6",
+    },
   },
   ios: {
     ...(appJson.expo.ios ?? {}),

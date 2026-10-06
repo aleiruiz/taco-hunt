@@ -1684,7 +1684,7 @@ components:
     # --- T51: consolidated from Phase A Data needs ---
     MapPin:
       type: object
-      required: [id, name, neighborhood, latitude, longitude, bestTaco]
+      required: [id, name, neighborhood, latitude, longitude, bestTaco, reviewCount]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -1692,6 +1692,7 @@ components:
         latitude: { type: number, minimum: -90, maximum: 90 }
         longitude: { type: number, minimum: -180, maximum: 180 }
         bestTaco: { type: [string, "null"] }
+        reviewCount: { type: integer, minimum: 0 }
     MapCluster:
       type: object
       required: [count, latitude, longitude, bounds]
