@@ -19,4 +19,10 @@ export interface ApiRequest {
   ip: string;
   method: string;
   user?: AuthenticatedProfile;
+  /**
+   * Why a presented bearer token was not accepted (malformed, invalid, expired, or its account
+   * was deleted). Public routes ignore it and serve the request anonymously; AuthRequiredGuard
+   * rethrows it so protected routes keep the precise 401.
+   */
+  authRejection?: Error;
 }

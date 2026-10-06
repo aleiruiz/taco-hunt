@@ -21,6 +21,8 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
+
 function messageFromError(error: unknown) {
   return error instanceof Error ? error.message : "No pudimos restaurar tu sesión.";
 }
@@ -53,6 +55,30 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // A stored session can outlive its account (e.g. deleted from another device). When the API
+  // rejects it, try one refresh; if that also fails, drop it locally so the app browses as a
+  // guest instead of repeating rejected requests.
+  const accessToken = session?.access_token;
+  useEffect(() => {
+    if (!accessToken) return undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`${API}/me`, {
+          headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+        });
+        if (cancelled || response.status !== 401) return;
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (!cancelled && refreshError) await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        // Offline or API unavailable: keep the session; this check runs again next launch.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   const retrySession = useCallback(async () => {
     setLoading(true);

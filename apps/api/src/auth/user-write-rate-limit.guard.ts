@@ -19,7 +19,9 @@ export class UserWriteRateLimitGuard implements CanActivate {
       return true;
     }
     const profile = request.user;
-    if (!profile) throw new UnauthorizedException("Se requiere iniciar sesión");
+    if (!profile) {
+      throw request.authRejection ?? new UnauthorizedException("Se requiere iniciar sesión");
+    }
 
     try {
       this.limits.consume("write-ip", request.ip || "unknown", 30, 60_000);
