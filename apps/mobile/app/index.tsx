@@ -1731,11 +1731,11 @@ const styles = StyleSheet.create({
   },
   // Room above and to the right of the pin for the sparkle badge, which native map
   // markers would otherwise clip.
-  markerWrap: { width: 51, height: 51 },
+  markerWrap: { width: 58, height: 58 },
   marker: {
     position: "absolute",
-    left: 0,
-    bottom: 0,
+    left: 7,
+    bottom: 7,
     width: 44,
     height: 44,
     borderRadius: 22,
