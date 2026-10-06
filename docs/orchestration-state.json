@@ -593,17 +593,17 @@
       "coderabbitReviewedSha": null
     },
     "T78": {
-      "status": "pr-open",
+      "status": "merged",
       "dependsOn": ["T77"],
-      "note": "Profile Fotos stat/tab: GET /v1/me/spot-photos (OwnSpotPhotoPage) and mobile list with StatusBadge per design §6.",
+      "note": "Profile Fotos stat/tab: GET /v1/me/spot-photos (OwnSpotPhotoPage) and mobile list with StatusBadge per design §6. Merged 2026-10-06.",
       "pr": "https://github.com/aleiruiz/taco-hunt/pull/74",
-      "headSha": "5a9330e8a0765831cd8a9fc2bbe0b4c8151c5eac",
-      "coderabbitReviewedSha": null
+      "headSha": "31814f0b1a0235fdcbce07cc6b7d30a1789a3537",
+      "coderabbitReviewedSha": "31814f0b1a0235fdcbce07cc6b7d30a1789a3537"
     }
   },
-  "lastReconciled": "2026-10-05",
+  "lastReconciled": "2026-10-06",
   "mainHead": {
-    "sha": "e032bac3144f31d2e28d7d9832e19b9137bedc76",
-    "note": "Merge of PR #67 (T72)."
+    "sha": "df859120d2ace729f52475b31ef8a0c79445b6c4",
+    "note": "Merge of PR #74 (T78)."
   }
 }
