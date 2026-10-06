@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 import { Link, type Href, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import TacoHuntTaco from "@/assets/taco-hunt-taco.svg";
 import { useAuth } from "@/auth/provider";
 import MapView, { Marker, PROVIDER_GOOGLE, type Region } from "react-native-maps";
@@ -311,7 +311,7 @@ const MapPreviewCard = ({
   detail?: string;
   photoUrl?: string | null;
   primaryLabel?: string;
-  primaryIcon?: keyof typeof Ionicons.glyphMap;
+  primaryIcon?: IconName;
   onPrimary?: () => void;
   /** When set, the secondary action opens the full stand page instead of closing the card. */
   onOpen?: () => void;
@@ -951,7 +951,7 @@ export default function ExploreScreen() {
         onPress={() => setMode("lista")}
         style={[styles.modeButton, mode === "lista" && styles.modeSelected]}
       >
-        <Ionicons
+        <Icon
           name="list"
           size={14}
           color={mode === "lista" ? colors.ink : colors.muted}
@@ -965,7 +965,7 @@ export default function ExploreScreen() {
         onPress={() => setMode("mapa")}
         style={[styles.modeButton, mode === "mapa" && styles.modeSelected]}
       >
-        <Ionicons
+        <Icon
           name="map"
           size={14}
           color={mode === "mapa" ? colors.ink : colors.muted}
@@ -991,7 +991,7 @@ export default function ExploreScreen() {
           })
         }
       >
-        <Ionicons name="search" size={18} color={colors.muted} />
+        <Icon name="search" size={18} color={colors.muted} />
         <Text
           style={[styles.searchPillPlaceholder, !query && { color: colors.placeholder }]}
           numberOfLines={1}
@@ -1026,7 +1026,7 @@ export default function ExploreScreen() {
           photoUrl={headerAvatarPhotoUrl ?? undefined}
         />
       ) : (
-        <Ionicons name="person" size={22} color={colors.ink} />
+        <Icon name="person" size={22} color={colors.ink} />
       )}
     </Pressable>
   );
@@ -1044,7 +1044,7 @@ export default function ExploreScreen() {
           {area.label}
           {activeType ? ` · ${activeType.nameEs}` : ""}
         </Text>
-        <Ionicons name="chevron-down" size={12} color={colors.ink} />
+        <Icon name="chevron-down" size={12} color={colors.ink} />
       </Pressable>
       <View style={styles.countPill}>
         <Text style={styles.countPillText}>{placeCountLabel(count)}</Text>
@@ -1210,7 +1210,7 @@ export default function ExploreScreen() {
             style={styles.listPill}
             onPress={() => setMode("lista")}
           >
-            <Ionicons name="list" size={16} color={colors.ink} style={styles.icon} />
+            <Icon name="list" size={16} color={colors.ink} style={styles.icon} />
             <Text style={styles.listPillText}>Lista</Text>
           </Pressable>
           <View style={styles.bottomRightControls}>
@@ -1240,7 +1240,7 @@ export default function ExploreScreen() {
               ]}
               onPress={() => router.push("/propose")}
             >
-              <Ionicons name="add" size={22} color={colors.paper} />
+              <Icon name="add" size={22} color={colors.paper} />
               {!selectedSpotId && <Text style={styles.addButtonText}>Agregar taquería</Text>}
             </Pressable>
           </View>
@@ -1477,7 +1477,7 @@ export default function ExploreScreen() {
                     : "Tacos por descubrir"}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={22} color={colors.muted} />
+              <Icon name="chevron-forward" size={22} color={colors.muted} />
             </Pressable>
           </Link>
         )}

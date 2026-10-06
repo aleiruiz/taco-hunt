@@ -1,6 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 import type { ComponentProps } from "react";
 import { Avatar } from "@/components/Avatar";
 import { colors, elevation, radii, spacing, typography } from "@/theme";
@@ -18,7 +18,7 @@ type Props = {
 };
 
 type MenuRowProps = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   onPress: () => void;
   subtitle?: string;
@@ -33,13 +33,13 @@ function MenuRow({ icon, label, onPress, subtitle }: MenuRowProps) {
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={20} color={colors.green} />
+        <Icon name={icon} size={20} color={colors.green} />
       </View>
       <View style={styles.rowCopy}>
         <Text style={styles.rowLabel}>{label}</Text>
         {subtitle ? <Text style={styles.rowSubtitle}>{subtitle}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+      <Icon name="chevron-forward" size={18} color={colors.muted} />
     </Pressable>
   );
 }
@@ -82,7 +82,7 @@ export function AccountSidebar({
                 <Avatar size={40} preset={avatarPreset} photoUrl={avatarPhotoUrl ?? undefined} />
               ) : (
                 <View style={styles.guestAvatar}>
-                  <Ionicons name="person-outline" size={24} color={colors.green} />
+                  <Icon name="person-outline" size={24} color={colors.green} />
                 </View>
               )}
               <View style={styles.headerCopy}>
@@ -101,7 +101,7 @@ export function AccountSidebar({
               onPress={onClose}
               style={styles.closeButton}
             >
-              <Ionicons name="close" size={22} color={colors.ink} />
+              <Icon name="close" size={22} color={colors.ink} />
             </Pressable>
           </View>
 
@@ -152,7 +152,7 @@ export function AccountSidebar({
                   }}
                   style={({ pressed }) => [styles.signOut, pressed && styles.rowPressed]}
                 >
-                  <Ionicons name="log-out-outline" size={20} color={colors.dangerText} />
+                  <Icon name="log-out-outline" size={20} color={colors.dangerText} />
                   <Text style={styles.signOutText}>Cerrar sesión</Text>
                 </Pressable>
               </>
@@ -169,7 +169,7 @@ export function AccountSidebar({
                   onPress={() => navigate("/sign-up")}
                 />
                 <View style={styles.guestHint}>
-                  <Ionicons name="heart-outline" size={18} color={colors.green} />
+                  <Icon name="heart-outline" size={18} color={colors.green} />
                   <Text style={styles.guestHintText}>
                     Inicia sesión para guardar favoritos, reseñas y propuestas.
                   </Text>

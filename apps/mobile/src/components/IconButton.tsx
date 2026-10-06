@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View, type PressableProps } from "react-native";
 import { colors, sizes, elevation } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 type Props = Omit<PressableProps, "children"> & {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   color?: string;
   /** Button diameter in px. Defaults to the 44 px touch target. */
@@ -34,7 +34,7 @@ export function IconButton({
       ]}
       {...rest}
     >
-      <Ionicons name={icon} size={size >= 48 ? 22 : 20} color={color} />
+      <Icon name={icon} size={size >= 48 ? 22 : 20} color={color} />
       {typeof badge === "number" && badge > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge}</Text>

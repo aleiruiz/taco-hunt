@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import MapView, { Marker } from "react-native-maps";
 import { useAuth } from "@/auth/provider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -213,7 +213,7 @@ export default function AdminScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Link href="/settings" asChild>
         <Pressable accessibilityRole="link" accessibilityLabel="Ajustes" style={styles.back}>
-          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Icon name="chevron-back" size={16} color={colors.green} />
           <Text style={styles.backText}>Ajustes</Text>
         </Pressable>
       </Link>
@@ -270,7 +270,7 @@ export default function AdminScreen() {
                         </View>
                       ) : null}
                     </View>
-                    <Ionicons
+                    <Icon
                       name={expanded ? "chevron-up" : "chevron-down"}
                       size={18}
                       color={colors.muted}

@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet } from "react-native";
 import { colors, radii, spacing, typography } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 type Props = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   earned?: boolean;
   progress?: string;
@@ -12,7 +12,7 @@ type Props = {
 export function BadgeMedal({ icon, label, earned = false, progress }: Props) {
   return (
     <View style={[styles.container, !earned && styles.locked]}>
-      <Ionicons
+      <Icon
         name={icon as any}
         size={40}
         color={earned ? colors.gold : colors.muted}

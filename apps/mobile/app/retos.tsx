@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { colors, radii, spacing, typography } from "@/theme";
 import { Card } from "@/components/Card";
 import { ProgressBar } from "@/components/ProgressBar";
@@ -20,7 +20,7 @@ export default function RetosScreen() {
         onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
         style={styles.back}
       >
-        <Ionicons name="chevron-back" size={16} color={colors.green} />
+        <Icon name="chevron-back" size={16} color={colors.green} />
         <Text style={styles.backText}>Volver</Text>
       </Pressable>
       <Text style={styles.kicker}>TU PROGRESO</Text>

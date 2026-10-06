@@ -1,6 +1,6 @@
 import { Animated, View, Text, StyleSheet, Platform } from "react-native";
 import { colors, spacing, radii, motion } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 import { useEffect, useRef } from "react";
 
 type Variant = "success" | "error" | "info";
@@ -32,7 +32,7 @@ export function Toast({ message, variant = "info", duration = 3000, onDismiss }:
 
   return (
     <Animated.View style={[styles.toast, { backgroundColor: config.bgColor, opacity: fadeAnim }]}>
-      <Ionicons name={config.icon as any} size={20} color={config.textColor} style={styles.icon} />
+      <Icon name={config.icon as any} size={20} color={config.textColor} style={styles.icon} />
       <Text style={[styles.text, { color: config.textColor }]}>{message}</Text>
     </Animated.View>
   );

@@ -8,7 +8,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { colors, radii, typography, motion } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 type Variant = "primary" | "secondary" | "danger" | "ghost" | "accent";
 type Size = "md" | "lg";
@@ -25,7 +25,7 @@ type Props = Omit<PressableProps, "style" | "children"> & {
   label: string;
   variant?: Variant;
   size?: Size;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: IconName;
   loading?: boolean;
   /** Layout-only overrides (margin, flex, etc.) applied on top of the variant's own look. */
   style?: StyleProp<ViewStyle>;
@@ -84,7 +84,7 @@ export function Button({
       ) : (
         <>
           {icon && (
-            <Ionicons
+            <Icon
               name={icon}
               size={iconSize}
               color={textColors[variant]}

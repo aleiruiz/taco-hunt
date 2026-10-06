@@ -62,7 +62,10 @@ module.exports = function withAndroidCxxShared(config) {
             }
         }
 `;
-      appConfig.modResults.contents = contents.replace(/(defaultConfig\s*\{\s*)/, `$1${appCmakeConfig}`);
+      appConfig.modResults.contents = contents.replace(
+        /(defaultConfig\s*\{\s*)/,
+        `$1${appCmakeConfig}`,
+      );
     }
 
     return appConfig;
