@@ -53,25 +53,41 @@ try {
     ConvertTo-Json -Depth 8 | Set-Content -Encoding ascii "$Tmp/user-policy.json"
   aws iam put-user-policy --user-name $User --policy-name media-bucket-access --policy-document "file://$Tmp/user-policy.json"
 
+  # IAM allows two keys per user. Refuse instead of failing halfway; to rotate, delete the
+  # retired key after the new one is stored and deployed.
+  $existingKeys = @((aws iam list-access-keys --user-name $User | ConvertFrom-Json).AccessKeyMetadata)
+  if ($existingKeys.Count -ge 2) {
+    throw "$User already has two access keys. Delete the one no longer in use (aws iam delete-access-key) and re-run."
+  }
+
   $key = aws iam create-access-key --user-name $User | ConvertFrom-Json
-  if ($Environment -eq 'prod') {
-    foreach ($pair in @(@('s3-media-access-key-id', $key.AccessKey.AccessKeyId), @('s3-media-secret-access-key', $key.AccessKey.SecretAccessKey))) {
-      $name = $pair[0]
-      $secretExists = $true
-      try { gcloud secrets describe $name --project $GcpProject 2>$null | Out-Null } catch { $secretExists = $false }
-      if (-not $secretExists) {
-        gcloud secrets create $name --project $GcpProject --replication-policy automatic | Out-Null
+  try {
+    if ($Environment -eq 'prod') {
+      foreach ($pair in @(@('s3-media-access-key-id', $key.AccessKey.AccessKeyId), @('s3-media-secret-access-key', $key.AccessKey.SecretAccessKey))) {
+        $name = $pair[0]
+        $secretExists = $true
+        try { gcloud secrets describe $name --project $GcpProject 2>$null | Out-Null } catch { $secretExists = $false }
+        if (-not $secretExists) {
+          gcloud secrets create $name --project $GcpProject --replication-policy automatic | Out-Null
+        }
+        # The value goes through a temp file (no trailing newline), never a process argument.
+        $valueFile = Join-Path $Tmp $name
+        Set-Content -Encoding ascii -NoNewline -LiteralPath $valueFile -Value $pair[1]
+        gcloud secrets versions add $name --project $GcpProject "--data-file=$valueFile" | Out-Null
       }
-      # The value goes through a temp file (no trailing newline), never a process argument.
-      $valueFile = Join-Path $Tmp $name
-      Set-Content -Encoding ascii -NoNewline -LiteralPath $valueFile -Value $pair[1]
-      gcloud secrets versions add $name --project $GcpProject "--data-file=$valueFile" | Out-Null
+      Write-Host "Done: bucket $Bucket and user $User; access key stored in Secret Manager ($GcpProject)."
+    } else {
+      # Local, git-ignored file only.
+      Add-Content -Encoding ascii apps/api/.env "`nMEDIA_STORAGE_DRIVER=s3`nS3_MEDIA_BUCKET=$Bucket`nS3_MEDIA_REGION=$Region`nS3_MEDIA_ACCESS_KEY_ID=$($key.AccessKey.AccessKeyId)`nS3_MEDIA_SECRET_ACCESS_KEY=$($key.AccessKey.SecretAccessKey)"
+      Write-Host "Done: bucket $Bucket and user $User; credentials appended to apps/api/.env."
     }
-    Write-Host "Done: bucket $Bucket and user $User; access key stored in Secret Manager ($GcpProject)."
-  } else {
-    # Local, git-ignored file only.
-    Add-Content -Encoding ascii apps/api/.env "`nMEDIA_STORAGE_DRIVER=s3`nS3_MEDIA_BUCKET=$Bucket`nS3_MEDIA_REGION=$Region`nS3_MEDIA_ACCESS_KEY_ID=$($key.AccessKey.AccessKeyId)`nS3_MEDIA_SECRET_ACCESS_KEY=$($key.AccessKey.SecretAccessKey)"
-    Write-Host "Done: bucket $Bucket and user $User; credentials appended to apps/api/.env."
+  } catch {
+    # Never leave an active key that was not stored completely.
+    aws iam delete-access-key --user-name $User --access-key-id $key.AccessKey.AccessKeyId
+    throw
+  }
+  if ($existingKeys.Count -gt 0) {
+    Write-Host "Note: $User has an older access key. Delete it once the API runs with the new one."
   }
 } finally {
   Remove-Item -Recurse -Force $Tmp

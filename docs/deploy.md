@@ -122,19 +122,33 @@ Create each secret once and grant the runtime identity access. Read the value fr
 | `google-places-api-key`      | `GOOGLE_PLACES_API_KEY`      | Step 7                         |
 
 ```bash
-gcloud secrets create database-url --project "$PROJECT_ID" --replication-policy automatic --data-file=-   # paste, then Ctrl-D
-for secret in database-url supabase-secret-key s3-media-access-key-id s3-media-secret-access-key google-places-api-key; do
+# The two S3 secrets already exist (step 5); create the other two now.
+gcloud secrets create database-url --project "$PROJECT_ID" --replication-policy automatic --data-file=-          # paste, then Ctrl-D
+gcloud secrets create supabase-secret-key --project "$PROJECT_ID" --replication-policy automatic --data-file=-   # paste, then Ctrl-D
+for secret in database-url supabase-secret-key s3-media-access-key-id s3-media-secret-access-key; do
   gcloud secrets add-iam-policy-binding "$secret" --project "$PROJECT_ID" \
     --member "serviceAccount:taco-hunt-api@$PROJECT_ID.iam.gserviceaccount.com" \
     --role roles/secretmanager.secretAccessor
 done
 ```
 
+`google-places-api-key` is created and bound in step 7, once the key exists.
+
 Five secrets with one active version each stay within Secret Manager's free allowance at the time of writing. Rotating a secret means adding a new version and redeploying; disable the old version afterwards.
 
 ### 7. Google keys (owner)
 
 - **Places (server):** create an API key restricted to _Places API (New)_ only. Cloud Run has no fixed egress IP, so the key cannot be IP-restricted; the API-level restriction, the daily call limit and the kill switch are the controls.
+
+  Store it and grant the runtime identity access:
+
+  ```bash
+  gcloud secrets create google-places-api-key --project "$PROJECT_ID" --replication-policy automatic --data-file=-   # paste, then Ctrl-D
+  gcloud secrets add-iam-policy-binding google-places-api-key --project "$PROJECT_ID" \
+    --member "serviceAccount:taco-hunt-api@$PROJECT_ID.iam.gserviceaccount.com" \
+    --role roles/secretmanager.secretAccessor
+  ```
+
 - **Maps SDK for Android:** a separate key restricted to _Maps SDK for Android_, package `com.aleiruiz.tacohunt`, and the SHA-1 fingerprints of both the EAS upload certificate and the Google Play app signing certificate (Play Console → App integrity). Never enable Places on this key.
 
 ## Deploying the API
