@@ -419,7 +419,7 @@ export default function MyTacosScreen() {
         photos.length === 0 && photosError ? (
           <View style={styles.notice}>
             <Text style={styles.body}>No pudimos cargar tus fotos.</Text>
-            <Pressable onPress={() => void load()}>
+            <Pressable hitSlop={14} onPress={() => void load()}>
               <Text style={styles.link}>Reintentar</Text>
             </Pressable>
           </View>
