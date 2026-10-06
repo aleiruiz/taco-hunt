@@ -51,10 +51,21 @@ The deploy workflow authenticates with short-lived tokens through Workload Ident
 gcloud iam service-accounts create taco-hunt-deployer --project "$PROJECT_ID" \
   --display-name "Taco Hunt deploy from GitHub Actions"
 
-for role in roles/run.admin roles/artifactregistry.writer; do
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-    --member "serviceAccount:taco-hunt-deployer@$PROJECT_ID.iam.gserviceaccount.com" --role "$role"
-done
+# Push access to the API's image repository only.
+gcloud artifacts repositories add-iam-policy-binding taco-hunt --project "$PROJECT_ID" \
+  --location "$REGION" \
+  --member "serviceAccount:taco-hunt-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role roles/artifactregistry.writer
+
+# The owner creates the service once, public, with a placeholder image. Deploys then only update
+# this service, so the deployer needs no project-wide Cloud Run role.
+gcloud run deploy taco-hunt-api --project "$PROJECT_ID" --region "$REGION" \
+  --image us-docker.pkg.dev/cloudrun/container/hello \
+  --service-account "taco-hunt-api@$PROJECT_ID.iam.gserviceaccount.com" \
+  --allow-unauthenticated --min-instances 0 --max-instances 1
+gcloud run services add-iam-policy-binding taco-hunt-api --project "$PROJECT_ID" --region "$REGION" \
+  --member "serviceAccount:taco-hunt-deployer@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role roles/run.developer
 # The deployer may deploy the service as the runtime identity, and nothing else.
 gcloud iam service-accounts add-iam-policy-binding \
   "taco-hunt-api@$PROJECT_ID.iam.gserviceaccount.com" --project "$PROJECT_ID" \
@@ -171,7 +182,7 @@ Run the **Deploy API** workflow from the Actions tab (manual trigger, `main` onl
 | Request timeout    | 60s       | Uploads and Places calls finish well within this.                                       |
 | `TRUST_PROXY_HOPS` | 1         | Cloud Run's front end appends one trusted `X-Forwarded-For` hop.                        |
 
-The service allows unauthenticated invocations: the API is public and enforces its own auth.
+The service allows unauthenticated invocations (set once when the owner creates it in step 3): the API is public and enforces its own auth. The deployer can't change who may invoke the service.
 
 After a deploy, check `GET <service-url>/healthz` returns `{"status":"ok"}` and that the app can browse stands.
 
