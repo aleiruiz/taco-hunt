@@ -62,6 +62,7 @@ export default function MyTacosScreen() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [photos, setPhotos] = useState<OwnSpotPhoto[]>([]);
+  const [photosError, setPhotosError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("favoritos");
@@ -90,6 +91,7 @@ export default function MyTacosScreen() {
     setFavorites([]);
     setProposals([]);
     setPhotos([]);
+    setPhotosError(false);
     setProfile(null);
   }, [session?.user.id]);
   const load = useCallback(async () => {
@@ -118,6 +120,7 @@ export default function MyTacosScreen() {
       setReviews(reviewPage.items);
       setFavorites(favoritePage.items);
       setProfile(ownProfile);
+      setPhotosError(!ownPhotos);
       if (ownPhotos) setPhotos(ownPhotos);
       if (proposalsResponse?.ok) {
         const data = (await proposalsResponse.json()) as {
@@ -413,7 +416,14 @@ export default function MyTacosScreen() {
       ) : null}
 
       {!loading && tab === "fotos" ? (
-        photos.length === 0 ? (
+        photos.length === 0 && photosError ? (
+          <View style={styles.notice}>
+            <Text style={styles.body}>No pudimos cargar tus fotos.</Text>
+            <Pressable onPress={() => void load()}>
+              <Text style={styles.link}>Reintentar</Text>
+            </Pressable>
+          </View>
+        ) : photos.length === 0 ? (
           <EmptyState
             icon="camera-outline"
             title="Aún no subes fotos"
