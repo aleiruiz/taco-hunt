@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Link, Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { useAuth } from "@/auth/provider";
 import {
   deleteReview,
@@ -234,7 +234,7 @@ export default function MyTacosScreen() {
             photoUrl={profile?.avatarPhotoUrl ?? undefined}
           />
           <View style={styles.avatarCameraBadge}>
-            <Ionicons name="camera" size={14} color={colors.paper} />
+            <Icon name="camera" size={14} color={colors.paper} />
           </View>
         </Pressable>
         <View style={{ flex: 1 }}>
@@ -254,15 +254,15 @@ export default function MyTacosScreen() {
         <View style={styles.checklistCard}>
           <Text style={styles.checklistLabel}>ARMA TU PERFIL · 1 DE 3</Text>
           <View style={styles.checklistRow}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.green} />
+            <Icon name="checkmark-circle" size={20} color={colors.green} />
             <Text style={styles.checklistText}>Crear cuenta</Text>
           </View>
           <View style={styles.checklistRow}>
-            <Ionicons name="ellipse-outline" size={20} color={colors.muted} />
+            <Icon name="ellipse-outline" size={20} color={colors.muted} />
             <Text style={styles.checklistText}>Califica tu primer taco</Text>
           </View>
           <View style={styles.checklistRow}>
-            <Ionicons name="ellipse-outline" size={20} color={colors.muted} />
+            <Icon name="ellipse-outline" size={20} color={colors.muted} />
             <Text style={styles.checklistText}>Guarda un favorito</Text>
           </View>
         </View>
@@ -289,12 +289,12 @@ export default function MyTacosScreen() {
         onPress={() => router.push("/retos")}
         style={styles.badgeRow}
       >
-        <Ionicons name="ribbon" size={18} color={colors.gold} />
+        <Icon name="ribbon" size={18} color={colors.gold} />
         <Text style={styles.badgeRowText}>
           {badgeCountLabel}
           {nextBadge ? ` · siguiente: ${nextBadge.label}` : ""}
         </Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.paper} />
+        <Icon name="chevron-forward" size={16} color={colors.paper} />
       </Pressable>
 
       <Pressable
@@ -307,7 +307,7 @@ export default function MyTacosScreen() {
         {pendingProposals > 0 ? (
           <StatusBadge status="pending" reason={`${pendingProposals}`} />
         ) : (
-          <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+          <Icon name="chevron-forward" size={16} color={colors.muted} />
         )}
       </Pressable>
 
@@ -360,7 +360,7 @@ export default function MyTacosScreen() {
                 <Text style={styles.cardTitle}>{favorite.name}</Text>
                 <Text style={styles.body}>{favorite.neighborhood}</Text>
               </View>
-              <Ionicons name="heart" size={21} color={colors.red} />
+              <Icon name="heart" size={21} color={colors.red} />
             </Pressable>
           ))
         )

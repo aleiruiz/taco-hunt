@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { authConfigured, supabase } from "@/auth/client";
 import { useAuth } from "@/auth/provider";
 import { colors } from "@/theme";
@@ -56,7 +56,7 @@ export default function UpdatePasswordScreen() {
           accessibilityLabel="Explorar sin cuenta"
           style={styles.back}
         >
-          <Ionicons name="chevron-back" size={16} color={colors.green} />
+          <Icon name="chevron-back" size={16} color={colors.green} />
           <Text style={styles.backText}>Explorar sin cuenta</Text>
         </Pressable>
       </Link>

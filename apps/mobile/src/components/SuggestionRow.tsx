@@ -1,6 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { colors, spacing, radii } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 export interface SuggestionItem {
   id: string;
@@ -24,7 +24,7 @@ type Props =
   | {
       variant: "dashed";
       label: string;
-      icon?: keyof typeof Ionicons.glyphMap;
+      icon?: IconName;
       onPress: () => void;
     };
 
@@ -83,7 +83,7 @@ export function SuggestionRow(props: Props) {
         accessibilityLabel={label}
         style={[styles.row, styles.dashedRow]}
       >
-        <Ionicons name={icon} size={20} color={colors.redStrong} style={styles.icon} />
+        <Icon name={icon} size={20} color={colors.redStrong} style={styles.icon} />
         <Text style={styles.dashedLabel}>{label}</Text>
       </Pressable>
     );
@@ -98,7 +98,7 @@ export function SuggestionRow(props: Props) {
       style={styles.row}
     >
       <View style={[styles.iconCircle, { backgroundColor: iconBg[item.type] }]}>
-        <Ionicons
+        <Icon
           name={item.type === "puesto" ? "fast-food" : "location"}
           size={16}
           color={iconColor[item.type]}

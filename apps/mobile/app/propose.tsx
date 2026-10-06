@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -220,7 +220,7 @@ export default function ProposeScreen() {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={styles.reviewContent}>
         <View style={styles.reviewIcon} accessibilityLabel="Propuesta pendiente de revisión">
-          <Ionicons name="checkmark-circle" size={64} color={colors.green} />
+          <Icon name="checkmark-circle" size={64} color={colors.green} />
         </View>
         <Text style={styles.kicker}>PROPUESTA ENVIADA</Text>
         <Text style={styles.reviewTitle}>{submittedName || "Tu taquería"} está en revisión</Text>
@@ -261,7 +261,7 @@ export default function ProposeScreen() {
     >
       <Link href="/" asChild>
         <Pressable accessibilityRole="link" accessibilityLabel="Volver al mapa" style={styles.back}>
-          <Ionicons name="chevron-back" size={18} color={colors.green} />
+          <Icon name="chevron-back" size={18} color={colors.green} />
           <Text style={styles.backText}>Volver al mapa</Text>
         </Pressable>
       </Link>
@@ -279,11 +279,7 @@ export default function ProposeScreen() {
           onPress={() => resetSource("google")}
           style={[styles.sourceTab, source === "google" && styles.sourceTabActive]}
         >
-          <Ionicons
-            name="search"
-            size={16}
-            color={source === "google" ? colors.green : colors.muted}
-          />
+          <Icon name="search" size={16} color={source === "google" ? colors.green : colors.muted} />
           <Text style={[styles.sourceTabText, source === "google" && styles.sourceTabTextActive]}>
             Buscar en Google
           </Text>
@@ -295,7 +291,7 @@ export default function ProposeScreen() {
           onPress={() => resetSource("local")}
           style={[styles.sourceTab, source === "local" && styles.sourceTabActive]}
         >
-          <Ionicons
+          <Icon
             name="location"
             size={16}
             color={source === "local" ? colors.green : colors.muted}
@@ -354,7 +350,7 @@ export default function ProposeScreen() {
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
             >
-              <Ionicons name="alert-circle" size={18} color={colors.dangerText} />
+              <Icon name="alert-circle" size={18} color={colors.dangerText} />
               <Text style={styles.errorText}>
                 No pudimos buscar. Puedes colocar un pin en el mapa.
               </Text>
@@ -388,7 +384,7 @@ export default function ProposeScreen() {
           ) : null}
           {selectedGoogle ? (
             <View style={styles.selectedCard} accessibilityLiveRegion="polite">
-              <Ionicons name="checkmark-circle" size={20} color={colors.green} />
+              <Icon name="checkmark-circle" size={20} color={colors.green} />
               <View style={styles.suggestionCopy}>
                 <Text style={styles.suggestionTitle}>{selectedGoogle.displayName}</Text>
                 <Text style={styles.muted}>Selección lista · se enviará solo el place_id</Text>
@@ -401,12 +397,12 @@ export default function ProposeScreen() {
             onPress={() => resetSource("local")}
             style={styles.manualCard}
           >
-            <Ionicons name="location-outline" size={20} color={colors.redStrong} />
+            <Icon name="location-outline" size={20} color={colors.redStrong} />
             <View style={styles.suggestionCopy}>
               <Text style={styles.manualTitle}>No aparece: poner un pin en el mapa</Text>
               <Text style={styles.muted}>No necesitas escribir una dirección.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.redStrong} />
+            <Icon name="chevron-forward" size={18} color={colors.redStrong} />
           </Pressable>
           <Button
             label="Siguiente"
@@ -455,7 +451,7 @@ export default function ProposeScreen() {
             <>
               <Text style={styles.stepTitle}>Lugar seleccionado</Text>
               <View style={styles.selectedCard} accessibilityLiveRegion="polite">
-                <Ionicons name="checkmark-circle" size={20} color={colors.green} />
+                <Icon name="checkmark-circle" size={20} color={colors.green} />
                 <View style={styles.suggestionCopy}>
                   <Text style={styles.suggestionTitle}>{selectedGoogle?.displayName}</Text>
                   <Text style={styles.muted}>Resultados de Google · selección lista</Text>
@@ -512,7 +508,7 @@ export default function ProposeScreen() {
         <Card>
           <Text style={styles.stepTitle}>Revisa antes de enviar</Text>
           <View style={styles.reviewRow}>
-            <Ionicons
+            <Icon
               name={source === "google" ? "logo-google" : "location"}
               size={20}
               color={colors.green}
@@ -537,7 +533,7 @@ export default function ProposeScreen() {
               accessibilityRole="alert"
               accessibilityLiveRegion="polite"
             >
-              <Ionicons name="alert-circle" size={18} color={colors.dangerText} />
+              <Icon name="alert-circle" size={18} color={colors.dangerText} />
               <Text style={styles.errorText}>{submitError}</Text>
             </View>
           ) : null}
@@ -579,7 +575,7 @@ function PinMap({
         onRegionChangeComplete={onRegionChange}
       />
       <View style={styles.centerPin} pointerEvents="none">
-        <Ionicons name="location" size={36} color={colors.redStrong} />
+        <Icon name="location" size={36} color={colors.redStrong} />
       </View>
     </View>
   );
@@ -589,7 +585,7 @@ function DuplicateCard({ match, onView }: { match: RegisteredPlaceMatch; onView:
   return (
     <Card tone="highlight" style={styles.duplicateCard} accessibilityLiveRegion="polite">
       <View style={styles.duplicateHeading}>
-        <Ionicons name="sparkles" size={18} color={colors.pendingText} />
+        <Icon name="sparkles" size={18} color={colors.pendingText} />
         <Text style={styles.duplicateKicker}>¿ES ESTE? YA ESTÁ EN TACO HUNT</Text>
       </View>
       <Text style={styles.duplicateTitle}>{match.displayName}</Text>
@@ -606,7 +602,7 @@ function TimelineRow({
   badge,
   muted = false,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   label: string;
   color: string;
   badge?: string;
@@ -614,7 +610,7 @@ function TimelineRow({
 }) {
   return (
     <View style={styles.timelineRow}>
-      <Ionicons name={icon} size={20} color={color} />
+      <Icon name={icon} size={20} color={color} />
       <Text style={[styles.timelineLabel, muted && styles.timelineMuted]}>{label}</Text>
       {badge ? <Text style={styles.timelineBadge}>{badge}</Text> : null}
     </View>

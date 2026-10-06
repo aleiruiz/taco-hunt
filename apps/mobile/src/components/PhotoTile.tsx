@@ -1,6 +1,6 @@
 import { View, Image, Pressable, StyleSheet } from "react-native";
 import { colors, radii, spacing } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 type Props = {
   photoUrl?: string;
@@ -36,7 +36,7 @@ export function PhotoTile({
         <Image source={{ uri: photoUrl }} style={StyleSheet.absoluteFill} />
       ) : (
         <View style={styles.empty}>
-          <Ionicons name="add" size={32} color={colors.redStrong} />
+          <Icon name="add" size={32} color={colors.redStrong} />
         </View>
       )}
     </Pressable>

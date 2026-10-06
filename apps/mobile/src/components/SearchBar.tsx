@@ -1,16 +1,16 @@
 import { View, TextInput, Pressable, StyleSheet, type TextInputProps } from "react-native";
 import { colors, radii, spacing } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "./Icon";
 
 type Props = Omit<TextInputProps, "style"> & {
   onClear?: () => void;
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: IconName;
 };
 
 export function SearchBar({ value, onClear, icon = "search", ...rest }: Props) {
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={20} color={colors.muted} style={styles.icon} />
+      <Icon name={icon} size={20} color={colors.muted} style={styles.icon} />
       <TextInput
         style={styles.input}
         placeholderTextColor={colors.placeholder}
@@ -24,7 +24,7 @@ export function SearchBar({ value, onClear, icon = "search", ...rest }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Borrar búsqueda"
         >
-          <Ionicons name="close-circle" size={20} color={colors.muted} />
+          <Icon name="close-circle" size={20} color={colors.muted} />
         </Pressable>
       )}
     </View>

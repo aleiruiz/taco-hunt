@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { Button, Card } from "@/components";
 import { colors, spacing, typography } from "@/theme";
 import { supabase } from "./client";
@@ -88,7 +88,7 @@ export function EmailConfirmation({
 
   return (
     <View style={styles.content}>
-      <Ionicons name="mail-outline" size={56} color={colors.green} />
+      <Icon name="mail-outline" size={56} color={colors.green} />
       <Text accessibilityRole="header" style={styles.title}>
         Revisa tu correo
       </Text>

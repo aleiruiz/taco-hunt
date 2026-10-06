@@ -6,13 +6,14 @@
  * stay client-side; the API only returns badge IDs and counts.
  */
 import type { Session } from "@supabase/supabase-js";
+import type { IconName } from "@/components/Icon";
 
 const API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001/v1";
 
 export interface Badge {
   id: string;
   label: string;
-  icon: string;
+  icon: IconName;
   earned: boolean;
   progress?: string;
 }
@@ -34,7 +35,7 @@ type ProgressResponse = {
   nextChallenge: { badgeId: BadgeId; label: string; current: number; target: number } | null;
 };
 
-const BADGES: { id: BadgeId; label: string; icon: string; target: number }[] = [
+const BADGES: { id: BadgeId; label: string; icon: IconName; target: number }[] = [
   { id: "recien-llegado", label: "Recién llegado", icon: "sparkles", target: 1 },
   { id: "primera-mordida", label: "Primera mordida", icon: "star", target: 1 },
   { id: "pionero", label: "Pionero", icon: "flag", target: 1 },

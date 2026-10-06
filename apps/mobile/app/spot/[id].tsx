@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Icon, type IconName } from "@/components/Icon";
 import { useAuth } from "@/auth/provider";
 import { listFavorites, setFavorite } from "@/features/contributions/api";
 import { createReport, ReportConflictError, type ReportReason } from "@/features/reports/api";
@@ -467,7 +467,7 @@ export default function SpotScreen() {
             onPress={() => router.back()}
             style={styles.back}
           >
-            <Ionicons name="chevron-back" size={16} color={colors.green} />
+            <Icon name="chevron-back" size={16} color={colors.green} />
             <Text style={styles.backText}>Volver</Text>
           </Pressable>
         )}
@@ -498,7 +498,7 @@ export default function SpotScreen() {
                   <Image source={{ uri: heroUrl }} style={StyleSheet.absoluteFill} />
                 ) : (
                   <View style={[StyleSheet.absoluteFill, styles.heroPlaceholder]}>
-                    <Ionicons name="camera-outline" size={40} color={colors.muted} />
+                    <Icon name="camera-outline" size={40} color={colors.muted} />
                   </View>
                 )}
                 <View style={styles.heroTopRow}>
@@ -552,7 +552,7 @@ export default function SpotScreen() {
               {hasPin && (
                 <View style={styles.pinCard}>
                   <View style={styles.pinIcon}>
-                    <Ionicons name="location" size={23} color={colors.ink} />
+                    <Icon name="location" size={23} color={colors.ink} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.pinTitle}>{spot.neighborhood}</Text>
@@ -574,7 +574,7 @@ export default function SpotScreen() {
               <Card style={styles.googleDetailsCard}>
                 <View style={styles.googleHeadingRow}>
                   <View style={styles.googleIcon}>
-                    <Ionicons name="logo-google" size={18} color={colors.ink} />
+                    <Icon name="logo-google" size={18} color={colors.ink} />
                   </View>
                   <View style={styles.googleHeadingCopy}>
                     <Text style={styles.googleTitle}>Detalles de Google</Text>
@@ -600,7 +600,7 @@ export default function SpotScreen() {
                 )}
                 {(googleDetailsState === "unavailable" || googleDetailsState === "error") && (
                   <View style={styles.googleUnavailable}>
-                    <Ionicons
+                    <Icon
                       name={
                         googleDetailsState === "error"
                           ? "cloud-offline-outline"
@@ -673,7 +673,7 @@ export default function SpotScreen() {
                         pointerEvents="none"
                       />
                       <View style={styles.pendingClock} pointerEvents="none">
-                        <Ionicons name="time" size={14} color={colors.pendingText} />
+                        <Icon name="time" size={14} color={colors.pendingText} />
                       </View>
                     </View>
                   ))}
@@ -798,7 +798,7 @@ export default function SpotScreen() {
                 onPress={openTacoModal}
                 style={styles.dashedRow}
               >
-                <Ionicons name="add-circle-outline" size={16} color={colors.redStrong} />
+                <Icon name="add-circle-outline" size={16} color={colors.redStrong} />
                 <Text style={styles.dashedRowText}>¿Venden otro taco? Agrégalo</Text>
               </Pressable>
             </>
