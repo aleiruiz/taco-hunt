@@ -2,7 +2,7 @@
 
 Version 1.2 — 2 October 2026
 Owner: Alei Ruiz  
-Initial market: Monterrey metropolitan area, Mexico  
+Initial market: all of Mexico (widened from the Monterrey metropolitan area on 2026-10-13, T89)  
 Audience: implementation agent building an open source portfolio project
 
 ## 1. Mission and definition of done

@@ -65,10 +65,10 @@ paths:
       summary: Busca puestos aprobados dentro de un área
       description: Results are ordered by distance from the bounding-box center, then normalized name and UUID. The opaque keyset cursor contains this full sort tuple; preserve all filters and bounds while paging. The effective bounding box is capped at 9,000 km².
       parameters:
-        - { in: query, name: north, schema: { type: number, minimum: 25, maximum: 27 } }
-        - { in: query, name: south, schema: { type: number, minimum: 25, maximum: 27 } }
-        - { in: query, name: east, schema: { type: number, minimum: -101.5, maximum: -99 } }
-        - { in: query, name: west, schema: { type: number, minimum: -101.5, maximum: -99 } }
+        - { in: query, name: north, schema: { type: number, minimum: 14, maximum: 33 } }
+        - { in: query, name: south, schema: { type: number, minimum: 14, maximum: 33 } }
+        - { in: query, name: east, schema: { type: number, minimum: -119, maximum: -86 } }
+        - { in: query, name: west, schema: { type: number, minimum: -119, maximum: -86 } }
         - { in: query, name: q, schema: { type: string, maxLength: 100 } }
         - { in: query, name: tacoType, schema: { type: string, maxLength: 80 } }
         - {
@@ -485,13 +485,13 @@ paths:
             in: query,
             name: latitude,
             required: true,
-            schema: { type: number, minimum: 25, maximum: 27 },
+            schema: { type: number, minimum: 14, maximum: 33 },
           }
         - {
             in: query,
             name: longitude,
             required: true,
-            schema: { type: number, minimum: -101.5, maximum: -99 },
+            schema: { type: number, minimum: -119, maximum: -86 },
           }
       responses:
         "200":
@@ -1334,8 +1334,8 @@ components:
       properties:
         name: { type: string, minLength: 2, maxLength: 120 }
         neighborhood: { type: string, minLength: 2, maxLength: 120 }
-        latitude: { type: number, minimum: 25, maximum: 27 }
-        longitude: { type: number, minimum: -101.5, maximum: -99 }
+        latitude: { type: number, minimum: 14, maximum: 33 }
+        longitude: { type: number, minimum: -119, maximum: -86 }
         note: { type: string, maxLength: 500 }
         source: { type: string, enum: [manual, autocomplete], default: manual }
         sourceRef: { type: string, minLength: 1, maxLength: 200 }
@@ -1459,8 +1459,8 @@ components:
         confirmOwnFields: { type: boolean }
         name: { type: string, minLength: 1, maxLength: 120 }
         neighborhood: { type: string, minLength: 1, maxLength: 120 }
-        latitude: { type: number, minimum: 25, maximum: 27 }
-        longitude: { type: number, minimum: -101.5, maximum: -99 }
+        latitude: { type: number, minimum: 14, maximum: 33 }
+        longitude: { type: number, minimum: -119, maximum: -86 }
         sourceType: { type: string, enum: [user, owner, licensed, fictional] }
         sourceRef: { type: string, minLength: 1, maxLength: 200 }
         verifiedAt: { type: string, format: date-time }
@@ -1865,8 +1865,8 @@ components:
         normalizedName: { type: string }
         originalName: { type: string }
         address: { type: string }
-        latitude: { type: number, minimum: 25, maximum: 27 }
-        longitude: { type: number, minimum: -101.5, maximum: -99 }
+        latitude: { type: number, minimum: 14, maximum: 33 }
+        longitude: { type: number, minimum: -119, maximum: -86 }
         source: { type: string }
         sourceRef: { type: string }
         licenseRef: { type: string }
@@ -1885,8 +1885,8 @@ components:
       required: [latitude, longitude]
       additionalProperties: false
       properties:
-        latitude: { type: number, minimum: 25, maximum: 27 }
-        longitude: { type: number, minimum: -101.5, maximum: -99 }
+        latitude: { type: number, minimum: 14, maximum: 33 }
+        longitude: { type: number, minimum: -119, maximum: -86 }
     ImportCandidateReject:
       type: object
       required: [reason]

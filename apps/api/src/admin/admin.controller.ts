@@ -15,6 +15,7 @@ import {
   importCandidateApproveSchema,
   importCandidateRejectSchema,
   importCandidateMergeSchema,
+  MEXICO_COVERAGE,
 } from "@taco-hunt/contracts";
 import { AdminGuard } from "../auth/admin.guard.js";
 import { CurrentProfile } from "../auth/current-profile.decorator.js";
@@ -31,8 +32,8 @@ const approvalSchema = z
     confirmOwnFields: z.boolean().optional(),
     name: z.string().trim().min(1).max(120).optional(),
     neighborhood: z.string().trim().min(1).max(120).optional(),
-    latitude: z.number().min(25).max(27).optional(),
-    longitude: z.number().min(-101.5).max(-99).optional(),
+    latitude: z.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north).optional(),
+    longitude: z.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east).optional(),
     sourceType: z.enum(["user", "owner", "licensed", "fictional"]).optional(),
     sourceRef: z.string().trim().min(1).max(200).optional(),
     verifiedAt: z.string().datetime({ offset: true }).optional(),
@@ -74,8 +75,8 @@ const approvalSchema = z
   });
 const duplicateQuerySchema = z.object({
   name: z.string().trim().min(2).max(120),
-  latitude: z.coerce.number().min(25).max(27),
-  longitude: z.coerce.number().min(-101.5).max(-99),
+  latitude: z.coerce.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north),
+  longitude: z.coerce.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east),
 });
 
 @Controller("/admin")
@@ -104,7 +105,7 @@ export class AdminController {
   }
 
   /**
-   * Validates the name and Monterrey-area coordinates for an admin duplicate search.
+   * Validates the name and in-coverage coordinates for an admin duplicate search.
    * @throws {BadRequestException} If any query parameter is invalid.
    */
   @Get("/duplicate-candidates")

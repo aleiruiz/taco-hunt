@@ -538,7 +538,7 @@ export default function SpotScreen() {
                   </Pressable>
                 )}
               </View>
-              <Text style={styles.kicker}>PUESTO EN MONTERREY</Text>
+              <Text style={styles.kicker}>PUESTO EN MÉXICO</Text>
               <Text style={styles.title}>{spot.name}</Text>
               <Text style={styles.neighborhood}>{spot.neighborhood}</Text>
               {ratingSummary ? <Text style={styles.body}>{ratingSummary}</Text> : null}
@@ -556,7 +556,7 @@ export default function SpotScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.pinTitle}>{spot.neighborhood}</Text>
-                    <Text style={styles.body}>Monterrey y área metropolitana</Text>
+                    <Text style={styles.body}>México</Text>
                   </View>
                   <Pressable
                     accessibilityRole="button"

@@ -12,6 +12,7 @@ import { z } from "zod";
 import {
   googlePlaceIdSchema,
   googleReviewTargetCreateSchema,
+  MEXICO_COVERAGE,
   placeAutocompleteQuerySchema,
   placesViewportQuerySchema,
   type PlacesViewportQuery,
@@ -33,12 +34,10 @@ const PUBLIC_GOOGLE_READ_LIMIT = 30;
 const PUBLIC_GOOGLE_READ_WINDOW_MS = 60_000;
 const VIEWPORT_SEARCH_INSET = 0.15;
 
-/** Monterrey and its metropolitan area: the coverage for contributions and address search. */
-const MONTERREY_AREA = { south: 25.3, north: 26.1, west: -101, east: -99.7 } as const;
-
-const monterreyBounds = z.object({
-  latitude: z.number().min(MONTERREY_AREA.south).max(MONTERREY_AREA.north),
-  longitude: z.number().min(MONTERREY_AREA.west).max(MONTERREY_AREA.east),
+/** All of Mexico: the coverage for contributions and address search. */
+const coverageBounds = z.object({
+  latitude: z.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north),
+  longitude: z.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east),
 });
 
 type GooglePlace = {
@@ -296,7 +295,7 @@ export class PlacesService {
     if (!name || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       throw new BadGatewayException("Google Places devolvió datos incompletos");
     }
-    if (!monterreyBounds.safeParse({ latitude, longitude }).success) {
+    if (!coverageBounds.safeParse({ latitude, longitude }).success) {
       throw new BadRequestException("El lugar está fuera de la cobertura de Taco Hunt");
     }
     const client = await this.pool.connect();
@@ -607,12 +606,10 @@ export class PlacesService {
         throw new BadGatewayException("Google Places devolvió datos incompletos");
       }
       if (
-        !monterreyBounds.shape.latitude.safeParse(latitude).success ||
-        !monterreyBounds.shape.longitude.safeParse(longitude).success
+        !coverageBounds.shape.latitude.safeParse(latitude).success ||
+        !coverageBounds.shape.longitude.safeParse(longitude).success
       ) {
-        throw new BadRequestException(
-          "Ese lugar queda fuera de la cobertura de Monterrey y su área metropolitana",
-        );
+        throw new BadRequestException("Ese lugar queda fuera de México");
       }
 
       return {
@@ -728,15 +725,8 @@ export class PlacesService {
       body: JSON.stringify({
         input: query,
         languageCode: "es",
+        // Coverage is all of Mexico, so the country filter replaces a location rectangle.
         includedRegionCodes: ["mx"],
-        // A bias still returns other cities when nothing nearby matches (e.g. Toluca or CDMX
-        // for "Demo 01"); restrict suggestions to the same area resolvePlace accepts.
-        locationRestriction: {
-          rectangle: {
-            low: { latitude: MONTERREY_AREA.south, longitude: MONTERREY_AREA.west },
-            high: { latitude: MONTERREY_AREA.north, longitude: MONTERREY_AREA.east },
-          },
-        },
       }),
       signal: AbortSignal.timeout(5_000),
     });
