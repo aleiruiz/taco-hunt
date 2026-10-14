@@ -97,7 +97,8 @@ type GooglePlaceDetailsResponse = {
   state: "ready" | "unavailable";
   details?: { photoName?: string };
 };
-const API_COVERAGE = { north: 27, south: 25, east: -99, west: -101.5 };
+// Matches MEXICO_COVERAGE in @taco-hunt/contracts (all of Mexico).
+const API_COVERAGE = { north: 33, south: 14, east: -86, west: -119 };
 const LOCAL_MAP_DELTA = 0.02;
 const DEFAULT_MAP_REGION: Region = {
   latitude: 25.6866,
@@ -120,10 +121,12 @@ const API =
   (Platform.OS === "android" ? "http://10.0.2.2:3001/v1" : "http://localhost:3001/v1");
 const AREAS: Area[] = [
   { label: "Monterrey", north: 25.78, south: 25.6, east: -100.2, west: -100.4 },
-  { label: "San Pedro", north: 25.72, south: 25.62, east: -100.3, west: -100.45 },
-  { label: "San Nicolás", north: 25.8, south: 25.7, east: -100.2, west: -100.32 },
-  { label: "Guadalupe", north: 25.72, south: 25.62, east: -100.15, west: -100.27 },
-  { label: "Apodaca", north: 25.82, south: 25.72, east: -100.08, west: -100.23 },
+  { label: "CDMX", north: 19.55, south: 19.32, east: -99.02, west: -99.25 },
+  { label: "Guadalajara", north: 20.76, south: 20.56, east: -103.25, west: -103.45 },
+  { label: "Puebla", north: 19.12, south: 18.96, east: -98.12, west: -98.29 },
+  { label: "Querétaro", north: 20.67, south: 20.51, east: -100.31, west: -100.47 },
+  { label: "Tijuana", north: 32.56, south: 32.43, east: -116.92, west: -117.12 },
+  { label: "Mérida", north: 21.05, south: 20.89, east: -89.52, west: -89.68 },
 ];
 
 async function getGoogleFallbackPhotoUrl(placeId: string): Promise<string | null> {
@@ -503,7 +506,7 @@ export default function ExploreScreen() {
         if (!bounds) {
           setItems([]);
           setError(
-            "Esta zona queda fuera de la cobertura disponible. Elige una zona de Monterrey y su área metropolitana.",
+            "Esta zona queda fuera de la cobertura disponible. Elige una zona dentro de México.",
           );
           return;
         }
@@ -558,9 +561,7 @@ export default function ExploreScreen() {
         longitude < API_COVERAGE.west ||
         longitude > API_COVERAGE.east
       ) {
-        setError(
-          "Tu ubicación está fuera de la cobertura de Monterrey y su área metropolitana. Puedes elegir una zona manualmente.",
-        );
+        setError("Tu ubicación está fuera de México. Puedes elegir una zona manualmente.");
         return;
       }
       const areaAtLocation = clipAreaToApiCoverage({
@@ -779,7 +780,7 @@ export default function ExploreScreen() {
       longitude < API_COVERAGE.west ||
       longitude > API_COVERAGE.east
     ) {
-      setError("Esa dirección queda fuera de la cobertura de Monterrey y su área metropolitana.");
+      setError("Esa dirección queda fuera de México.");
       return;
     }
     setMode("mapa");
@@ -1422,7 +1423,7 @@ export default function ExploreScreen() {
         ListHeaderComponent={
           <>
             <View style={styles.headerRow}>
-              <Text style={styles.kicker}>MONTERREY · NUEVO LEÓN</Text>
+              <Text style={styles.kicker}>TACO HUNT · MÉXICO</Text>
               {profileButton}
             </View>
             <Text style={styles.title}>¿Qué se te antoja hoy?</Text>

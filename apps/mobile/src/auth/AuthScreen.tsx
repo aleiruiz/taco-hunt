@@ -268,7 +268,7 @@ export function AuthScreen({ mode }: { mode: Mode }) {
                 onPress={() => router.replace("/")}
               />
               <View style={styles.hero}>
-                <Text style={styles.kicker}>TACO HUNT · MONTERREY</Text>
+                <Text style={styles.kicker}>TACO HUNT · MÉXICO</Text>
                 <Text accessibilityRole="header" style={styles.title}>
                   {title}
                 </Text>

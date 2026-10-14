@@ -301,7 +301,7 @@ export class AdminService {
       const rawNeighborhood =
         (typeof payload.neighborhood === "string" ? payload.neighborhood.trim() : "") ||
         (typeof payload.formatted_address === "string" ? payload.formatted_address.trim() : "");
-      const neighborhood = (rawNeighborhood || "Monterrey").slice(0, 120);
+      const neighborhood = (rawNeighborhood || "Zona no confirmada").slice(0, 120);
       const knownSourceTypes = new Set(["user", "owner", "licensed", "fictional"]);
       // Only offline, permissioned candidate sources reach this path. Google payload
       // candidates are retired and excluded above; live Google data is never promoted

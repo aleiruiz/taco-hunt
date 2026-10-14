@@ -200,7 +200,7 @@ export default function SearchScreen() {
           )}
         </View>
       </View>
-      <Text style={styles.subline}>Monterrey y su área metropolitana · lo más cercano primero</Text>
+      <Text style={styles.subline}>Todo México · lo más cercano primero</Text>
 
       <ScrollView
         style={styles.body}

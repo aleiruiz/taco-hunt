@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+/**
+ * Service area: a box around all of Mexico, matching the coordinate checks on
+ * app_private.spots. Precise country filtering is left to Google (region MX).
+ */
+export const MEXICO_COVERAGE = { south: 14, north: 33, west: -119, east: -86 } as const;
+
 export const uuidSchema = z.string().uuid();
 export const isoTimestampSchema = z.string().datetime({ offset: true });
 export const cursorTokenSchema = z.string().min(1).max(512);
@@ -107,10 +113,10 @@ export type SpotDetail = z.infer<typeof spotDetailSchema>;
 
 export const spotListQuerySchema = z
   .object({
-    north: z.coerce.number().min(25).max(27).optional(),
-    south: z.coerce.number().min(25).max(27).optional(),
-    east: z.coerce.number().min(-101.5).max(-99).optional(),
-    west: z.coerce.number().min(-101.5).max(-99).optional(),
+    north: z.coerce.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north).optional(),
+    south: z.coerce.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north).optional(),
+    east: z.coerce.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east).optional(),
+    west: z.coerce.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east).optional(),
     q: z.string().trim().max(100).optional(),
     tacoType: z.string().trim().max(80).optional(),
     cursor: cursorTokenSchema.optional(),
@@ -232,8 +238,8 @@ export const spotProposalSchema = z
   .object({
     name: z.string().trim().min(2).max(120),
     neighborhood: z.string().trim().min(2).max(120),
-    latitude: z.number().min(25).max(27),
-    longitude: z.number().min(-101.5).max(-99),
+    latitude: z.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north),
+    longitude: z.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east),
     note: z.string().max(500).optional(),
     source: spotProposalSourceSchema.default("manual"),
     sourceRef: z.string().trim().min(1).max(200).optional(),
@@ -285,8 +291,8 @@ export const placeResolveResponseSchema = z.object({
   name: z.string(),
   neighborhood: z.string(),
   formattedAddress: z.string().nullable(),
-  latitude: z.number().min(25).max(27),
-  longitude: z.number().min(-101.5).max(-99),
+  latitude: z.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north),
+  longitude: z.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east),
   attribution: z.string().nullable(),
 });
 export type PlaceResolveResponse = z.infer<typeof placeResolveResponseSchema>;
@@ -513,8 +519,8 @@ export const importCandidateSchema = z.object({
   normalizedName: z.string(),
   originalName: z.string(),
   address: z.string(),
-  latitude: z.number().min(25).max(27),
-  longitude: z.number().min(-101.5).max(-99),
+  latitude: z.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north),
+  longitude: z.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east),
   source: z.string(),
   sourceRef: z.string(),
   licenseRef: z.string(),
@@ -533,8 +539,8 @@ export type ImportCandidateListResponse = z.infer<typeof importCandidateListResp
 
 export const importCandidateApproveSchema = z
   .object({
-    latitude: z.number().min(25).max(27),
-    longitude: z.number().min(-101.5).max(-99),
+    latitude: z.number().min(MEXICO_COVERAGE.south).max(MEXICO_COVERAGE.north),
+    longitude: z.number().min(MEXICO_COVERAGE.west).max(MEXICO_COVERAGE.east),
   })
   .strict();
 export type ImportCandidateApprove = z.infer<typeof importCandidateApproveSchema>;

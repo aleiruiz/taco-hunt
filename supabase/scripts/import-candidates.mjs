@@ -20,7 +20,8 @@ const REQUIRED_COLUMNS = [
   "notes",
 ];
 const ALLOWED_SOURCE_TYPES = new Set(["owner", "licensed", "user", "fictional"]);
-const MONTERREY_BOUNDS = { minLat: 24.0, maxLat: 26.2, minLng: -101.5, maxLng: -99.5 };
+// All of Mexico, matching MEXICO_COVERAGE in @taco-hunt/contracts and the spots table checks.
+const COVERAGE_BOUNDS = { minLat: 14.0, maxLat: 33.0, minLng: -119.0, maxLng: -86.0 };
 
 function usage() {
   console.error(
@@ -126,14 +127,12 @@ function validate(rows) {
     if (
       !Number.isFinite(latitude) ||
       !Number.isFinite(longitude) ||
-      latitude < MONTERREY_BOUNDS.minLat ||
-      latitude > MONTERREY_BOUNDS.maxLat ||
-      longitude < MONTERREY_BOUNDS.minLng ||
-      longitude > MONTERREY_BOUNDS.maxLng
+      latitude < COVERAGE_BOUNDS.minLat ||
+      latitude > COVERAGE_BOUNDS.maxLat ||
+      longitude < COVERAGE_BOUNDS.minLng ||
+      longitude > COVERAGE_BOUNDS.maxLng
     ) {
-      throw new Error(
-        `Row ${line}: coordinates must be inside the documented Monterrey contribution bounds`,
-      );
+      throw new Error(`Row ${line}: coordinates must be inside Mexico`);
     }
     if (!ALLOWED_SOURCE_TYPES.has(row.source_type))
       throw new Error(

@@ -31,16 +31,14 @@ import { DATABASE_POOL } from "../database/database.module.js";
 
 const SEARCH_SUGGEST_LIMIT = 8;
 // No municipality column exists on app_private.spots yet (only free-text
-// neighborhood); every seeded/approved stand today is within the Monterrey
-// metro area per docs/build-spec.md's coverage, matching the fixed string
-// already shown elsewhere (e.g. spot/[id].tsx's pin card). Revisit if/when
-// a real municipality column lands (see docs/data-provenance.md).
-const DEFAULT_MUNICIPALITY = "Monterrey y área metropolitana";
+// neighborhood), and coverage is all of Mexico, so colonia suggestions carry
+// the country instead of a city. Revisit if/when a real municipality column
+// lands (see docs/data-provenance.md).
+const DEFAULT_MUNICIPALITY = "México";
 
-// Per-request limit, not an area cap: the viewport can be anywhere in (and
-// around) the Monterrey metro area with no maximum size. When more approved
-// stands than this fall inside it, they're returned as grid clusters instead
-// of truncating results silently.
+// Per-request limit, not an area cap: the viewport can be anywhere in Mexico
+// with no maximum size. When more approved stands than this fall inside it,
+// they're returned as grid clusters instead of truncating results silently.
 const MAP_PIN_LIMIT = 300;
 
 // RFC 9110 §13.1.2: If-None-Match is a comma-separated list of entity tags
